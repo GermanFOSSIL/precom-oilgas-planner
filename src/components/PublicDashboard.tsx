@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
-import GanttChart from "@/components/GanttChart";
+import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { 
   Select, 
   SelectContent, 
@@ -207,7 +207,7 @@ const PublicDashboard: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent className={`p-0 overflow-hidden ${getGanttHeight()}`}>
-            <GanttChart
+            <EnhancedGanttChart
               filtros={filtros}
               configuracion={configuracionGrafico}
             />

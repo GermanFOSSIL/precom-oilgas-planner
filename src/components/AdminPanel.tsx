@@ -18,12 +18,13 @@ import {
   Layers,
   FileText,
   Settings,
-  Bell,
+  Users,
   SunMoon,
   Download,
   Edit2,
   Trash2,
-  Save
+  Save,
+  FilePdf
 } from "lucide-react";
 import {
   Dialog,
@@ -56,9 +57,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import KPICards from "@/components/KPICards";
 import ProyectoSelector from "@/components/ProyectoSelector";
-import GanttChart from "@/components/GanttChart";
+import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import ActividadesTable from "@/components/ActividadesTable";
 import ITRBTable from "@/components/ITRBTable";
+import UserManagement from "@/components/UserManagement";
+import ReportGenerator from "@/components/ReportGenerator";
 import { FiltrosDashboard, ConfiguracionGrafico, Proyecto, Actividad, ITRB } from "@/types";
 
 const AdminPanel: React.FC = () => {
@@ -448,14 +451,26 @@ const AdminPanel: React.FC = () => {
           )}
           
           <Button 
-            variant={activeTab === "alertas" ? "default" : "ghost"} 
+            variant={activeTab === "reportes" ? "default" : "ghost"} 
             className="w-full justify-start" 
             size="sm"
-            onClick={() => setActiveTab("alertas")}
+            onClick={() => setActiveTab("reportes")}
           >
-            <Bell className="h-4 w-4 mr-2" />
-            Alertas
+            <FilePdf className="h-4 w-4 mr-2" />
+            Reportes
           </Button>
+          
+          {isAdmin && (
+            <Button 
+              variant={activeTab === "usuarios" ? "default" : "ghost"} 
+              className="w-full justify-start" 
+              size="sm"
+              onClick={() => setActiveTab("usuarios")}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Usuarios
+            </Button>
+          )}
           
           {isAdmin && (
             <Button 
@@ -476,7 +491,7 @@ const AdminPanel: React.FC = () => {
               <SunMoon className="h-4 w-4" />
             </Button>
             
-            <Button variant="ghost" size="sm" onClick={handleGenerarPDF}>
+            <Button variant="ghost" size="sm" onClick={() => setActiveTab("reportes")}>
               <Download className="h-4 w-4" />
             </Button>
             
@@ -558,12 +573,14 @@ const AdminPanel: React.FC = () => {
           </div>
         </div>
         
-        <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
+        {activeTab !== "usuarios" && activeTab !== "reportes" && (
+          <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
+        )}
         
         {activeTab === "dashboard" && (
           <Card>
             <CardContent className="p-0 h-[600px]">
-              <GanttChart
+              <EnhancedGanttChart
                 filtros={filtros}
                 configuracion={configuracionGrafico}
               />
@@ -796,17 +813,12 @@ const AdminPanel: React.FC = () => {
           </Card>
         )}
         
-        {activeTab === "alertas" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Alertas</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-center text-muted-foreground py-10">
-                Sistema de alertas (en desarrollo)
-              </p>
-            </CardContent>
-          </Card>
+        {activeTab === "reportes" && (
+          <ReportGenerator />
+        )}
+        
+        {activeTab === "usuarios" && isAdmin && (
+          <UserManagement />
         )}
         
         {activeTab === "configuracion" && isAdmin && (
@@ -819,13 +831,9 @@ const AdminPanel: React.FC = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-2">Exportar datos</h3>
                   <div className="flex space-x-2">
-                    <Button onClick={handleGenerarPDF}>
+                    <Button onClick={() => setActiveTab("reportes")}>
                       <Download className="h-4 w-4 mr-2" />
-                      Exportar a PDF
-                    </Button>
-                    <Button variant="outline" onClick={handleGenerarExcel}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar a Excel
+                      Ir a Reportes
                     </Button>
                   </div>
                 </div>

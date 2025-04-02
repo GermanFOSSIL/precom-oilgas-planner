@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import KPICards from "@/components/KPICards";
 import ActividadesTable from "@/components/ActividadesTable";
 import ITRBTable from "@/components/ITRBTable";
-import GanttChart from "@/components/GanttChart";
+import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import CriticalPathView from "@/components/CriticalPathView";
 import { 
   Calendar, 
@@ -155,7 +155,7 @@ const Dashboard: React.FC = () => {
           </div>
           
           <TabsContent value="gantt" className="mt-0">
-            <GanttChart 
+            <EnhancedGanttChart 
               filtros={filtros} 
               configuracion={configuracionGrafico} 
             />
