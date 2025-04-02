@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,17 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Colores específicos para el estado del proyecto
+				estado: {
+					completado: '#10B981', // Verde para completado
+					curso: '#FBBF24',      // Amarillo para en curso
+					vencido: '#EF4444',    // Rojo para vencido
+				},
+				oilgas: {
+					primary: '#1E3A8A',    // Azul oscuro principal
+					secondary: '#475569',  // Gris oscuro secundario
+					accent: '#0EA5E9',     // Azul claro para acentos
 				}
 			},
 			borderRadius: {

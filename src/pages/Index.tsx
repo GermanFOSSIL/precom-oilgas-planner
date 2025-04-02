@@ -1,13 +1,22 @@
-// Update this page (the content is just a fallback if you fail to update the page)
 
-const Index = () => {
+import React from "react";
+import { AppProvider } from "@/context/AppContext";
+import Login from "@/components/Login";
+import Dashboard from "@/components/Dashboard";
+import { useAppContext } from "@/context/AppContext";
+
+// Contenedor que verifica si hay un usuario autenticado
+const AppContainer: React.FC = () => {
+  const { user } = useAppContext();
+  
+  return user ? <Dashboard /> : <Login />;
+};
+
+const Index: React.FC = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <AppProvider>
+      <AppContainer />
+    </AppProvider>
   );
 };
 
