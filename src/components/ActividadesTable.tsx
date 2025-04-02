@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { 
   MoreHorizontal, 
   Edit, 
-  Trash, 
+  Trash2, 
   Plus, 
   Download,
   Filter,
@@ -23,7 +23,10 @@ import {
   Search,
   SortAsc,
   SortDesc,
-  List
+  List,
+  Save,
+  X,
+  AlertCircle
 } from "lucide-react";
 import { 
   Tooltip,
@@ -35,6 +38,26 @@ import { Actividad } from "@/types";
 import { toast } from "sonner";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
 
 // Tipo para el estado de ordenamiento
 type SortField = 'nombre' | 'sistema' | 'subsistema' | 'fechaInicio' | 'fechaFin' | 'duracion';
@@ -66,6 +89,15 @@ const ActividadesTable: React.FC = () => {
     duracionMaxima: "",
     mostrarSoloVencidas: false
   });
+
+  // Estado para la actividad en edición
+  const [actividadEditando, setActividadEditando] = useState<Actividad | null>(null);
+  
+  // Estado para controlar el diálogo de edición
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  
+  // Estado para el ID de la actividad a eliminar
+  const [actividadAEliminar, setActividadAEliminar] = useState<string | null>(null);
 
   // Función para cambiar el ordenamiento
   const requestSort = (field: SortField) => {
@@ -156,6 +188,54 @@ const ActividadesTable: React.FC = () => {
     return resultado;
   }, [actividades, filtros, sortConfig, filtrosLocales]);
 
+  // Función para abrir el diálogo de edición
+  const handleEditActividad = (actividad: Actividad) => {
+    setActividadEditando({...actividad});
+    setShowEditDialog(true);
+  };
+  
+  // Función para guardar los cambios de la actividad
+  const handleSaveActividad = () => {
+    if (actividadEditando) {
+      // Validar campos requeridos
+      if (!actividadEditando.nombre.trim() || !actividadEditando.sistema.trim() || !actividadEditando.subsistema.trim()) {
+        toast.error("Todos los campos son obligatorios");
+        return;
+      }
+
+      // Calcular la duración en días si cambiaron las fechas
+      const inicio = new Date(actividadEditando.fechaInicio);
+      const fin = new Date(actividadEditando.fechaFin);
+      const duracionDias = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (duracionDias < 0) {
+        toast.error("La fecha de fin debe ser posterior a la fecha de inicio");
+        return;
+      }
+      
+      // Actualizar la duración
+      const actividadActualizada = {
+        ...actividadEditando,
+        duracion: duracionDias
+      };
+      
+      updateActividad(actividadActualizada.id, actividadActualizada);
+      setShowEditDialog(false);
+      toast.success("Actividad actualizada exitosamente", {
+        description: "Los cambios se han guardado correctamente."
+      });
+    }
+  };
+  
+  // Función para confirmar la eliminación
+  const handleConfirmDelete = () => {
+    if (actividadAEliminar) {
+      deleteActividad(actividadAEliminar);
+      setActividadAEliminar(null);
+      toast.success("Actividad eliminada exitosamente");
+    }
+  };
+
   // Función para agregar una nueva actividad
   const handleAddActividad = () => {
     // Esta es la manera correcta de crear una nueva actividad, asegurándose de que tenga todos los campos requeridos
@@ -214,6 +294,28 @@ const ActividadesTable: React.FC = () => {
     return sortConfig.direction === 'asc' 
       ? <SortAsc className="h-4 w-4 text-indigo-500" />
       : <SortDesc className="h-4 w-4 text-indigo-500" />;
+  };
+
+  // Manejar cambio de fecha de inicio
+  const handleFechaInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (actividadEditando) {
+      const fechaInicio = e.target.value;
+      setActividadEditando({
+        ...actividadEditando,
+        fechaInicio: new Date(fechaInicio).toISOString()
+      });
+    }
+  };
+
+  // Manejar cambio de fecha de fin
+  const handleFechaFinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (actividadEditando) {
+      const fechaFin = e.target.value;
+      setActividadEditando({
+        ...actividadEditando,
+        fechaFin: new Date(fechaFin).toISOString()
+      });
+    }
   };
 
   return (
@@ -401,7 +503,11 @@ const ActividadesTable: React.FC = () => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleEditActividad(actividad)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
@@ -414,9 +520,31 @@ const ActividadesTable: React.FC = () => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive">
-                              <Trash className="h-4 w-4" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta acción eliminará permanentemente la actividad "{actividad.nombre}".
+                                    Esta acción no puede deshacerse.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => deleteActividad(actividad.id)}
+                                    className="bg-red-500 hover:bg-red-600"
+                                  >
+                                    Eliminar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Eliminar actividad</p>
@@ -437,6 +565,104 @@ const ActividadesTable: React.FC = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Diálogo de edición de actividad */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Editar Actividad</DialogTitle>
+            <DialogDescription>
+              Modifique los datos de la actividad
+            </DialogDescription>
+          </DialogHeader>
+          
+          {actividadEditando && (
+            <div className="grid gap-4 py-3">
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="nombreActividad">Nombre de Actividad *</Label>
+                <Input 
+                  id="nombreActividad"
+                  value={actividadEditando.nombre}
+                  onChange={(e) => setActividadEditando({
+                    ...actividadEditando,
+                    nombre: e.target.value
+                  })}
+                  placeholder="Ej: Montaje de equipos"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sistema">Sistema *</Label>
+                  <Input 
+                    id="sistema"
+                    value={actividadEditando.sistema}
+                    onChange={(e) => setActividadEditando({
+                      ...actividadEditando,
+                      sistema: e.target.value
+                    })}
+                    placeholder="Ej: Sistema Eléctrico"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="subsistema">Subsistema *</Label>
+                  <Input 
+                    id="subsistema"
+                    value={actividadEditando.subsistema}
+                    onChange={(e) => setActividadEditando({
+                      ...actividadEditando,
+                      subsistema: e.target.value
+                    })}
+                    placeholder="Ej: Iluminación"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fechaInicio">Fecha Inicio</Label>
+                  <Input 
+                    id="fechaInicio"
+                    type="date"
+                    value={new Date(actividadEditando.fechaInicio).toISOString().split('T')[0]}
+                    onChange={handleFechaInicioChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fechaFin">Fecha Fin</Label>
+                  <Input 
+                    id="fechaFin"
+                    type="date"
+                    value={new Date(actividadEditando.fechaFin).toISOString().split('T')[0]}
+                    onChange={handleFechaFinChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="duracion">Duración (días)</Label>
+                  <Input 
+                    id="duracion"
+                    type="number"
+                    value={actividadEditando.duracion}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveActividad}>
+              <Save className="h-4 w-4 mr-2" />
+              Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

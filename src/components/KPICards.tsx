@@ -1,277 +1,239 @@
 
 import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAppContext } from "@/context/AppContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, CheckCircle, FileCheck, Layers } from "lucide-react";
+import { CheckCircle, FileText, AlertTriangle, ArrowUpFromLine } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { 
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent
-} from "@/components/ui/chart";
 
 interface KPICardsProps {
   proyectoId?: string;
 }
 
-const COLORS = ["#22c55e", "#94a3b8"];
-const COLORS_RED = ["#ef4444", "#94a3b8"];
-const COLORS_INDIGO = ["#6366f1", "#94a3b8"];
-
 const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
-  const { getKPIs, proyectos } = useAppContext();
+  const { getKPIs } = useAppContext();
+  
   const kpis = getKPIs(proyectoId);
-
-  // Si hay un proyecto seleccionado, mostrar su título
-  const proyectoTitulo = proyectoId && proyectoId !== "todos" ? 
-    proyectos.find(p => p.id === proyectoId)?.titulo || "Proyecto" : 
-    "Todos los proyectos";
-
-  // Datos para los gráficos de pie
-  const dataITRB = [
-    { name: "Completados", value: kpis.realizadosITRB },
-    { name: "Pendientes", value: kpis.totalITRB - kpis.realizadosITRB }
+  
+  // Formato para porcentajes
+  const formatPercentage = (value: number): string => {
+    return value.toFixed(1) + '%';
+  };
+  
+  // Calculo del porcentaje de avance
+  const avancePorcentaje = kpis.totalITRB > 0 
+    ? Math.round((kpis.realizadosITRB / kpis.totalITRB) * 100)
+    : 0;
+  
+  // Data para el gráfico de avance
+  const avanceData = [
+    { name: 'Completado', value: kpis.realizadosITRB },
+    { name: 'Pendiente', value: kpis.totalITRB - kpis.realizadosITRB },
   ];
-
-  const dataSubsistemas = [
-    { name: "Con CCC", value: kpis.subsistemasCCC },
-    { name: "Sin CCC", value: kpis.totalSubsistemas - kpis.subsistemasCCC }
+  
+  // Data para el gráfico de CCC
+  const cccData = [
+    { name: 'Con CCC', value: kpis.subsistemasCCC },
+    { name: 'Sin CCC', value: kpis.totalSubsistemas - kpis.subsistemasCCC },
   ];
-
-  const dataVencidos = [
-    { name: "Vencidos", value: kpis.actividadesVencidas },
-    { name: "En Tiempo", value: kpis.totalITRB - kpis.actividadesVencidas }
-  ];
-
+  
+  // Colores para los gráficos
+  const COLORS = ['#4F46E5', '#E5E7EB', '#F43F5E', '#D1D5DB'];
+  
+  // CustomTooltip para los gráficos
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-slate-800 p-2 border rounded shadow-sm text-xs">
+          <p className="font-medium">{`${payload[0].name}: ${payload[0].value}`}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+  
   return (
-    <div className="mb-6">
-      {proyectoId && proyectoId !== "todos" && (
-        <h2 className="text-lg font-semibold mb-2 text-muted-foreground">
-          {proyectoTitulo}
-        </h2>
-      )}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Avance físico */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avance Físico
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold mb-2">
-              {kpis.avanceFisico.toFixed(1)}%
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Avance Físico */}
+      <Card className="relative overflow-hidden">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Avance Físico</p>
+              <div className="flex items-baseline">
+                <h3 className="text-2xl font-bold">
+                  {typeof avancePorcentaje === 'number' ? avancePorcentaje.toFixed(1) : '0.0'}%
+                </h3>
+                <span className="text-xs text-green-500 ml-2 flex items-center">
+                  <ArrowUpFromLine className="h-3 w-3 mr-1" />
+                  Progreso
+                </span>
+              </div>
+              <Progress value={avancePorcentaje} className="h-2 mt-2" />
             </div>
-            <Progress
-              value={kpis.avanceFisico}
-              className="h-2 mb-2"
-            />
-            <div className="h-[100px] mt-4">
+            
+            <div className="w-[70px] h-[70px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={avanceData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={18}
+                    outerRadius={30}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {avanceData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* ITR B Completados */}
+      <Card className="relative overflow-hidden">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center">
+                <FileText className="h-4 w-4 mr-1 text-indigo-500" />
+                <p className="text-sm font-medium text-muted-foreground mb-1">ITR B Completados</p>
+              </div>
+              <div className="flex items-baseline">
+                <h3 className="text-2xl font-bold">
+                  {kpis.realizadosITRB} / {kpis.totalITRB}
+                </h3>
+              </div>
+              <Progress 
+                value={(kpis.realizadosITRB / (kpis.totalITRB || 1)) * 100} 
+                className="h-2 mt-2" 
+              />
+            </div>
+            
+            <div className="w-[70px] h-[70px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={[
-                      { name: "Completado", value: kpis.avanceFisico },
-                      { name: "Pendiente", value: 100 - kpis.avanceFisico }
+                      { name: 'Completados', value: kpis.realizadosITRB },
+                      { name: 'Pendientes', value: kpis.totalITRB - kpis.realizadosITRB }
                     ]}
                     cx="50%"
                     cy="50%"
-                    innerRadius={25}
-                    outerRadius={40}
-                    paddingAngle={3}
+                    innerRadius={18}
+                    outerRadius={30}
+                    paddingAngle={2}
                     dataKey="value"
-                    animationDuration={800}
                   >
-                    <Cell fill="#22c55e" />
-                    <Cell fill="#e5e7eb" />
+                    <Cell fill="#4F46E5" />
+                    <Cell fill="#E5E7EB" />
                   </Pie>
-                  <Tooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-white p-2 border rounded shadow text-xs">
-                            {payload[0].name}: {payload[0].value.toFixed(1)}%
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* ITR B completados */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-              <FileCheck className="mr-1 h-4 w-4 text-green-500" />
-              ITR B Completados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold mb-2">
-              {kpis.realizadosITRB} / {kpis.totalITRB}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Subsistemas con CCC */}
+      <Card className="relative overflow-hidden">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center">
+                <CheckCircle className="h-4 w-4 mr-1 text-indigo-500" />
+                <p className="text-sm font-medium text-muted-foreground mb-1">Subsistemas con CCC</p>
+              </div>
+              <div className="flex items-baseline">
+                <h3 className="text-2xl font-bold">
+                  {kpis.subsistemasCCC} / {kpis.totalSubsistemas}
+                </h3>
+              </div>
+              <Progress 
+                value={(kpis.subsistemasCCC / (kpis.totalSubsistemas || 1)) * 100} 
+                className="h-2 mt-2" 
+              />
             </div>
-            <Progress
-              value={kpis.totalITRB > 0 ? (kpis.realizadosITRB / kpis.totalITRB) * 100 : 0}
-              className="h-2 mb-2"
-            />
             
-            <ChartContainer 
-              config={{
-                Completados: { color: "#22c55e" },
-                Pendientes: { color: "#94a3b8" }
-              }}
-              className="h-[100px] mt-4"
-            >
+            <div className="w-[70px] h-[70px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={dataITRB}
+                    data={cccData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={25}
-                    outerRadius={40}
-                    paddingAngle={3}
+                    innerRadius={18}
+                    outerRadius={30}
+                    paddingAngle={2}
                     dataKey="value"
-                    animationDuration={800}
                   >
-                    {dataITRB.map((entry, index) => (
+                    {cccData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <ChartTooltip
-                    content={({ active, payload }) => 
-                      active && payload && payload.length ? (
-                        <ChartTooltipContent
-                          className="bg-white p-2 border rounded shadow text-xs"
-                        />
-                      ) : null
-                    }
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Subsistemas con CCC */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-              <CheckCircle className="mr-1 h-4 w-4 text-indigo-500" />
-              Subsistemas con CCC
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold mb-2">
-              {kpis.subsistemasCCC} / {kpis.totalSubsistemas}
             </div>
-            <Progress
-              value={kpis.totalSubsistemas > 0 ? (kpis.subsistemasCCC / kpis.totalSubsistemas) * 100 : 0}
-              className="h-2 mb-2"
-            />
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Vencidos */}
+      <Card className="relative overflow-hidden bg-gradient-to-br from-red-50 to-white dark:from-red-900/20 dark:to-slate-800/50">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center">
+                <AlertTriangle className="h-4 w-4 mr-1 text-red-500" />
+                <p className="text-sm font-medium text-muted-foreground mb-1">Vencidos</p>
+              </div>
+              <div className="flex items-baseline">
+                <h3 className="text-2xl font-bold text-red-500">{kpis.actividadesVencidas}</h3>
+              </div>
+              <div className="text-xs mt-1 text-muted-foreground">
+                {kpis.actividadesVencidas === 0 ? (
+                  <span className="text-green-500">No hay ITR B vencidos</span>
+                ) : (
+                  <span className="text-red-500">
+                    {kpis.actividadesVencidas} {kpis.actividadesVencidas === 1 ? 'ITR B vencido' : 'ITR B vencidos'}
+                  </span>
+                )}
+              </div>
+            </div>
             
-            <ChartContainer 
-              config={{
-                "Con CCC": { color: "#6366f1" },
-                "Sin CCC": { color: "#94a3b8" }
-              }}
-              className="h-[100px] mt-4"
-            >
+            <div className="w-[70px] h-[70px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={dataSubsistemas}
+                    data={[
+                      { name: 'Vencidos', value: kpis.actividadesVencidas },
+                      { name: 'Al día', value: kpis.totalITRB - kpis.actividadesVencidas }
+                    ]}
                     cx="50%"
                     cy="50%"
-                    innerRadius={25}
-                    outerRadius={40}
-                    paddingAngle={3}
+                    innerRadius={18}
+                    outerRadius={30}
+                    paddingAngle={2}
                     dataKey="value"
-                    animationDuration={800}
                   >
-                    {dataSubsistemas.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS_INDIGO[index % COLORS_INDIGO.length]} />
-                    ))}
+                    <Cell fill="#F43F5E" />
+                    <Cell fill="#D1D5DB" />
                   </Pie>
-                  <ChartTooltip
-                    content={({ active, payload }) => 
-                      active && payload && payload.length ? (
-                        <ChartTooltipContent
-                          className="bg-white p-2 border rounded shadow text-xs"
-                        />
-                      ) : null
-                    }
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Actividades vencidas */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
-              <AlertCircle className="mr-1 h-4 w-4 text-red-500" />
-              Vencidos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500 mb-2">
-              {kpis.actividadesVencidas}
             </div>
-            
-            <ChartContainer 
-              config={{
-                Vencidos: { color: "#ef4444" },
-                "En Tiempo": { color: "#94a3b8" }
-              }}
-              className="h-[100px] mt-4"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dataVencidos}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={25}
-                    outerRadius={40}
-                    paddingAngle={3}
-                    dataKey="value"
-                    animationDuration={800}
-                  >
-                    {dataVencidos.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS_RED[index % COLORS_RED.length]} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip
-                    content={({ active, payload }) => 
-                      active && payload && payload.length ? (
-                        <ChartTooltipContent
-                          className="bg-white p-2 border rounded shadow text-xs"
-                        />
-                      ) : null
-                    }
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-            
-            <div className="text-xs text-muted-foreground mt-2">
-              {kpis.actividadesVencidas > 0 
-                ? `${kpis.actividadesVencidas} ITR B requieren atención inmediata` 
-                : "No hay ITR B vencidos"}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

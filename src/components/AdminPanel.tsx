@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +21,8 @@ import {
   Bell,
   SunMoon,
   Download,
-  CalendarIcon,
-  CheckCircle,
+  Edit2,
+  Trash2,
   Save
 } from "lucide-react";
 import {
@@ -40,6 +41,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import KPICards from "@/components/KPICards";
@@ -60,6 +72,8 @@ const AdminPanel: React.FC = () => {
     filtros,
     proyectos,
     addProyecto,
+    updateProyecto,
+    deleteProyecto,
     actividades,
     addActividad,
     itrbItems,
@@ -79,6 +93,10 @@ const AdminPanel: React.FC = () => {
     titulo: "",
     descripcion: ""
   });
+  
+  // Estado para el proyecto en edición
+  const [proyectoEditando, setProyectoEditando] = useState<Proyecto | null>(null);
+  const [showEditProyectoDialog, setShowEditProyectoDialog] = useState(false);
 
   // Estados para la nueva actividad
   const [nuevaActividad, setNuevaActividad] = useState<Omit<Actividad, "id">>({
@@ -121,6 +139,45 @@ const AdminPanel: React.FC = () => {
     addProyecto(proyecto);
     setNuevoProyecto({ titulo: "", descripcion: "" });
     toast.success("Proyecto creado exitosamente");
+  };
+  
+  // Handler para editar un proyecto
+  const handleEditarProyecto = (proyecto: Proyecto) => {
+    setProyectoEditando({...proyecto});
+    setShowEditProyectoDialog(true);
+  };
+  
+  // Handler para guardar los cambios del proyecto
+  const handleGuardarProyecto = () => {
+    if (proyectoEditando) {
+      if (!proyectoEditando.titulo.trim()) {
+        toast.error("El título del proyecto es obligatorio");
+        return;
+      }
+      
+      const proyectoActualizado: Proyecto = {
+        ...proyectoEditando,
+        fechaActualizacion: new Date().toISOString()
+      };
+      
+      updateProyecto(proyectoEditando.id, proyectoActualizado);
+      setShowEditProyectoDialog(false);
+      toast.success("Proyecto actualizado exitosamente", {
+        description: "Los cambios se han guardado correctamente."
+      });
+    }
+  };
+  
+  // Handler para eliminar un proyecto
+  const handleEliminarProyecto = (id: string) => {
+    deleteProyecto(id);
+    
+    // Si se elimina el proyecto actualmente seleccionado, cambiar a "todos"
+    if (proyectoActual === id) {
+      setProyectoActual("todos");
+    }
+    
+    toast.success("Proyecto eliminado exitosamente");
   };
 
   // Handler para crear una nueva actividad
@@ -518,125 +575,6 @@ const AdminPanel: React.FC = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle>Actividades</CardTitle>
-              {isAdmin && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      Nueva Actividad
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-xl">
-                    <DialogHeader>
-                      <DialogTitle>Crear Nueva Actividad</DialogTitle>
-                      <DialogDescription>
-                        Complete los datos para la nueva actividad
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="grid gap-4 py-3">
-                      <div className="grid grid-cols-1 gap-2">
-                        <Label htmlFor="proyectoActividad">Proyecto *</Label>
-                        <Select 
-                          value={nuevaActividad.proyectoId}
-                          onValueChange={(value) => setNuevaActividad({...nuevaActividad, proyectoId: value})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar proyecto" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {proyectos.map(proyecto => (
-                              <SelectItem key={proyecto.id} value={proyecto.id}>
-                                {proyecto.titulo}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 gap-2">
-                        <Label htmlFor="nombreActividad">Nombre de Actividad *</Label>
-                        <Input 
-                          id="nombreActividad"
-                          value={nuevaActividad.nombre}
-                          onChange={(e) => setNuevaActividad({...nuevaActividad, nombre: e.target.value})}
-                          placeholder="Ej: Montaje de equipos"
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="sistema">Sistema *</Label>
-                          <Input 
-                            id="sistema"
-                            value={nuevaActividad.sistema}
-                            onChange={(e) => setNuevaActividad({...nuevaActividad, sistema: e.target.value})}
-                            placeholder="Ej: Sistema Eléctrico"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="subsistema">Subsistema *</Label>
-                          <Input 
-                            id="subsistema"
-                            value={nuevaActividad.subsistema}
-                            onChange={(e) => setNuevaActividad({...nuevaActividad, subsistema: e.target.value})}
-                            placeholder="Ej: Iluminación"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="fechaInicio">Fecha Inicio</Label>
-                          <Input 
-                            id="fechaInicio"
-                            type="date"
-                            value={nuevaActividad.fechaInicio}
-                            onChange={handleFechaInicioChange}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="fechaFin">Fecha Fin</Label>
-                          <Input 
-                            id="fechaFin"
-                            type="date"
-                            value={nuevaActividad.fechaFin}
-                            onChange={handleFechaFinChange}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="duracion">Duración (días)</Label>
-                          <Input 
-                            id="duracion"
-                            type="number"
-                            value={nuevaActividad.duracion}
-                            onChange={(e) => setNuevaActividad({...nuevaActividad, duracion: parseInt(e.target.value)})}
-                            min={1}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setNuevaActividad({
-                        proyectoId: proyectoActual !== "todos" ? proyectoActual : "",
-                        nombre: "",
-                        sistema: "",
-                        subsistema: "",
-                        fechaInicio: new Date().toISOString().split('T')[0],
-                        fechaFin: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                        duracion: 7
-                      })}>
-                        Cancelar
-                      </Button>
-                      <Button onClick={handleCrearActividad}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Guardar Actividad
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              )}
             </CardHeader>
             <CardContent>
               <ActividadesTable />
@@ -801,14 +739,41 @@ const AdminPanel: React.FC = () => {
                           </p>
                         </div>
                         <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-4 w-4 mr-2" />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleEditarProyecto(proyecto)}
+                          >
+                            <Edit2 className="h-4 w-4 mr-2" />
                             Editar
                           </Button>
-                          <Button variant="outline" size="sm" className="text-destructive">
-                            <Trash className="h-4 w-4 mr-2" />
-                            Eliminar
-                          </Button>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-destructive">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Eliminar
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta acción eliminará permanentemente el proyecto "{proyecto.titulo}"
+                                  y todas sus actividades e ITR B asociados. Esta acción no puede deshacerse.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleEliminarProyecto(proyecto.id)}
+                                  className="bg-red-500 hover:bg-red-600"
+                                >
+                                  Eliminar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </div>
@@ -817,7 +782,11 @@ const AdminPanel: React.FC = () => {
               ) : (
                 <div className="text-center py-10">
                   <p className="text-muted-foreground">No hay proyectos creados</p>
-                  <Button className="mt-4" onClick={() => document.querySelector('[data-dialog-trigger="nuevo-proyecto"]')?.click()}>
+                  <Button className="mt-4" onClick={() => document.querySelectorAll('[data-state="closed"]')[0]?.dispatchEvent(new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                  }))}>
                     <PlusCircle className="h-4 w-4 mr-2" />
                     Crear Primer Proyecto
                   </Button>
@@ -882,6 +851,53 @@ const AdminPanel: React.FC = () => {
             </CardContent>
           </Card>
         )}
+        
+        {/* Diálogo de edición de proyecto */}
+        <Dialog open={showEditProyectoDialog} onOpenChange={setShowEditProyectoDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Proyecto</DialogTitle>
+              <DialogDescription>
+                Modifique los datos del proyecto
+              </DialogDescription>
+            </DialogHeader>
+            
+            {proyectoEditando && (
+              <div className="space-y-4 py-3">
+                <div className="space-y-2">
+                  <Label htmlFor="tituloEdit">Título del Proyecto *</Label>
+                  <Input 
+                    id="tituloEdit" 
+                    value={proyectoEditando.titulo}
+                    onChange={(e) => setProyectoEditando({...proyectoEditando, titulo: e.target.value})}
+                    placeholder="Título del proyecto"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="descripcionEdit">Descripción</Label>
+                  <Textarea 
+                    id="descripcionEdit"
+                    value={proyectoEditando.descripcion}
+                    onChange={(e) => setProyectoEditando({...proyectoEditando, descripcion: e.target.value})}
+                    placeholder="Descripción del proyecto..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditProyectoDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleGuardarProyecto}>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar Cambios
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         
         <div className="py-6 border-t mt-6 text-center text-xs text-muted-foreground">
           Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
