@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+// La importación de autotable está en main.tsx, no es necesario repetirla aquí
 import * as XLSX from "xlsx";
 
 const Header: React.FC = () => {
