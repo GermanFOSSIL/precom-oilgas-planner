@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { 
@@ -19,7 +18,7 @@ import {
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Download, FilePdf, FileText, Settings, Image, Palette } from "lucide-react";
+import { Download, FileText, Settings, Image, Palette } from "lucide-react";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -278,12 +277,12 @@ const ReportGenerator: React.FC = () => {
     }
     
     // Pie de página en todas las páginas
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text(`Página ${i} de ${totalPages} - Plan de Precomisionado v1.0.0`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+      doc.text(`Página ${i} de ${pageCount} - Plan de Precomisionado v1.0.0`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
     }
     
     // Guardar PDF
@@ -605,7 +604,7 @@ const ReportGenerator: React.FC = () => {
                   size="sm"
                   onClick={() => setPreviewMode("pdf")}
                 >
-                  <FilePdf className="h-4 w-4 mr-2" />
+                  <FileText className="h-4 w-4 mr-2" />
                   PDF
                 </Button>
                 

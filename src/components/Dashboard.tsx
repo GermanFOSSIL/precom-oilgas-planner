@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
@@ -40,7 +39,7 @@ const Dashboard: React.FC = () => {
   });
 
   const [tabActual, setTabActual] = useState("gantt");
-
+  
   const generarPDF = () => {
     const doc = new jsPDF();
     
