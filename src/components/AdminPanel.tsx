@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +68,7 @@ const AdminPanel: React.FC = () => {
     setProyectoActual
   } = useAppContext();
   
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
     tamano: "mediano",
     mostrarLeyenda: true
@@ -235,6 +235,107 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  // Función para generar PDF
+  const handleGenerarPDF = () => {
+    const doc = new window.jsPDF();
+    const title = proyectoActual !== "todos" 
+      ? `Plan de Precomisionado - ${proyectos.find(p => p.id === proyectoActual)?.titulo || 'Todos los proyectos'}`
+      : "Plan de Precomisionado - Todos los proyectos";
+    
+    // Configuración de estilos
+    doc.setFontSize(18);
+    doc.text(title, 14, 20);
+    doc.setFontSize(12);
+    
+    // Fecha y usuario
+    const fechaActual = new Date().toLocaleDateString('es-ES');
+    doc.text(`Generado por: ${user?.nombre || user?.email}`, 14, 30);
+    doc.text(`Fecha: ${fechaActual}`, 14, 36);
+    
+    // Tabla de actividades
+    doc.setFontSize(14);
+    doc.text("Actividades", 14, 50);
+    
+    const actividadesFiltradas = actividades.filter(actividad => 
+      proyectoActual === "todos" || actividad.proyectoId === proyectoActual
+    );
+    
+    if (actividadesFiltradas.length > 0) {
+      const actividadesData = actividadesFiltradas.map(act => [
+        act.id.substring(0, 8),
+        act.nombre,
+        act.sistema,
+        act.subsistema,
+        new Date(act.fechaInicio).toLocaleDateString('es-ES'),
+        new Date(act.fechaFin).toLocaleDateString('es-ES'),
+        `${act.duracion} días`
+      ]);
+
+      (doc as any).autoTable({
+        startY: 55,
+        head: [['ID', 'Nombre', 'Sistema', 'Subsistema', 'Inicio', 'Fin', 'Duración']],
+        body: actividadesData,
+        theme: 'striped',
+        headStyles: { fillColor: [75, 85, 99] }
+      });
+    } else {
+      doc.text("No hay actividades para mostrar", 14, 60);
+    }
+    
+    // Tabla de ITR B
+    const lastPosition = (doc as any).lastAutoTable?.finalY || 90;
+    doc.setFontSize(14);
+    doc.text("ITR B", 14, lastPosition + 10);
+    
+    const itrbFiltrados = itrbItems.filter(itrb => {
+      const actividad = actividades.find(act => act.id === itrb.actividadId);
+      return !actividad || proyectoActual === "todos" || actividad.proyectoId === proyectoActual;
+    });
+    
+    if (itrbFiltrados.length > 0) {
+      const itrbData = itrbFiltrados.map(itrb => {
+        const actividad = actividades.find(act => act.id === itrb.actividadId);
+        return [
+          itrb.id.substring(0, 8),
+          itrb.descripcion,
+          actividad ? `${actividad.nombre} (${actividad.sistema})` : 'N/A',
+          `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
+          itrb.estado,
+          itrb.ccc ? 'Sí' : 'No',
+          new Date(itrb.fechaLimite).toLocaleDateString('es-ES')
+        ];
+      });
+      
+      (doc as any).autoTable({
+        startY: lastPosition + 15,
+        head: [['ID', 'Descripción', 'Actividad', 'Progreso', 'Estado', 'CCC', 'Fecha Límite']],
+        body: itrbData,
+        theme: 'striped',
+        headStyles: { fillColor: [75, 85, 99] }
+      });
+    } else {
+      doc.text("No hay ITR B para mostrar", 14, lastPosition + 15);
+    }
+    
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      doc.text(`Página ${i} de ${pageCount} - Plan de Precomisionado v1.0.0`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+    }
+    
+    doc.save("plan-precomisionado.pdf");
+    toast.success("PDF generado exitosamente");
+  };
+
+  // Función para generar Excel
+  const handleGenerarExcel = () => {
+    // Implementar en una siguiente fase
+    toast.info("Funcionalidad de exportación a Excel en desarrollo");
+  };
+
   return (
     <div className={`min-h-screen flex ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
       {/* Sidebar */}
@@ -247,35 +348,65 @@ const AdminPanel: React.FC = () => {
         </div>
         
         <nav className="flex-1 p-4 space-y-1">
-          <Button variant="ghost" className="w-full justify-start" size="sm">
+          <Button 
+            variant={activeTab === "dashboard" ? "default" : "ghost"} 
+            className="w-full justify-start" 
+            size="sm"
+            onClick={() => setActiveTab("dashboard")}
+          >
             <LayoutDashboard className="h-4 w-4 mr-2" />
             Dashboard
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start" size="sm">
+          <Button 
+            variant={activeTab === "actividades" ? "default" : "ghost"} 
+            className="w-full justify-start" 
+            size="sm"
+            onClick={() => setActiveTab("actividades")}
+          >
             <FileText className="h-4 w-4 mr-2" />
             Actividades
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start" size="sm">
+          <Button 
+            variant={activeTab === "itrb" ? "default" : "ghost"} 
+            className="w-full justify-start" 
+            size="sm"
+            onClick={() => setActiveTab("itrb")}
+          >
             <PlusCircle className="h-4 w-4 mr-2" />
             ITR B
           </Button>
           
           {isAdmin && (
-            <Button variant="ghost" className="w-full justify-start" size="sm">
+            <Button 
+              variant={activeTab === "proyectos" ? "default" : "ghost"} 
+              className="w-full justify-start" 
+              size="sm"
+              onClick={() => setActiveTab("proyectos")}
+            >
               <Layers className="h-4 w-4 mr-2" />
               Proyectos
             </Button>
           )}
           
-          <Button variant="ghost" className="w-full justify-start" size="sm">
+          <Button 
+            variant={activeTab === "alertas" ? "default" : "ghost"} 
+            className="w-full justify-start" 
+            size="sm"
+            onClick={() => setActiveTab("alertas")}
+          >
             <Bell className="h-4 w-4 mr-2" />
             Alertas
           </Button>
           
           {isAdmin && (
-            <Button variant="ghost" className="w-full justify-start" size="sm">
+            <Button 
+              variant={activeTab === "configuracion" ? "default" : "ghost"} 
+              className="w-full justify-start" 
+              size="sm"
+              onClick={() => setActiveTab("configuracion")}
+            >
               <Settings className="h-4 w-4 mr-2" />
               Configuración
             </Button>
@@ -288,7 +419,7 @@ const AdminPanel: React.FC = () => {
               <SunMoon className="h-4 w-4" />
             </Button>
             
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={handleGenerarPDF}>
               <Download className="h-4 w-4" />
             </Button>
             
@@ -372,317 +503,385 @@ const AdminPanel: React.FC = () => {
         
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
         
-        <Tabs defaultValue="gantt" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="gantt">
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              Diagrama Gantt
-            </TabsTrigger>
-            <TabsTrigger value="actividades">
-              <FileText className="h-4 w-4 mr-2" />
-              Actividades
-            </TabsTrigger>
-            <TabsTrigger value="itrb">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              ITR B
-            </TabsTrigger>
-            <TabsTrigger value="alertas">
-              <Bell className="h-4 w-4 mr-2" />
-              Alertas
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="gantt">
-            <Card>
-              <CardContent className="p-0 h-[600px]">
-                <GanttChart
-                  filtros={filtros}
-                  configuracion={configuracionGrafico}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="actividades">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle>Actividades</CardTitle>
-                {isAdmin && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <PlusCircle className="h-4 w-4 mr-2" />
-                        Nueva Actividad
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-xl">
-                      <DialogHeader>
-                        <DialogTitle>Crear Nueva Actividad</DialogTitle>
-                        <DialogDescription>
-                          Complete los datos para la nueva actividad
-                        </DialogDescription>
-                      </DialogHeader>
+        {activeTab === "dashboard" && (
+          <Card>
+            <CardContent className="p-0 h-[600px]">
+              <GanttChart
+                filtros={filtros}
+                configuracion={configuracionGrafico}
+              />
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "actividades" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle>Actividades</CardTitle>
+              {isAdmin && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Nueva Actividad
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                      <DialogTitle>Crear Nueva Actividad</DialogTitle>
+                      <DialogDescription>
+                        Complete los datos para la nueva actividad
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-4 py-3">
+                      <div className="grid grid-cols-1 gap-2">
+                        <Label htmlFor="proyectoActividad">Proyecto *</Label>
+                        <Select 
+                          value={nuevaActividad.proyectoId}
+                          onValueChange={(value) => setNuevaActividad({...nuevaActividad, proyectoId: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar proyecto" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {proyectos.map(proyecto => (
+                              <SelectItem key={proyecto.id} value={proyecto.id}>
+                                {proyecto.titulo}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       
-                      <div className="grid gap-4 py-3">
-                        <div className="grid grid-cols-1 gap-2">
-                          <Label htmlFor="proyectoActividad">Proyecto *</Label>
-                          <Select 
-                            value={nuevaActividad.proyectoId}
-                            onValueChange={(value) => setNuevaActividad({...nuevaActividad, proyectoId: value})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar proyecto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {proyectos.map(proyecto => (
-                                <SelectItem key={proyecto.id} value={proyecto.id}>
-                                  {proyecto.titulo}
+                      <div className="grid grid-cols-1 gap-2">
+                        <Label htmlFor="nombreActividad">Nombre de Actividad *</Label>
+                        <Input 
+                          id="nombreActividad"
+                          value={nuevaActividad.nombre}
+                          onChange={(e) => setNuevaActividad({...nuevaActividad, nombre: e.target.value})}
+                          placeholder="Ej: Montaje de equipos"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="sistema">Sistema *</Label>
+                          <Input 
+                            id="sistema"
+                            value={nuevaActividad.sistema}
+                            onChange={(e) => setNuevaActividad({...nuevaActividad, sistema: e.target.value})}
+                            placeholder="Ej: Sistema Eléctrico"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="subsistema">Subsistema *</Label>
+                          <Input 
+                            id="subsistema"
+                            value={nuevaActividad.subsistema}
+                            onChange={(e) => setNuevaActividad({...nuevaActividad, subsistema: e.target.value})}
+                            placeholder="Ej: Iluminación"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="fechaInicio">Fecha Inicio</Label>
+                          <Input 
+                            id="fechaInicio"
+                            type="date"
+                            value={nuevaActividad.fechaInicio}
+                            onChange={handleFechaInicioChange}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="fechaFin">Fecha Fin</Label>
+                          <Input 
+                            id="fechaFin"
+                            type="date"
+                            value={nuevaActividad.fechaFin}
+                            onChange={handleFechaFinChange}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="duracion">Duración (días)</Label>
+                          <Input 
+                            id="duracion"
+                            type="number"
+                            value={nuevaActividad.duracion}
+                            onChange={(e) => setNuevaActividad({...nuevaActividad, duracion: parseInt(e.target.value)})}
+                            min={1}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setNuevaActividad({
+                        proyectoId: proyectoActual !== "todos" ? proyectoActual : "",
+                        nombre: "",
+                        sistema: "",
+                        subsistema: "",
+                        fechaInicio: new Date().toISOString().split('T')[0],
+                        fechaFin: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        duracion: 7
+                      })}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleCrearActividad}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Guardar Actividad
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </CardHeader>
+            <CardContent>
+              <ActividadesTable />
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "itrb" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle>ITR B</CardTitle>
+              {(isAdmin || isTecnico) && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Nuevo ITR B
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Crear Nuevo ITR B</DialogTitle>
+                      <DialogDescription>
+                        Asocie el ITR B a una actividad existente
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 py-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="actividadId">Actividad Asociada *</Label>
+                        <Select 
+                          value={nuevoITRB.actividadId}
+                          onValueChange={(value) => setNuevoITRB({...nuevoITRB, actividadId: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar actividad" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {actividades
+                              .filter(act => proyectoActual === "todos" || act.proyectoId === proyectoActual)
+                              .map(actividad => (
+                                <SelectItem key={actividad.id} value={actividad.id}>
+                                  {actividad.nombre} ({actividad.sistema} - {actividad.subsistema})
                                 </SelectItem>
                               ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-2">
-                          <Label htmlFor="nombreActividad">Nombre de Actividad *</Label>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="descripcionITRB">Descripción *</Label>
+                        <Input 
+                          id="descripcionITRB"
+                          value={nuevoITRB.descripcion}
+                          onChange={(e) => setNuevoITRB({...nuevoITRB, descripcion: e.target.value})}
+                          placeholder="Ej: Revisión de montaje de luminarias"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="cantidadTotal">Cantidad Total</Label>
                           <Input 
-                            id="nombreActividad"
-                            value={nuevaActividad.nombre}
-                            onChange={(e) => setNuevaActividad({...nuevaActividad, nombre: e.target.value})}
-                            placeholder="Ej: Montaje de equipos"
+                            id="cantidadTotal"
+                            type="number"
+                            value={nuevoITRB.cantidadTotal}
+                            onChange={(e) => setNuevoITRB({...nuevoITRB, cantidadTotal: parseInt(e.target.value)})}
+                            min={1}
                           />
                         </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="sistema">Sistema *</Label>
-                            <Input 
-                              id="sistema"
-                              value={nuevaActividad.sistema}
-                              onChange={(e) => setNuevaActividad({...nuevaActividad, sistema: e.target.value})}
-                              placeholder="Ej: Sistema Eléctrico"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="subsistema">Subsistema *</Label>
-                            <Input 
-                              id="subsistema"
-                              value={nuevaActividad.subsistema}
-                              onChange={(e) => setNuevaActividad({...nuevaActividad, subsistema: e.target.value})}
-                              placeholder="Ej: Iluminación"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="fechaInicio">Fecha Inicio</Label>
-                            <Input 
-                              id="fechaInicio"
-                              type="date"
-                              value={nuevaActividad.fechaInicio}
-                              onChange={handleFechaInicioChange}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="fechaFin">Fecha Fin</Label>
-                            <Input 
-                              id="fechaFin"
-                              type="date"
-                              value={nuevaActividad.fechaFin}
-                              onChange={handleFechaFinChange}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="duracion">Duración (días)</Label>
-                            <Input 
-                              id="duracion"
-                              type="number"
-                              value={nuevaActividad.duracion}
-                              onChange={(e) => setNuevaActividad({...nuevaActividad, duracion: parseInt(e.target.value)})}
-                              min={1}
-                            />
-                          </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cantidadRealizada">Cantidad Realizada</Label>
+                          <Input 
+                            id="cantidadRealizada"
+                            type="number"
+                            value={nuevoITRB.cantidadRealizada}
+                            onChange={(e) => setNuevoITRB({...nuevoITRB, cantidadRealizada: parseInt(e.target.value)})}
+                            min={0}
+                            max={nuevoITRB.cantidadTotal}
+                          />
                         </div>
                       </div>
                       
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setNuevaActividad({
-                          proyectoId: proyectoActual !== "todos" ? proyectoActual : "",
-                          nombre: "",
-                          sistema: "",
-                          subsistema: "",
-                          fechaInicio: new Date().toISOString().split('T')[0],
-                          fechaFin: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                          duracion: 7
-                        })}>
-                          Cancelar
-                        </Button>
-                        <Button onClick={handleCrearActividad}>
-                          <Save className="h-4 w-4 mr-2" />
-                          Guardar Actividad
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </CardHeader>
-              <CardContent>
-                <ActividadesTable />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="itrb">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle>ITR B</CardTitle>
-                {(isAdmin || isTecnico) && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <PlusCircle className="h-4 w-4 mr-2" />
-                        Nuevo ITR B
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="fechaLimite">Fecha Límite</Label>
+                          <Input 
+                            id="fechaLimite"
+                            type="date"
+                            value={nuevoITRB.fechaLimite}
+                            onChange={(e) => setNuevoITRB({...nuevoITRB, fechaLimite: e.target.value})}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2 pt-8">
+                          <input
+                            type="checkbox"
+                            id="ccc"
+                            checked={nuevoITRB.ccc}
+                            onChange={(e) => setNuevoITRB({...nuevoITRB, ccc: e.target.checked})}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <Label htmlFor="ccc">Marcar como CCC</Label>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="observaciones">Observaciones</Label>
+                        <Textarea 
+                          id="observaciones"
+                          value={nuevoITRB.observaciones || ""}
+                          onChange={(e) => setNuevoITRB({...nuevoITRB, observaciones: e.target.value})}
+                          placeholder="Observaciones adicionales..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setNuevoITRB({
+                        actividadId: "",
+                        descripcion: "",
+                        cantidadTotal: 1,
+                        cantidadRealizada: 0,
+                        fechaLimite: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        ccc: false,
+                        observaciones: ""
+                      })}>
+                        Cancelar
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Crear Nuevo ITR B</DialogTitle>
-                        <DialogDescription>
-                          Asocie el ITR B a una actividad existente
-                        </DialogDescription>
-                      </DialogHeader>
-                      
-                      <div className="space-y-4 py-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="actividadId">Actividad Asociada *</Label>
-                          <Select 
-                            value={nuevoITRB.actividadId}
-                            onValueChange={(value) => setNuevoITRB({...nuevoITRB, actividadId: value})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar actividad" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {actividades
-                                .filter(act => proyectoActual === "todos" || act.proyectoId === proyectoActual)
-                                .map(actividad => (
-                                  <SelectItem key={actividad.id} value={actividad.id}>
-                                    {actividad.nombre} ({actividad.sistema} - {actividad.subsistema})
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+                      <Button onClick={handleCrearITRB}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Guardar ITR B
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </CardHeader>
+            <CardContent>
+              <ITRBTable />
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "proyectos" && isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de Proyectos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {proyectos.length > 0 ? (
+                <div className="space-y-4">
+                  {proyectos.map(proyecto => (
+                    <div key={proyecto.id} className="border rounded-md p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-lg font-medium">{proyecto.titulo}</h3>
+                          <p className="text-sm text-muted-foreground">ID: {proyecto.id}</p>
+                          <p className="text-sm mt-2">{proyecto.descripcion}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Creado: {new Date(proyecto.fechaCreacion).toLocaleDateString()}
+                          </p>
                         </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="descripcionITRB">Descripción *</Label>
-                          <Input 
-                            id="descripcionITRB"
-                            value={nuevoITRB.descripcion}
-                            onChange={(e) => setNuevoITRB({...nuevoITRB, descripcion: e.target.value})}
-                            placeholder="Ej: Revisión de montaje de luminarias"
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="cantidadTotal">Cantidad Total</Label>
-                            <Input 
-                              id="cantidadTotal"
-                              type="number"
-                              value={nuevoITRB.cantidadTotal}
-                              onChange={(e) => setNuevoITRB({...nuevoITRB, cantidadTotal: parseInt(e.target.value)})}
-                              min={1}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="cantidadRealizada">Cantidad Realizada</Label>
-                            <Input 
-                              id="cantidadRealizada"
-                              type="number"
-                              value={nuevoITRB.cantidadRealizada}
-                              onChange={(e) => setNuevoITRB({...nuevoITRB, cantidadRealizada: parseInt(e.target.value)})}
-                              min={0}
-                              max={nuevoITRB.cantidadTotal}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="fechaLimite">Fecha Límite</Label>
-                            <Input 
-                              id="fechaLimite"
-                              type="date"
-                              value={nuevoITRB.fechaLimite}
-                              onChange={(e) => setNuevoITRB({...nuevoITRB, fechaLimite: e.target.value})}
-                            />
-                          </div>
-                          <div className="flex items-center space-x-2 pt-8">
-                            <input
-                              type="checkbox"
-                              id="ccc"
-                              checked={nuevoITRB.ccc}
-                              onChange={(e) => setNuevoITRB({...nuevoITRB, ccc: e.target.checked})}
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <Label htmlFor="ccc">Marcar como CCC</Label>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="observaciones">Observaciones</Label>
-                          <Textarea 
-                            id="observaciones"
-                            value={nuevoITRB.observaciones || ""}
-                            onChange={(e) => setNuevoITRB({...nuevoITRB, observaciones: e.target.value})}
-                            placeholder="Observaciones adicionales..."
-                            rows={3}
-                          />
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm">
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-destructive">
+                            <Trash className="h-4 w-4 mr-2" />
+                            Eliminar
+                          </Button>
                         </div>
                       </div>
-                      
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setNuevoITRB({
-                          actividadId: "",
-                          descripcion: "",
-                          cantidadTotal: 1,
-                          cantidadRealizada: 0,
-                          fechaLimite: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                          ccc: false,
-                          observaciones: ""
-                        })}>
-                          Cancelar
-                        </Button>
-                        <Button onClick={handleCrearITRB}>
-                          <Save className="h-4 w-4 mr-2" />
-                          Guardar ITR B
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </CardHeader>
-              <CardContent>
-                <ITRBTable />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="alertas">
-            <Card>
-              <CardHeader>
-                <CardTitle>Alertas</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground py-10">
-                  Sistema de alertas (en desarrollo)
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground">No hay proyectos creados</p>
+                  <Button className="mt-4" onClick={() => document.querySelector('[data-dialog-trigger="nuevo-proyecto"]')?.click()}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Crear Primer Proyecto
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "alertas" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Alertas</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-center text-muted-foreground py-10">
+                Sistema de alertas (en desarrollo)
+              </p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "configuracion" && isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuración</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Exportar datos</h3>
+                  <div className="flex space-x-2">
+                    <Button onClick={handleGenerarPDF}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar a PDF
+                    </Button>
+                    <Button variant="outline" onClick={handleGenerarExcel}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar a Excel
+                    </Button>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Apariencia</h3>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" onClick={toggleTheme}>
+                      <SunMoon className="h-4 w-4 mr-2" />
+                      Cambiar a modo {theme.mode === "dark" ? "claro" : "oscuro"}
+                    </Button>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Acerca de</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Plan de Precomisionado v1.0.0<br />
+                    © {new Date().getFullYear()} Fossil Energy
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         <div className="py-6 border-t mt-6 text-center text-xs text-muted-foreground">
           Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
