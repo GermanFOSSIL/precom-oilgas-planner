@@ -18,7 +18,9 @@ import {
   Settings,
   Bell,
   SunMoon,
-  Download
+  Download,
+  CalendarIcon,
+  CheckCircle
 } from "lucide-react";
 import KPICards from "@/components/KPICards";
 import ProyectoSelector from "@/components/ProyectoSelector";
@@ -119,7 +121,7 @@ const AdminPanel: React.FC = () => {
         <Tabs defaultValue="gantt" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="gantt">
-              <Calendar className="h-4 w-4 mr-2" />
+              <CalendarIcon className="h-4 w-4 mr-2" />
               Diagrama Gantt
             </TabsTrigger>
             <TabsTrigger value="actividades">

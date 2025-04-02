@@ -105,7 +105,7 @@ const PublicDashboard: React.FC = () => {
                 <SelectValue placeholder="Sistema" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los sistemas</SelectItem>
+                <SelectItem value="todos">Todos los sistemas</SelectItem>
                 {sistemasDisponibles.map((sistema) => (
                   <SelectItem key={sistema} value={sistema}>
                     {sistema}
@@ -123,7 +123,7 @@ const PublicDashboard: React.FC = () => {
                 <SelectValue placeholder="Subsistema" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los subsistemas</SelectItem>
+                <SelectItem value="todos">Todos los subsistemas</SelectItem>
                 {subsistemasFiltrados.map((subsistema) => (
                   <SelectItem key={subsistema} value={subsistema}>
                     {subsistema}
@@ -140,7 +140,7 @@ const PublicDashboard: React.FC = () => {
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los estados</SelectItem>
+                <SelectItem value="todos">Todos los estados</SelectItem>
                 <SelectItem value="Completado">Completado</SelectItem>
                 <SelectItem value="En curso">En curso</SelectItem>
                 <SelectItem value="Vencido">Vencido</SelectItem>

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import KPICards from "@/components/KPICards";
@@ -7,8 +7,17 @@ import ActividadesTable from "@/components/ActividadesTable";
 import ITRBTable from "@/components/ITRBTable";
 import GanttChart from "@/components/GanttChart";
 import { Calendar, FileText, Table2 } from "lucide-react";
+import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
+import { useAppContext } from "@/context/AppContext";
 
 const Dashboard: React.FC = () => {
+  const { filtros } = useAppContext();
+  
+  const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
+    tamano: "mediano",
+    mostrarLeyenda: true
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
@@ -33,7 +42,10 @@ const Dashboard: React.FC = () => {
           </TabsList>
           
           <TabsContent value="gantt" className="mt-0">
-            <GanttChart />
+            <GanttChart 
+              filtros={filtros} 
+              configuracion={configuracionGrafico} 
+            />
           </TabsContent>
           
           <TabsContent value="actividades" className="mt-0">
