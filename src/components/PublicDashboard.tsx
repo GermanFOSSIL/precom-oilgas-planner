@@ -69,7 +69,8 @@ const PublicDashboard: React.FC = () => {
 
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
     tamano: "mediano",
-    mostrarLeyenda: true
+    mostrarLeyenda: true,
+    mostrarSubsistemas: true
   });
   
   const [tabActual, setTabActual] = useState("gantt");

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import {
@@ -46,66 +45,54 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const [currentStartDate, setCurrentStartDate] = useState<Date>(new Date());
   const [currentEndDate, setCurrentEndDate] = useState<Date>(addDays(new Date(), 30));
   
-  // Determinar si mostrar subsistemas basado en la configuración
   const mostrarSubsistemas = configuracion.mostrarSubsistemas !== undefined 
     ? configuracion.mostrarSubsistemas 
     : true;
 
   useEffect(() => {
-    // Simular carga de datos
     const timer = setTimeout(() => {
       setLoading(false);
     }, 500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Filtrar actividades según los filtros aplicados
   const actividadesFiltradas = useMemo(() => {
     return actividades.filter(actividad => {
-      // Filtrar por proyecto
       if (filtros.proyecto !== "todos" && actividad.proyectoId !== filtros.proyecto) {
         return false;
       }
       
-      // Filtrar por sistema
       if (filtros.sistema && filtros.sistema !== "todos" && actividad.sistema !== filtros.sistema) {
         return false;
       }
       
-      // Filtrar por subsistema
       if (filtros.subsistema && filtros.subsistema !== "todos" && actividad.subsistema !== filtros.subsistema) {
         return false;
       }
       
-      // Filtrar por búsqueda de actividad o código ITR
       if (filtros.busquedaActividad) {
         const busquedaMinuscula = filtros.busquedaActividad.toLowerCase();
         
-        // Buscar en el nombre de la actividad
         if (actividad.nombre.toLowerCase().includes(busquedaMinuscula)) {
           return true;
         }
         
-        // Buscar en los ITRs asociados a esta actividad
         const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
         return itrbsAsociados.some(itrb => 
           itrb.descripcion.toLowerCase().includes(busquedaMinuscula)
         );
       }
       
-      // Filtrar por estado de ITRB
       if (filtros.estadoITRB && filtros.estadoITRB !== "todos") {
         const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
         return itrbsAsociados.some(itrb => itrb.estado === filtros.estadoITRB);
       }
       
-      // Filtrar por tareas vencidas
       if (filtros.tareaVencida) {
         const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
         return itrbsAsociados.some(itrb => itrb.estado === "Vencido");
       }
       
-      // Filtrar por MCC
       if (filtros.mcc) {
         const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
         return itrbsAsociados.some(itrb => itrb.mcc);
@@ -115,24 +102,18 @@ const GanttChart: React.FC<GanttChartProps> = ({
     });
   }, [actividades, itrbItems, filtros]);
 
-  // Preparar datos para el gráfico de Gantt
   const ganttData = useMemo(() => {
     return actividadesFiltradas.map(actividad => {
       const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
       const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
       
-      // Calcular progreso
       const totalItrb = itrbsAsociados.length;
       const completados = itrbsAsociados.filter(itrb => itrb.estado === "Completado").length;
       const progreso = totalItrb > 0 ? (completados / totalItrb) * 100 : 0;
       
-      // Verificar si hay ITRBs vencidos
       const tieneVencidos = itrbsAsociados.some(itrb => itrb.estado === "Vencido");
-      
-      // Verificar si hay ITRBs MCC
       const tieneMCC = itrbsAsociados.some(itrb => itrb.mcc);
       
-      // Calcular fechas para el gráfico
       const fechaInicio = new Date(actividad.fechaInicio);
       const fechaFin = new Date(actividad.fechaFin);
       
@@ -154,15 +135,13 @@ const GanttChart: React.FC<GanttChartProps> = ({
     });
   }, [actividadesFiltradas, proyectos, itrbItems]);
 
-  // Función para obtener color según progreso
   const getColorByProgress = (progreso: number, tieneVencidos: boolean): string => {
-    if (tieneVencidos) return "#ef4444"; // Rojo para vencidos
-    if (progreso === 100) return "#22c55e"; // Verde para completados
-    if (progreso > 0) return "#f59e0b"; // Amarillo para en progreso
-    return "#94a3b8"; // Gris para no iniciados
+    if (tieneVencidos) return "#ef4444";
+    if (progreso === 100) return "#22c55e";
+    if (progreso > 0) return "#f59e0b";
+    return "#94a3b8";
   };
 
-  // Función para formatear fechas en el eje X
   const formatXAxis = (date: number) => {
     const dateObj = new Date(date);
     switch (viewMode) {
@@ -176,7 +155,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     }
   };
 
-  // Función para generar las fechas del eje X
   const getAxisDates = () => {
     const dates: Date[] = [];
     let currentDate = new Date(currentStartDate);
@@ -201,7 +179,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     return dates;
   };
 
-  // Función para navegar en el tiempo
   const navigateTime = (direction: "prev" | "next") => {
     let newStartDate, newEndDate;
     
@@ -240,7 +217,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     setCurrentEndDate(newEndDate);
   };
 
-  // Función para cambiar el nivel de zoom
   const changeZoom = (direction: "in" | "out") => {
     if (direction === "in" && zoomLevel < 2) {
       setZoomLevel(zoomLevel + 0.25);
@@ -249,7 +225,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     }
   };
 
-  // Personalizar el tooltip del gráfico
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -296,7 +271,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     return null;
   };
 
-  // Si está cargando, mostrar esqueleto
   if (loading) {
     return (
       <div className="w-full h-full flex flex-col">
@@ -311,7 +285,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     );
   }
 
-  // Si no hay datos, mostrar mensaje
   if (ganttData.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center">
@@ -464,7 +437,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
                 const fechaInicio = actividad.fechaInicio.getTime();
                 const fechaFin = actividad.fechaFin.getTime();
                 
-                // Calcular posición y ancho basado en fechas
                 const xStart = Math.max(
                   x, 
                   (fechaInicio - currentStartDate.getTime()) / 

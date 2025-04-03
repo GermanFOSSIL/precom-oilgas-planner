@@ -6,6 +6,7 @@ export interface BackupOptions {
   includeITRB: boolean;
   includeAlertas: boolean;
   proyectoSeleccionado?: string;
+  kpiConfig?: boolean;
 }
 
 // Make sure your ConfiguracionGrafico type includes mostrarSubsistemas
@@ -38,4 +39,25 @@ export interface FiltrosDashboard {
   busquedaActividad?: string;
   timestamp?: number;
   mcc?: boolean; // This should be mcc instead of ccc
+}
+
+// Add GraficoPersonalizado interface to ensure color is required
+export interface GraficoPersonalizado {
+  id: string;
+  titulo: string;
+  tipo: "barras" | "lineas" | "area" | "pastel";
+  datos: "actividades" | "itrb" | "avance" | "vencimientos";
+  filtro?: Partial<FiltrosDashboard>;
+  color: string;
+  posicion: number;
+}
+
+// Add OpcionesReporte interface for ReportGenerator
+export interface OpcionesReporte {
+  incluirGantt: boolean;
+  formatoGantt: string;
+  orientacion: string;
+  incluirKPIs: boolean;
+  incluirActividades: boolean;
+  incluirITRB: boolean;
 }

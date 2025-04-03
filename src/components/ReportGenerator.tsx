@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OpcionesReporte } from "@/types";
 import { toast } from "sonner";
-import { FileText, Download, Checkbox } from "lucide-react";
+import { FileText, Download } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const ReportGenerator: React.FC = () => {
   const { proyectos, actividades, itrbItems, filtros, getKPIs } = useAppContext();
@@ -30,6 +31,8 @@ const ReportGenerator: React.FC = () => {
       const jsPDFModule = await import('jspdf');
       const jsPDF = jsPDFModule.default;
       await import('jspdf-autotable');
+      const html2canvasModule = await import('html2canvas');
+      const html2canvas = html2canvasModule.default;
 
       const doc = new jsPDF({
         orientation: opciones.orientacion === "horizontal" ? "landscape" : "portrait",
@@ -43,7 +46,6 @@ const ReportGenerator: React.FC = () => {
       let currentY = 20;
       const margin = 10;
 
-      // Function to add a new page if content exceeds the page height
       const checkPageBreak = (contentHeight: number) => {
         if (currentY + contentHeight + margin > pageHeight) {
           doc.addPage({
@@ -51,30 +53,26 @@ const ReportGenerator: React.FC = () => {
             unit: "mm",
             format: 'a4'
           });
-          currentY = 20; // Reset Y position on the new page
+          currentY = 20;
         }
       };
 
-      // Título del reporte
       doc.setFontSize(18);
       doc.setTextColor(40, 40, 40);
       doc.text("Reporte de Precomisionado", margin, currentY);
       currentY += 10;
 
-      // Subtítulo con fecha y hora
       doc.setFontSize(10);
       doc.setTextColor(80, 80, 80);
       doc.text(`Generado: ${new Date().toLocaleString()}`, margin, currentY);
       currentY += 10;
 
-      // Información del proyecto
       const proyectoNombre = filtros.proyecto !== "todos"
         ? proyectos.find(p => p.id === filtros.proyecto)?.titulo || "Todos los proyectos"
         : "Todos los proyectos";
       doc.text(`Proyecto: ${proyectoNombre}`, margin, currentY);
       currentY += 10;
 
-      // Incluir KPIs
       if (opciones.incluirKPIs) {
         const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
         const kpisData = [
@@ -84,7 +82,7 @@ const ReportGenerator: React.FC = () => {
           ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
         ];
 
-        checkPageBreak(kpisData.length * 10); // Approximate height for KPI table
+        checkPageBreak(kpisData.length * 10);
 
         (doc as any).autoTable({
           startY: currentY,
@@ -96,7 +94,6 @@ const ReportGenerator: React.FC = () => {
         currentY = (doc as any).lastAutoTable.finalY + margin;
       }
 
-      // Incluir gráfico de Gantt
       if (opciones.incluirGantt) {
         const ganttChartModule = await import('@/components/EnhancedGanttChart');
         const ganttChart = ganttChartModule.default;
@@ -147,7 +144,6 @@ const ReportGenerator: React.FC = () => {
         }
       }
 
-      // Incluir tabla de actividades
       if (opciones.incluirActividades) {
         const actividadesFiltradas = actividades.filter(act =>
           filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
@@ -163,7 +159,7 @@ const ReportGenerator: React.FC = () => {
             `${act.duracion} días`
           ]);
 
-          checkPageBreak(actividadesData.length * 10); // Approximate height for activities table
+          checkPageBreak(actividadesData.length * 10);
 
           (doc as any).autoTable({
             startY: currentY,
@@ -176,7 +172,6 @@ const ReportGenerator: React.FC = () => {
         }
       }
 
-      // Incluir tabla de ITR B
       if (opciones.incluirITRB) {
         const itrbsFiltrados = itrbItems.filter(itrb => {
           const actividad = actividades.find(act => act.id === itrb.actividadId);
@@ -196,7 +191,7 @@ const ReportGenerator: React.FC = () => {
             ];
           });
 
-          checkPageBreak(itrbData.length * 10); // Approximate height for ITRB table
+          checkPageBreak(itrbData.length * 10);
 
           (doc as any).autoTable({
             startY: currentY,
@@ -209,7 +204,6 @@ const ReportGenerator: React.FC = () => {
         }
       }
 
-      // Footer
       const pageCount = doc.getNumberOfPages();
       doc.setFontSize(8);
       doc.setTextColor(150);
