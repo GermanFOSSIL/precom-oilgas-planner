@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ const BackupRestoreManager = () => {
     includeActividades: true,
     includeITRB: true,
     includeAlertas: true,
-    kpiConfig: true
+    includeKpiConfig: true // Changed from kpiConfig to includeKpiConfig
   });
   
   const [progress, setProgress] = useState(0);
@@ -75,7 +76,7 @@ const BackupRestoreManager = () => {
         backupData.alertas = alertas;
       }
       
-      if (backupOptions.kpiConfig) {
+      if (backupOptions.includeKpiConfig) { // Changed from kpiConfig to includeKpiConfig
         backupData.kpiConfig = kpiConfig;
       }
       
@@ -181,8 +182,8 @@ const BackupRestoreManager = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="config-backup" 
-                  checked={backupOptions.kpiConfig}
-                  onCheckedChange={() => handleBackupOptionChange('kpiConfig')}
+                  checked={backupOptions.includeKpiConfig}
+                  onCheckedChange={() => handleBackupOptionChange('includeKpiConfig')}
                 />
                 <Label htmlFor="config-backup">Configuración de KPIs</Label>
               </div>
@@ -206,7 +207,7 @@ const BackupRestoreManager = () => {
                    (backupOptions.includeActividades ? actividades.length : 0) +
                    (backupOptions.includeITRB ? itrbItems.length : 0) +
                    (backupOptions.includeAlertas ? alertas.length : 0) +
-                   (backupOptions.kpiConfig ? 1 : 0)}
+                   (backupOptions.includeKpiConfig ? 1 : 0)}
                 </p>
               </div>
               

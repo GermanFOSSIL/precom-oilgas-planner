@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { useAppContext } from "@/context/AppContext";
@@ -83,7 +82,7 @@ type DropResult = {
     droppableId: string;
     index: number;
   };
-  reason: 'DROP';
+  reason: string;
 };
 
 const formSchema = z.object({
@@ -144,7 +143,7 @@ const Dashboard: React.FC = () => {
   const [editandoGraficoId, setEditandoGraficoId] = useState<string | null>(null);
 
   useEffect(() => {
-    setFiltros({ ...filtros, timestamp: Date.now() });
+    setFiltros({ ...filtros, timestamp: Date.now().toString() });
   }, []);
 
   const sistemasDisponibles = Array.from(
@@ -461,7 +460,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const onDragEnd = (result: DropResult) => {
+  const onDragEnd = (result: any) => {
     if (!result.destination) {
       return;
     }
@@ -470,7 +469,6 @@ const Dashboard: React.FC = () => {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    // Actualizar la posición de los gráficos
     const updatedGraficos = items.map((grafico, index) => ({ ...grafico, posicion: index }));
 
     setGraficosPersonalizados(updatedGraficos);

@@ -52,7 +52,7 @@ const BackupRestoreUploader = () => {
     includeActividades: true,
     includeITRB: true,
     includeAlertas: true,
-    includeKpiConfig: true
+    includeKpiConfig: true // Changed from includeKpiConfig to match the updated interface
   });
   
   const [backupFile, setBackupFile] = useState<File | null>(null);

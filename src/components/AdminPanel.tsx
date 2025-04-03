@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox"; // Added missing import
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   LayoutDashboard,
   LogOut,
@@ -94,7 +93,8 @@ const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
     tamano: "mediano",
-    mostrarLeyenda: true
+    mostrarLeyenda: true,
+    mostrarSubsistemas: true
   });
   const [configTab, setConfigTab] = useState("users");
 
@@ -125,7 +125,7 @@ const AdminPanel: React.FC = () => {
     cantidadTotal: 1,
     cantidadRealizada: 0,
     fechaLimite: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    mcc: false, // Changed from ccc to mcc
+    mcc: false,
     observaciones: ""
   });
 
@@ -248,7 +248,7 @@ const AdminPanel: React.FC = () => {
       cantidadTotal: 1,
       cantidadRealizada: 0,
       fechaLimite: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      mcc: false, // Changed from ccc to mcc
+      mcc: false,
       observaciones: ""
     });
     
@@ -884,7 +884,6 @@ const AdminPanel: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Add dialogs for new activity and ITRB which were missing */}
         <Dialog open={showNewActivityDialog} onOpenChange={setShowNewActivityDialog}>
           <DialogContent>
             <DialogHeader>

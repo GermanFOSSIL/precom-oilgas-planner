@@ -82,7 +82,7 @@ const PublicDashboard: React.FC = () => {
   const [modoFiltroAvanzado, setModoFiltroAvanzado] = useState(false);
 
   useEffect(() => {
-    setFiltros({ ...filtros, timestamp: Date.now() });
+    setFiltros({ ...filtros, timestamp: Date.now().toString() });
   }, []);
 
   const sistemasDisponibles = Array.from(

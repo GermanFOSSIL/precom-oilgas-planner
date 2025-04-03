@@ -1,4 +1,3 @@
-
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -71,20 +70,19 @@ export interface FiltrosDashboard {
   estadoITRB?: "Completado" | "En curso" | "Vencido" | "todos";
   mcc?: boolean;
   tareaVencida?: boolean;
-  timestamp?: number; 
+  timestamp?: string;
 }
 
 export interface ConfiguracionGrafico {
   tamano: "pequeno" | "mediano" | "grande" | "completo";
   mostrarLeyenda: boolean;
-  mostrarSubsistemas: boolean; // Changed from optional to required
+  mostrarSubsistemas: boolean;
 }
 
 export interface AppTheme {
   mode: "light" | "dark";
 }
 
-// Configuración de KPIs ampliada
 export interface KPIConfig {
   itrVencidosMostrar: "total" | "diferencia" | "pendientes" | "completados";
   nombreKPI1?: string;
@@ -97,14 +95,12 @@ export interface KPIConfig {
   kpiPersonalizado4?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasMCC";
 }
 
-// Nueva configuración para Ruta Crítica
 export interface CriticalPathConfig {
   vistaAgrupada: "proyecto" | "sistema" | "subsistema";
   mostrarCompletados: boolean;
   ordernarPor: "retraso" | "impacto" | "fechaVencimiento";
 }
 
-// Nueva interfaz para filtros avanzados
 export interface FiltrosAvanzados {
   fechaInicioRango?: string;
   fechaFinRango?: string;
@@ -113,14 +109,12 @@ export interface FiltrosAvanzados {
   estado?: EstadoITRB[];
 }
 
-// Para mejorar la asignación de ITRBs a Actividades
 export interface ItemRelacionado {
   id: string;
   tipo: "actividad" | "itrb" | "proyecto";
   nombre: string;
 }
 
-// Nueva interfaz para configurar gráficos dinámicos
 export interface GraficoPersonalizado {
   id: string;
   titulo: string;
@@ -131,7 +125,6 @@ export interface GraficoPersonalizado {
   posicion: number;
 }
 
-// Interface for exported report options
 export interface OpcionesReporte {
   incluirGantt: boolean;
   formatoGantt: "imagen" | "tabla";
@@ -141,12 +134,11 @@ export interface OpcionesReporte {
   incluirITRB: boolean;
 }
 
-// Updated BackupOptions interface with correct property names
 export interface BackupOptions {
   includeProyectos: boolean;
   includeActividades: boolean;
   includeITRB: boolean;
   includeAlertas: boolean;
-  includeKpiConfig?: boolean;
+  includeKpiConfig: boolean;
   proyectoSeleccionado?: string;
 }
