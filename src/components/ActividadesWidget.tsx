@@ -192,13 +192,13 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
                   <div className="mt-1">
                     <Progress 
                       value={actividad.progreso} 
-                      className={`h-2 ${
+                      className={
                         actividad.progreso === 100 
                           ? "bg-green-500" 
                           : actividad.estado === "vencida"
                             ? "bg-red-500"
                             : "bg-blue-500"
-                      }`}
+                      }
                     />
                     <div className="flex justify-between mt-1 text-xs text-muted-foreground">
                       <span>Progreso</span>

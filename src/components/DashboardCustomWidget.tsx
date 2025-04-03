@@ -56,6 +56,11 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
   const { actividades, itrbItems, proyectos } = useAppContext();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   
+  const bindDrag = useDrag((state) => {
+    const { movement } = state;
+    setPosition({ x: movement[0], y: movement[1] });
+  });
+  
   const getData = () => {
     switch (widget.datos) {
       case "avance":
@@ -302,10 +307,6 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
         return <BarChart4 className="h-5 w-5 mr-2" />;
     }
   };
-  
-  const bindDrag = useDrag(({ movement: [x, y] }) => {
-    setPosition({ x, y });
-  });
   
   return (
     <Card 
