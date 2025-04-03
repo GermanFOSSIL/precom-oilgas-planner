@@ -43,6 +43,7 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   mostrarLeyenda = true
 }) => {
   const [hoveredItem, setHoveredItem] = useState<GanttData | null>(null);
+  const [hoveredItrb, setHoveredItrb] = useState<any | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -105,12 +106,22 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   // Handle mouse over for tooltip
   const handleMouseOver = (event: React.MouseEvent, item: GanttData) => {
     setHoveredItem(item);
+    setHoveredItrb(null);
     setTooltipPosition({ x: event.clientX, y: event.clientY });
+  };
+
+  // Handle mouse over for ITR tooltip
+  const handleItrbMouseOver = (event: React.MouseEvent, itrb: any) => {
+    setHoveredItrb(itrb);
+    setHoveredItem(null);
+    setTooltipPosition({ x: event.clientX, y: event.clientY });
+    event.stopPropagation();
   };
 
   // Handle mouse out for tooltip
   const handleMouseOut = () => {
     setHoveredItem(null);
+    setHoveredItrb(null);
   };
 
   // Calculate gridTemplateColumns for the date headers
@@ -264,24 +275,42 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                                   </div>
                                 </div>
 
-                                {/* Individual ITR items */}
+                                {/* Individual ITR items as bars instead of points */}
                                 {item.itrbsAsociados.map((itrb, itrbIndex) => {
                                   const itrbStatus = itrb.estado || "En curso";
                                   const itrbDate = new Date(itrb.fechaLimite);
                                   
+                                  // If ITRB is outside the visible range, don't render it
                                   if (!isDateInRange(itrbDate)) return null;
+                                  
+                                  // Use the activity's start date as the ITR's start date
+                                  const itrbStartDate = new Date(item.fechaInicio);
+                                  
+                                  // Calculate the ITR bar's position and width
+                                  const itrbLeft = calculatePosition(itrbStartDate);
+                                  const itrbRight = calculatePosition(itrbDate);
+                                  const itrbWidth = itrbRight - itrbLeft;
                                   
                                   return (
                                     <div 
                                       key={`itrb-${itrb.id}`}
-                                      className="absolute w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 z-10"
+                                      className="absolute h-3 rounded-sm z-10 border-2 border-white dark:border-gray-800"
                                       style={{ 
-                                        left: `${calculatePosition(itrbDate)}%`,
-                                        top: "50%",
-                                        transform: "translate(-50%, -50%)",
+                                        left: `${itrbLeft}%`,
+                                        width: `${itrbWidth}%`,
+                                        top: "calc(50% + 4px)",
                                         backgroundColor: getStatusColor(itrbStatus)
                                       }}
-                                      title={`${itrb.descripcion} (${itrbStatus})`}
+                                      onMouseOver={(e) => handleItrbMouseOver(e, {
+                                        ...itrb,
+                                        actividad: item.nombre,
+                                        sistema: item.sistema,
+                                        subsistema: item.subsistema,
+                                        proyecto: item.proyecto,
+                                        fechaInicio: itrbStartDate,
+                                        fechaFin: itrbDate
+                                      })}
+                                      onMouseOut={handleMouseOut}
                                     />
                                   );
                                 })}
@@ -340,24 +369,42 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                                   </div>
                                 </div>
 
-                                {/* Individual ITR items */}
+                                {/* Individual ITR items as bars instead of points */}
                                 {item.itrbsAsociados.map((itrb, itrbIndex) => {
                                   const itrbStatus = itrb.estado || "En curso";
                                   const itrbDate = new Date(itrb.fechaLimite);
                                   
+                                  // If ITRB is outside the visible range, don't render it
                                   if (!isDateInRange(itrbDate)) return null;
+                                  
+                                  // Use the activity's start date as the ITR's start date
+                                  const itrbStartDate = new Date(item.fechaInicio);
+                                  
+                                  // Calculate the ITR bar's position and width
+                                  const itrbLeft = calculatePosition(itrbStartDate);
+                                  const itrbRight = calculatePosition(itrbDate);
+                                  const itrbWidth = itrbRight - itrbLeft;
                                   
                                   return (
                                     <div 
                                       key={`itrb-direct-${itrb.id}`}
-                                      className="absolute w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 z-10"
+                                      className="absolute h-3 rounded-sm z-10 border-2 border-white dark:border-gray-800"
                                       style={{ 
-                                        left: `${calculatePosition(itrbDate)}%`,
-                                        top: "50%",
-                                        transform: "translate(-50%, -50%)",
+                                        left: `${itrbLeft}%`,
+                                        width: `${itrbWidth}%`,
+                                        top: "calc(50% + 4px)",
                                         backgroundColor: getStatusColor(itrbStatus)
                                       }}
-                                      title={`${itrb.descripcion} (${itrbStatus})`}
+                                      onMouseOver={(e) => handleItrbMouseOver(e, {
+                                        ...itrb,
+                                        actividad: item.nombre,
+                                        sistema: item.sistema,
+                                        subsistema: item.subsistema,
+                                        proyecto: item.proyecto,
+                                        fechaInicio: itrbStartDate,
+                                        fechaFin: itrbDate
+                                      })}
+                                      onMouseOut={handleMouseOut}
                                     />
                                   );
                                 })}
@@ -380,6 +427,64 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
           item={hoveredItem} 
           position={tooltipPosition} 
         />
+      )}
+      
+      {/* ITRB Tooltip */}
+      {hoveredItrb && (
+        <div
+          className="fixed z-50 bg-white dark:bg-slate-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-md p-3 text-sm min-w-[250px] max-w-[350px]"
+          style={{
+            top: `${tooltipPosition.y + 10}px`,
+            left: `${tooltipPosition.x + 10}px`,
+          }}
+        >
+          <h3 className="font-bold text-base mb-1 border-b pb-1">{hoveredItrb.descripcion}</h3>
+          
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+            <div className="text-gray-500 dark:text-gray-400">Actividad:</div>
+            <div className="font-medium">{hoveredItrb.actividad}</div>
+            
+            <div className="text-gray-500 dark:text-gray-400">Proyecto:</div>
+            <div className="font-medium">{hoveredItrb.proyecto}</div>
+            
+            <div className="text-gray-500 dark:text-gray-400">Sistema:</div>
+            <div className="font-medium">{hoveredItrb.sistema}</div>
+            
+            <div className="text-gray-500 dark:text-gray-400">Subsistema:</div>
+            <div className="font-medium">{hoveredItrb.subsistema}</div>
+            
+            <div className="text-gray-500 dark:text-gray-400">Fecha inicio:</div>
+            <div className="font-medium">
+              {format(hoveredItrb.fechaInicio, "dd/MM/yyyy", { locale: es })}
+            </div>
+            
+            <div className="text-gray-500 dark:text-gray-400">Fecha límite:</div>
+            <div className="font-medium">
+              {format(hoveredItrb.fechaFin, "dd/MM/yyyy", { locale: es })}
+            </div>
+            
+            <div className="text-gray-500 dark:text-gray-400">Estado:</div>
+            <div className="font-medium">
+              <span 
+                className={`inline-block w-2 h-2 rounded-full mr-1 ${
+                  hoveredItrb.estado === "Completado" ? "bg-green-500" : 
+                  hoveredItrb.estado === "En curso" ? "bg-amber-500" : 
+                  hoveredItrb.estado === "Vencido" ? "bg-red-500" : "bg-gray-500"
+                }`}
+              />
+              {hoveredItrb.estado}
+            </div>
+            
+            {hoveredItrb.cantidadRealizada !== undefined && (
+              <>
+                <div className="text-gray-500 dark:text-gray-400">Progreso:</div>
+                <div className="font-medium">
+                  {hoveredItrb.cantidadRealizada}/{hoveredItrb.cantidadTotal}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Legend */}
