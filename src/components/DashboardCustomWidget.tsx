@@ -57,9 +57,12 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
   const { actividades, itrbItems, proyectos } = useAppContext();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   
-  // Fix for the useDrag implementation
-  const bindDrag = useDrag(({ movement }) => {
-    setPosition({ x: movement[0], y: movement[1] });
+  // Correct implementation of useDrag
+  const bindDrag = useDrag((state) => {
+    setPosition({ 
+      x: state.offset[0], 
+      y: state.offset[1] 
+    });
   });
   
   const getData = () => {
