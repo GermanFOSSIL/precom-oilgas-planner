@@ -152,3 +152,8 @@ export interface LoginProps {
 export interface PublicHeaderProps {
   onLoginClick?: () => void;
 }
+
+export interface APIKeys {
+  openAI?: string;
+  aiModel?: string;
+}

@@ -1,34 +1,16 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-  Cell,
-} from "recharts";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
-import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
-import { es } from "date-fns/locale";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Tooltip as UITooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { addDays } from "date-fns";
+
+// Import our refactored components
+import GanttLoadingState from "./gantt/GanttLoadingState";
+import GanttEmptyState from "./gantt/GanttEmptyState";
+import GanttNavigationControls from "./gantt/GanttNavigationControls";
+import GanttBarChart from "./gantt/GanttBarChart";
+import { useGanttData } from "./gantt/hooks/useGanttData";
+import { calculateNewDateRange } from "./gantt/utils/dateUtils";
 
 interface EnhancedGanttChartProps {
   filtros: FiltrosDashboard;
@@ -50,6 +32,10 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     ? configuracion.mostrarSubsistemas 
     : true;
 
+  // Get filtered and processed data from custom hook
+  const { ganttData } = useGanttData(actividades, itrbItems, proyectos, filtros);
+
+  // Simulate loading for a smoother experience
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -57,170 +43,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Define the getColorByProgress function BEFORE it's used in ganttData
-  const getColorByProgress = (progreso: number, tieneVencidos: boolean): string => {
-    if (tieneVencidos) return "#ef4444";
-    if (progreso === 100) return "#22c55e";
-    if (progreso > 0) return "#f59e0b";
-    return "#94a3b8";
-  };
-
-  const actividadesFiltradas = useMemo(() => {
-    return actividades.filter(actividad => {
-      if (filtros.proyecto !== "todos" && actividad.proyectoId !== filtros.proyecto) {
-        return false;
-      }
-      
-      if (filtros.sistema && filtros.sistema !== "todos" && actividad.sistema !== filtros.sistema) {
-        return false;
-      }
-      
-      if (filtros.subsistema && filtros.subsistema !== "todos" && actividad.subsistema !== filtros.subsistema) {
-        return false;
-      }
-      
-      if (filtros.busquedaActividad) {
-        const busquedaMinuscula = filtros.busquedaActividad.toLowerCase();
-        
-        if (actividad.nombre.toLowerCase().includes(busquedaMinuscula)) {
-          return true;
-        }
-        
-        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => 
-          itrb.descripcion.toLowerCase().includes(busquedaMinuscula)
-        );
-      }
-      
-      if (filtros.estadoITRB && filtros.estadoITRB !== "todos") {
-        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => itrb.estado === filtros.estadoITRB);
-      }
-      
-      if (filtros.tareaVencida) {
-        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => itrb.estado === "Vencido");
-      }
-      
-      if (filtros.mcc) {
-        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => itrb.mcc);
-      }
-      
-      return true;
-    });
-  }, [actividades, itrbItems, filtros]);
-
-  const ganttData = useMemo(() => {
-    return actividadesFiltradas.map(actividad => {
-      const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
-      const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-      
-      const totalItrb = itrbsAsociados.length;
-      const completados = itrbsAsociados.filter(itrb => itrb.estado === "Completado").length;
-      const progreso = totalItrb > 0 ? (completados / totalItrb) * 100 : 0;
-      
-      const tieneVencidos = itrbsAsociados.some(itrb => itrb.estado === "Vencido");
-      const tieneMCC = itrbsAsociados.some(itrb => itrb.mcc);
-      
-      const fechaInicio = new Date(actividad.fechaInicio);
-      const fechaFin = new Date(actividad.fechaFin);
-      
-      return {
-        id: actividad.id,
-        nombre: actividad.nombre,
-        sistema: actividad.sistema,
-        subsistema: actividad.subsistema,
-        fechaInicio,
-        fechaFin,
-        duracion: actividad.duracion,
-        progreso,
-        tieneVencidos,
-        tieneMCC,
-        proyecto: proyecto?.titulo || "Sin proyecto",
-        color: getColorByProgress(progreso, tieneVencidos),
-        itrbsAsociados
-      };
-    });
-  }, [actividadesFiltradas, proyectos, itrbItems]);
-
-  // The original getColorByProgress function was here, moved it above
-
-  const formatXAxis = (date: number) => {
-    const dateObj = new Date(date);
-    switch (viewMode) {
-      case "day":
-        return format(dateObj, "dd MMM", { locale: es });
-      case "week":
-        return format(dateObj, "dd MMM", { locale: es });
-      case "month":
-      default:
-        return format(dateObj, "MMM yyyy", { locale: es });
-    }
-  };
-
-  const getAxisDates = () => {
-    const dates: Date[] = [];
-    let currentDate = new Date(currentStartDate);
-    
-    while (currentDate <= currentEndDate) {
-      dates.push(new Date(currentDate));
-      
-      switch (viewMode) {
-        case "day":
-          currentDate = addDays(currentDate, 1);
-          break;
-        case "week":
-          currentDate = addDays(currentDate, 7);
-          break;
-        case "month":
-        default:
-          currentDate.setMonth(currentDate.getMonth() + 1);
-          break;
-      }
-    }
-    
-    return dates;
-  };
-
-  const navigateTime = (direction: "prev" | "next") => {
-    let newStartDate, newEndDate;
-    
-    switch (viewMode) {
-      case "day":
-        newStartDate = direction === "prev" 
-          ? addDays(currentStartDate, -7) 
-          : addDays(currentStartDate, 7);
-        newEndDate = direction === "prev" 
-          ? addDays(currentEndDate, -7) 
-          : addDays(currentEndDate, 7);
-        break;
-      case "week":
-        newStartDate = direction === "prev" 
-          ? addDays(currentStartDate, -28) 
-          : addDays(currentStartDate, 28);
-        newEndDate = direction === "prev" 
-          ? addDays(currentEndDate, -28) 
-          : addDays(currentEndDate, 28);
-        break;
-      case "month":
-      default:
-        newStartDate = new Date(currentStartDate);
-        newEndDate = new Date(currentEndDate);
-        if (direction === "prev") {
-          newStartDate.setMonth(newStartDate.getMonth() - 3);
-          newEndDate.setMonth(newEndDate.getMonth() - 3);
-        } else {
-          newStartDate.setMonth(newStartDate.getMonth() + 3);
-          newEndDate.setMonth(newEndDate.getMonth() + 3);
-        }
-        break;
-    }
-    
-    setCurrentStartDate(newStartDate);
-    setCurrentEndDate(newEndDate);
-  };
-
+  // Handle zoom level changes
   const changeZoom = (direction: "in" | "out") => {
     if (direction === "in" && zoomLevel < 2) {
       setZoomLevel(zoomLevel + 0.25);
@@ -229,266 +52,53 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      
-      return (
-        <Card className="p-0 shadow-lg border-0">
-          <CardContent className="p-3">
-            <div className="space-y-2">
-              <div className="font-medium">{data.nombre}</div>
-              <div className="text-sm text-muted-foreground">
-                {data.sistema} {mostrarSubsistemas ? `/ ${data.subsistema}` : ''}
-              </div>
-              <div className="text-xs">
-                <span className="font-medium">Duración:</span> {data.duracion} días
-              </div>
-              <div className="text-xs">
-                <span className="font-medium">Inicio:</span> {format(data.fechaInicio, "dd/MM/yyyy")}
-              </div>
-              <div className="text-xs">
-                <span className="font-medium">Fin:</span> {format(data.fechaFin, "dd/MM/yyyy")}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium">Progreso:</span>
-                <Progress value={data.progreso} className="h-2 w-24" />
-                <span className="text-xs">{Math.round(data.progreso)}%</span>
-              </div>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {data.tieneVencidos && (
-                  <Badge variant="destructive" className="text-xs">Vencido</Badge>
-                )}
-                {data.tieneMCC && (
-                  <Badge className="bg-blue-500 text-xs">MCC</Badge>
-                )}
-                {data.progreso === 100 && (
-                  <Badge className="bg-green-500 text-xs">Completado</Badge>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
+  // Handle time navigation
+  const navigateTime = (direction: "prev" | "next") => {
+    const { newStartDate, newEndDate } = calculateNewDateRange(
+      currentStartDate,
+      currentEndDate,
+      direction,
+      viewMode
+    );
     
-    return null;
+    setCurrentStartDate(newStartDate);
+    setCurrentEndDate(newEndDate);
+  };
+
+  // Handle view mode changes
+  const handleViewModeChange = (newMode: "month" | "week" | "day") => {
+    setViewMode(newMode);
   };
 
   if (loading) {
-    return (
-      <div className="w-full h-full flex flex-col">
-        <div className="flex justify-between items-center mb-4 px-4">
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-10 w-60" />
-        </div>
-        <div className="flex-1">
-          <Skeleton className="w-full h-full" />
-        </div>
-      </div>
-    );
+    return <GanttLoadingState />;
   }
 
   if (ganttData.length === 0) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center">
-          <h3 className="text-lg font-medium mb-2">No hay actividades para mostrar</h3>
-          <p className="text-muted-foreground">
-            Ajusta los filtros o agrega nuevas actividades
-          </p>
-        </div>
-      </div>
-    );
+    return <GanttEmptyState />;
   }
 
   return (
     <div className="w-full h-full flex flex-col gantt-chart-container">
-      <div className="flex justify-between items-center mb-4 px-4">
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigateTime("prev")}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigateTime("next")}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <span className="text-sm font-medium">
-            {format(currentStartDate, "MMM yyyy", { locale: es })} - {format(currentEndDate, "MMM yyyy", { locale: es })}
-          </span>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Tabs 
-            value={viewMode} 
-            onValueChange={(value) => setViewMode(value as "month" | "week" | "day")}
-            className="mr-2"
-          >
-            <TabsList className="h-8">
-              <TabsTrigger value="month" className="text-xs px-2 h-6">Mes</TabsTrigger>
-              <TabsTrigger value="week" className="text-xs px-2 h-6">Semana</TabsTrigger>
-              <TabsTrigger value="day" className="text-xs px-2 h-6">Día</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          <TooltipProvider>
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8" 
-                  onClick={() => changeZoom("in")}
-                  disabled={zoomLevel >= 2}
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Aumentar zoom</p>
-              </TooltipContent>
-            </UITooltip>
-          </TooltipProvider>
-          
-          <TooltipProvider>
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8" 
-                  onClick={() => changeZoom("out")}
-                  disabled={zoomLevel <= 0.5}
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Reducir zoom</p>
-              </TooltipContent>
-            </UITooltip>
-          </TooltipProvider>
-        </div>
-      </div>
+      <GanttNavigationControls
+        currentStartDate={currentStartDate}
+        currentEndDate={currentEndDate}
+        viewMode={viewMode}
+        zoomLevel={zoomLevel}
+        onNavigate={navigateTime}
+        onViewModeChange={handleViewModeChange}
+        onZoomChange={changeZoom}
+      />
       
-      <div className="flex-1 overflow-x-auto">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={ganttData}
-            layout="vertical"
-            barCategoryGap={4 * zoomLevel}
-            margin={{ top: 20, right: 30, left: 150, bottom: 20 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="fechaInicio" 
-              type="number" 
-              domain={[currentStartDate.getTime(), currentEndDate.getTime()]} 
-              tickFormatter={formatXAxis}
-              scale="time"
-              ticks={getAxisDates().map(date => date.getTime())}
-            />
-            <YAxis 
-              dataKey="nombre" 
-              type="category" 
-              width={150}
-              tick={({ x, y, payload }) => {
-                const actividad = ganttData.find(item => item.nombre === payload.value);
-                if (!actividad) return null;
-                
-                return (
-                  <g transform={`translate(${x},${y})`}>
-                    <text x={-3} y={0} dy={4} textAnchor="end" fontSize={12} fill="#666">
-                      {payload.value}
-                    </text>
-                    {mostrarSubsistemas && (
-                      <text x={-3} y={16} textAnchor="end" fontSize={10} fill="#999">
-                        {actividad.sistema} / {actividad.subsistema}
-                      </text>
-                    )}
-                  </g>
-                );
-              }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            {configuracion.mostrarLeyenda && (
-              <Legend 
-                verticalAlign="top" 
-                height={36}
-                payload={[
-                  { value: 'Completado', type: 'rect', color: '#22c55e' },
-                  { value: 'En progreso', type: 'rect', color: '#f59e0b' },
-                  { value: 'Vencido', type: 'rect', color: '#ef4444' },
-                  { value: 'No iniciado', type: 'rect', color: '#94a3b8' }
-                ]}
-              />
-            )}
-            <ReferenceLine x={new Date().getTime()} stroke="#ef4444" strokeWidth={2} label={{ value: 'Hoy', position: 'insideTopRight', fill: '#ef4444' }} />
-            <Bar 
-              dataKey="duracion" 
-              name="Duración" 
-              minPointSize={2}
-              barSize={20 * zoomLevel}
-              shape={({ x, y, width, height, payload }: any) => {
-                const actividad = payload;
-                const fechaInicio = actividad.fechaInicio.getTime();
-                const fechaFin = actividad.fechaFin.getTime();
-                
-                const xStart = Math.max(
-                  x, 
-                  (fechaInicio - currentStartDate.getTime()) / 
-                  (currentEndDate.getTime() - currentStartDate.getTime()) * width + x
-                );
-                
-                const xEnd = Math.min(
-                  x + width,
-                  (fechaFin - currentStartDate.getTime()) / 
-                  (currentEndDate.getTime() - currentStartDate.getTime()) * width + x
-                );
-                
-                const barWidth = Math.max(xEnd - xStart, 2);
-                
-                return (
-                  <g>
-                    <rect 
-                      x={xStart} 
-                      y={y} 
-                      width={barWidth} 
-                      height={height} 
-                      fill={actividad.color} 
-                      rx={2} 
-                      ry={2}
-                    />
-                    {actividad.progreso > 0 && actividad.progreso < 100 && (
-                      <rect 
-                        x={xStart} 
-                        y={y} 
-                        width={barWidth * (actividad.progreso / 100)} 
-                        height={height} 
-                        fill={actividad.tieneVencidos ? "#fecaca" : "#86efac"} 
-                        rx={2} 
-                        ry={2}
-                        fillOpacity={0.7}
-                      />
-                    )}
-                  </g>
-                );
-              }}
-            >
-              {ganttData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <GanttBarChart
+        data={ganttData}
+        currentStartDate={currentStartDate}
+        currentEndDate={currentEndDate}
+        zoomLevel={zoomLevel}
+        viewMode={viewMode}
+        mostrarSubsistemas={mostrarSubsistemas}
+        mostrarLeyenda={configuracion.mostrarLeyenda}
+      />
     </div>
   );
 };
