@@ -96,11 +96,13 @@ const Dashboard: React.FC = () => {
     getKPIs
   } = useAppContext();
 
-  const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
+  const defaultConfiguracionGrafico: ConfiguracionGrafico = {
     tamano: "mediano",
     mostrarLeyenda: true,
     mostrarSubsistemas: true
-  });
+  };
+
+  const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>(defaultConfiguracionGrafico);
 
   const [tabActual, setTabActual] = useState("gantt");
   const ganttChartRef = React.useRef<HTMLDivElement | null>(null);
@@ -167,7 +169,9 @@ const Dashboard: React.FC = () => {
   };
 
   const getGanttHeight = () => {
-    switch (configuracionGrafico.tamano) {
+    const tamano = configuracionGrafico?.tamano || "mediano";
+    
+    switch (tamano) {
       case "pequeno": return "h-[400px]";
       case "mediano": return "h-[600px]";
       case "grande": return "h-[800px]";
@@ -525,6 +529,14 @@ const Dashboard: React.FC = () => {
     return { ...filtros, timestamp: ensureStringTimestamp(Date.now()) };
   };
 
+  const getGanttConfiguration = () => {
+    return {
+      ...defaultConfiguracionGrafico,
+      ...configuracionGrafico,
+      mostrarSubsistemas: mostrarSubsistemas
+    };
+  };
+
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
       <PublicHeader />
@@ -789,10 +801,7 @@ const Dashboard: React.FC = () => {
                       busquedaActividad: codigoITRFilter || filtros.busquedaActividad,
                       timestamp: ensureStringTimestamp(Date.now())
                     }}
-                    configuracion={{
-                      ...configuracionGrafico,
-                      mostrarSubsistemas
-                    }}
+                    configuracion={getGanttConfiguration()}
                   />
                 </div>
               </CardContent>
