@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -75,7 +74,6 @@ const BackupRestore = () => {
       setIsExporting(true);
       setProgress(0);
       
-      // Simular progreso
       const progressInterval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 95) {
@@ -86,7 +84,6 @@ const BackupRestore = () => {
         });
       }, 50);
       
-      // Crear objeto de backup basado en las opciones seleccionadas
       const backupData: any = {};
       
       if (backupOptions.proyectos) {
@@ -109,33 +106,27 @@ const BackupRestore = () => {
         backupData.kpiConfig = kpiConfig;
       }
       
-      // Añadir metadata
       backupData.metadata = {
         fecha: new Date().toISOString(),
         version: "1.0.0",
         opciones: backupOptions
       };
       
-      // Convertir a JSON y crear blob
       const jsonData = JSON.stringify(backupData, null, 2);
       const blob = new Blob([jsonData], { type: 'application/json' });
       
-      // Crear URL y link para descargar
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       
-      // Nombre del archivo con fecha
       const date = new Date();
       const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
       link.download = `backup-proyectos-${formattedDate}.json`;
       
-      // Simular finalización
       setTimeout(() => {
         clearInterval(progressInterval);
         setProgress(100);
         
-        // Descargar
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -162,7 +153,20 @@ const BackupRestore = () => {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
-      setBackupFile(event.target.files[0]);
+      const file = event.target.files[0];
+      
+      const isJsonExtension = file.name.toLowerCase().endsWith('.json');
+      const isJsonType = file.type === 'application/json' || file.type === '';
+      
+      if (isJsonExtension || isJsonType) {
+        setBackupFile(file);
+      } else {
+        toast.error("Formato de archivo no válido", {
+          description: "Por favor seleccione un archivo .json"
+        });
+        
+        event.target.value = '';
+      }
     }
   };
 
@@ -176,7 +180,6 @@ const BackupRestore = () => {
       setIsImporting(true);
       setProgress(0);
       
-      // Simular progreso
       const progressInterval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 95) {
@@ -187,20 +190,22 @@ const BackupRestore = () => {
         });
       }, 50);
 
-      // Leer el archivo
       const reader = new FileReader();
       
       reader.onload = (e) => {
         if (e.target?.result) {
           try {
-            const data = JSON.parse(e.target.result as string);
-            
-            // Verificar que el backup tiene el formato correcto
-            if (!data.metadata) {
-              throw new Error("Formato de archivo no válido");
+            let data;
+            try {
+              data = JSON.parse(e.target.result as string);
+            } catch (parseError) {
+              throw new Error("Error al analizar el archivo JSON. El formato del archivo no es válido.");
             }
             
-            // Restaurar datos seleccionados
+            if (!data.metadata) {
+              throw new Error("El archivo seleccionado no es un backup válido. No se encontraron metadatos.");
+            }
+            
             if (restoreOptions.proyectos && data.proyectos) {
               setProyectos(data.proyectos);
             }
@@ -221,7 +226,6 @@ const BackupRestore = () => {
               updateKPIConfig(data.kpiConfig);
             }
             
-            // Simular finalización
             setTimeout(() => {
               clearInterval(progressInterval);
               setProgress(100);
@@ -236,7 +240,6 @@ const BackupRestore = () => {
                 setBackupFile(null);
                 setOpen(false);
                 
-                // Reset file input
                 const fileInput = document.getElementById('backup-file') as HTMLInputElement;
                 if (fileInput) fileInput.value = '';
               }, 500);
@@ -245,12 +248,23 @@ const BackupRestore = () => {
           } catch (error) {
             console.error("Error al procesar el archivo:", error);
             toast.error("Error al procesar el archivo", {
-              description: "El formato del archivo no es válido"
+              description: error instanceof Error ? error.message : "El formato del archivo no es válido"
             });
             setIsImporting(false);
             setProgress(0);
+            
+            const fileInput = document.getElementById('backup-file') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
           }
         }
+      };
+      
+      reader.onerror = () => {
+        toast.error("Error al leer el archivo", {
+          description: "No se pudo leer el contenido del archivo"
+        });
+        setIsImporting(false);
+        setProgress(0);
       };
       
       reader.readAsText(backupFile);
