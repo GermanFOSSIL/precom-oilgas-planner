@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,7 +31,6 @@ const PublicDashboard: React.FC = () => {
   
   const navigate = useNavigate();
   
-  // Initialize filtros with timestamp as string
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ 
     proyecto: "todos", 
     timestamp: String(Date.now()) 
@@ -47,13 +45,11 @@ const PublicDashboard: React.FC = () => {
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
   const [tabActual, setTabActual] = useState("gantt");
   
-  // Ensure timestamp is always a string
   const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
     return typeof timestamp === 'number' ? String(timestamp) : timestamp;
   }, []);
   
-  // Update timestamp at regular intervals to force refreshes
   useEffect(() => {
     const updateTimestamp = () => {
       setFiltros(prev => ({ 
@@ -62,11 +58,9 @@ const PublicDashboard: React.FC = () => {
       }));
     };
     
-    // Initial update
     updateTimestamp();
     
-    // Set up interval for updates
-    const interval = setInterval(updateTimestamp, 60000); // Every minute
+    const interval = setInterval(updateTimestamp, 60000);
     
     return () => clearInterval(interval);
   }, [ensureStringTimestamp]);
@@ -121,14 +115,12 @@ const PublicDashboard: React.FC = () => {
 
   const handleExportGantt = useCallback(() => {
     try {
-      // Simple check to prevent errors in non-dashboard pages
       const ganttContainer = document.querySelector('.gantt-chart-container');
       if (!ganttContainer) {
         toast.error("No se encontró un gráfico Gantt para exportar");
         return;
       }
       
-      // Trigger PDF generation through window event
       const exportEvent = new CustomEvent('export-gantt-pdf');
       window.dispatchEvent(exportEvent);
       toast.success("Exportando a PDF...");
@@ -140,7 +132,6 @@ const PublicDashboard: React.FC = () => {
 
   const handleExportExcel = useCallback(() => {
     try {
-      // Trigger Excel generation through window event
       const exportEvent = new CustomEvent('export-gantt-excel');
       window.dispatchEvent(exportEvent);
       toast.success("Exportando a Excel...");
@@ -151,13 +142,11 @@ const PublicDashboard: React.FC = () => {
   }, []);
 
   const handleToggleDemoData = useCallback(() => {
-    // Trigger demo data toggle through window event
     const toggleEvent = new CustomEvent('toggle-demo-data');
     window.dispatchEvent(toggleEvent);
     toast.success("Cambiando origen de datos...");
   }, []);
 
-  // Memoized current timestamp for filters
   const currentFilterTimestamp = ensureStringTimestamp(Date.now());
 
   return (
@@ -311,7 +300,7 @@ const PublicDashboard: React.FC = () => {
           
           <TabsContent value="gantt" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
-              <CardContent className={`p-0 overflow-hidden ${getGanttHeight()}`}>
+              <CardContent className={`p-0 ${getGanttHeight()} flex flex-col`}>
                 <EnhancedGanttChart 
                   filtros={{
                     ...filtros,
@@ -328,7 +317,7 @@ const PublicDashboard: React.FC = () => {
           
           <TabsContent value="critical-path" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
-              <CardContent className="p-0 overflow-hidden h-[600px]">
+              <CardContent className="p-0 h-[600px] flex flex-col">
                 <CriticalPathView />
               </CardContent>
             </Card>

@@ -187,7 +187,8 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
         </div>
       </div>
       
-      <div className="overflow-y-auto h-full">
+      {/* Área de Gantt con scroll vertical que ocupa todo el espacio disponible */}
+      <div className="flex-1 w-full overflow-y-auto min-h-0">
         <GanttBarChart
           data={ganttData}
           currentStartDate={currentStartDate}
