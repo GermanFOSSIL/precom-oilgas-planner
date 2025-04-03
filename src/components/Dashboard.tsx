@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -83,12 +84,14 @@ const Dashboard: React.FC = () => {
   
   const ganttChartRef = React.useRef<HTMLDivElement | null>(null);
 
+  // This function ensures timestamps are always handled as strings
   const ensureStringTimestamp = (timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
     return typeof timestamp === 'number' ? String(timestamp) : timestamp;
   };
 
   useEffect(() => {
+    // Update the timestamp as a string
     setFiltros({
       ...filtros,
       timestamp: ensureStringTimestamp(Date.now())
