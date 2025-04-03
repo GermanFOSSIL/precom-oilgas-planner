@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
@@ -29,9 +30,10 @@ import { useAppContext } from "@/context/AppContext";
 import { toast } from "sonner";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const Dashboard: React.FC = () => {
-  const { filtros } = useAppContext();
+  const { filtros, actividades, itrbItems, proyectos, getKPIs } = useAppContext();
   
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
     tamano: "mediano",
@@ -41,28 +43,162 @@ const Dashboard: React.FC = () => {
   const [tabActual, setTabActual] = useState("gantt");
   
   const generarPDF = () => {
-    const doc = new jsPDF();
-    
-    doc.text("Dashboard - Plan de Precomisionado", 14, 20);
-    doc.text("Fecha: " + new Date().toLocaleDateString('es-ES'), 14, 30);
-    
-    doc.text("Este PDF contiene un resumen de las actividades y estados del plan.", 14, 40);
-    
-    doc.save("dashboard-precomisionado.pdf");
-    toast.success("PDF generado exitosamente");
+    try {
+      const doc = new jsPDF();
+      
+      // Título
+      doc.text("Dashboard - Plan de Precomisionado", 14, 20);
+      doc.text("Fecha: " + new Date().toLocaleDateString('es-ES'), 14, 30);
+      
+      // Obtener KPIs para el proyecto seleccionado
+      const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
+      
+      // Proyecto actual
+      const proyectoNombre = filtros.proyecto !== "todos" ? 
+        proyectos.find(p => p.id === filtros.proyecto)?.titulo || "Todos los proyectos" : 
+        "Todos los proyectos";
+      
+      doc.text(`Proyecto: ${proyectoNombre}`, 14, 40);
+      
+      // Tabla de KPIs
+      const kpisData = [
+        ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
+        ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
+        ["Subsistemas con CCC", `${kpis.subsistemasCCC}/${kpis.totalSubsistemas}`],
+        ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
+      ];
+      
+      (doc as any).autoTable({
+        startY: 45,
+        head: [["Indicador", "Valor"]],
+        body: kpisData,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246] }
+      });
+      
+      // Tabla de actividades filtradas por proyecto
+      const actividadesFiltradas = actividades.filter(act => 
+        filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
+      );
+      
+      if (actividadesFiltradas.length > 0) {
+        doc.text("Actividades", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        const actividadesData = actividadesFiltradas.map(act => [
+          act.nombre,
+          act.sistema,
+          act.subsistema,
+          new Date(act.fechaInicio).toLocaleDateString('es-ES'),
+          new Date(act.fechaFin).toLocaleDateString('es-ES'),
+          `${act.duracion} días`
+        ]);
+        
+        (doc as any).autoTable({
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [['Nombre', 'Sistema', 'Subsistema', 'Inicio', 'Fin', 'Duración']],
+          body: actividadesData,
+          theme: 'striped',
+          headStyles: { fillColor: [59, 130, 246] }
+        });
+      }
+      
+      // Tabla de ITR B filtrados por proyecto
+      const itrbsFiltrados = itrbItems.filter(itrb => {
+        const actividad = actividades.find(act => act.id === itrb.actividadId);
+        return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
+      });
+      
+      if (itrbsFiltrados.length > 0) {
+        doc.text("ITR B", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        const itrbData = itrbsFiltrados.map(itrb => {
+          const actividad = actividades.find(act => act.id === itrb.actividadId);
+          return [
+            itrb.descripcion,
+            actividad?.sistema || "",
+            actividad?.subsistema || "",
+            `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
+            itrb.estado,
+            itrb.ccc ? "Sí" : "No"
+          ];
+        });
+        
+        (doc as any).autoTable({
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [['Descripción', 'Sistema', 'Subsistema', 'Realizado/Total', 'Estado', 'CCC']],
+          body: itrbData,
+          theme: 'striped',
+          headStyles: { fillColor: [59, 130, 246] }
+        });
+      }
+      
+      doc.save("dashboard-precomisionado.pdf");
+      toast.success("PDF generado exitosamente");
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      toast.error("Error al generar el PDF");
+    }
   };
 
-  const handleTamanoGrafico = (tamano: ConfiguracionGrafico["tamano"]) => {
-    setConfiguracionGrafico({ ...configuracionGrafico, tamano });
-    toast.success(`Tamaño de gráfico ajustado a: ${tamano}`);
-  };
-
-  const handleMostrarLeyenda = () => {
-    setConfiguracionGrafico({ 
-      ...configuracionGrafico, 
-      mostrarLeyenda: !configuracionGrafico.mostrarLeyenda 
-    });
-    toast.success(`Leyenda ${configuracionGrafico.mostrarLeyenda ? 'ocultada' : 'mostrada'}`);
+  const generarExcel = () => {
+    try {
+      // Crear libro Excel
+      const wb = XLSX.utils.book_new();
+      
+      // Filtrar actividades según proyecto
+      const actividadesFiltradas = actividades.filter(act => 
+        filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
+      );
+      
+      // Filtrar ITRBs según proyecto
+      const itrbsFiltrados = itrbItems.filter(itrb => {
+        const actividad = actividades.find(act => act.id === itrb.actividadId);
+        return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
+      });
+      
+      // Hoja de actividades
+      if (actividadesFiltradas.length > 0) {
+        const wsData = actividadesFiltradas.map(act => ({
+          Nombre: act.nombre,
+          Sistema: act.sistema,
+          Subsistema: act.subsistema,
+          "Fecha Inicio": new Date(act.fechaInicio).toLocaleDateString('es-ES'),
+          "Fecha Fin": new Date(act.fechaFin).toLocaleDateString('es-ES'),
+          "Duración (días)": act.duracion
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "Actividades");
+      }
+      
+      // Hoja de ITR B
+      if (itrbsFiltrados.length > 0) {
+        const wsData = itrbsFiltrados.map(itrb => {
+          const actividad = actividades.find(act => act.id === itrb.actividadId);
+          return {
+            Descripción: itrb.descripcion,
+            Actividad: actividad?.nombre || "",
+            Sistema: actividad?.sistema || "",
+            Subsistema: actividad?.subsistema || "",
+            "Realizado/Total": `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
+            "Progreso (%)": itrb.cantidadTotal > 0 ? ((itrb.cantidadRealizada / itrb.cantidadTotal) * 100).toFixed(1) + "%" : "0%",
+            Estado: itrb.estado,
+            CCC: itrb.ccc ? "Sí" : "No",
+            "Fecha Límite": new Date(itrb.fechaLimite).toLocaleDateString('es-ES')
+          };
+        });
+        
+        const ws = XLSX.utils.json_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "ITR B");
+      }
+      
+      // Guardar Excel
+      XLSX.writeFile(wb, "dashboard-precomisionado.xlsx");
+      toast.success("Excel generado exitosamente");
+    } catch (error) {
+      console.error("Error al generar Excel:", error);
+      toast.error("Error al generar el Excel");
+    }
   };
 
   return (
@@ -74,10 +210,16 @@ const Dashboard: React.FC = () => {
           <h1 className="text-2xl font-bold">
             Panel de Control
           </h1>
-          <Button variant="outline" onClick={generarPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar PDF
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={generarPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar PDF
+            </Button>
+            <Button variant="outline" onClick={generarExcel}>
+              <FileText className="h-4 w-4 mr-2" />
+              Exportar Excel
+            </Button>
+          </div>
         </div>
         
         <KPICards />

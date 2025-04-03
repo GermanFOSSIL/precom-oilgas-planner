@@ -4,6 +4,7 @@ import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
 import EnhancedGanttChart from "@/components/EnhancedGanttChart";
+import CriticalPathView from "@/components/CriticalPathView";
 import { 
   Select, 
   SelectContent, 
@@ -25,7 +26,8 @@ import {
   Filter, 
   Search, 
   Download,
-  SunMoon
+  SunMoon,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
@@ -33,6 +35,9 @@ import { Input } from "@/components/ui/input";
 import PublicHeader from "@/components/PublicHeader";
 import ProyectoSelector from "@/components/ProyectoSelector";
 import AlertasWidget from "@/components/AlertasWidget";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const PublicDashboard: React.FC = () => {
   const { 
@@ -43,13 +48,16 @@ const PublicDashboard: React.FC = () => {
     toggleTheme,
     actividades,
     itrbItems,
-    logout  // Add logout to clear user session
+    logout,
+    getKPIs
   } = useAppContext();
 
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
     tamano: "mediano",
     mostrarLeyenda: true
   });
+  
+  const [tabActual, setTabActual] = useState("gantt");
 
   // Effect to clear cache when component mounts
   useEffect(() => {
@@ -78,8 +86,7 @@ const PublicDashboard: React.FC = () => {
   };
 
   const exportarGrafico = () => {
-    // Esta funcionalidad podría implementarse más adelante
-    alert("Exportación de gráfico no implementada aún");
+    generarPDF();
   };
 
   // Limpiar sesión y recargar la página
@@ -97,6 +104,167 @@ const PublicDashboard: React.FC = () => {
       case "grande": return "h-[800px]";
       case "completo": return "h-screen";
       default: return "h-[600px]";
+    }
+  };
+  
+  // Generar PDF para usuarios no autenticados
+  const generarPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Título
+      doc.text("Dashboard - Plan de Precomisionado", 14, 20);
+      doc.text("Fecha: " + new Date().toLocaleDateString('es-ES'), 14, 30);
+      
+      // Obtener KPIs para el proyecto seleccionado
+      const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
+      
+      // Proyecto actual
+      const proyectoNombre = filtros.proyecto !== "todos" ? 
+        proyectos.find(p => p.id === filtros.proyecto)?.titulo || "Todos los proyectos" : 
+        "Todos los proyectos";
+      
+      doc.text(`Proyecto: ${proyectoNombre}`, 14, 40);
+      
+      // Tabla de KPIs
+      const kpisData = [
+        ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
+        ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
+        ["Subsistemas con CCC", `${kpis.subsistemasCCC}/${kpis.totalSubsistemas}`],
+        ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
+      ];
+      
+      (doc as any).autoTable({
+        startY: 45,
+        head: [["Indicador", "Valor"]],
+        body: kpisData,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246] }
+      });
+      
+      // Tabla de actividades filtradas por proyecto
+      const actividadesFiltradas = actividades.filter(act => 
+        filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
+      );
+      
+      if (actividadesFiltradas.length > 0) {
+        doc.text("Actividades", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        const actividadesData = actividadesFiltradas.map(act => [
+          act.nombre,
+          act.sistema,
+          act.subsistema,
+          new Date(act.fechaInicio).toLocaleDateString('es-ES'),
+          new Date(act.fechaFin).toLocaleDateString('es-ES'),
+          `${act.duracion} días`
+        ]);
+        
+        (doc as any).autoTable({
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [['Nombre', 'Sistema', 'Subsistema', 'Inicio', 'Fin', 'Duración']],
+          body: actividadesData,
+          theme: 'striped',
+          headStyles: { fillColor: [59, 130, 246] }
+        });
+      }
+      
+      // Tabla de ITR B filtrados por proyecto
+      const itrbsFiltrados = itrbItems.filter(itrb => {
+        const actividad = actividades.find(act => act.id === itrb.actividadId);
+        return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
+      });
+      
+      if (itrbsFiltrados.length > 0) {
+        doc.text("ITR B", 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        const itrbData = itrbsFiltrados.map(itrb => {
+          const actividad = actividades.find(act => act.id === itrb.actividadId);
+          return [
+            itrb.descripcion,
+            actividad?.sistema || "",
+            actividad?.subsistema || "",
+            `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
+            itrb.estado,
+            itrb.ccc ? "Sí" : "No"
+          ];
+        });
+        
+        (doc as any).autoTable({
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [['Descripción', 'Sistema', 'Subsistema', 'Realizado/Total', 'Estado', 'CCC']],
+          body: itrbData,
+          theme: 'striped',
+          headStyles: { fillColor: [59, 130, 246] }
+        });
+      }
+      
+      doc.save("dashboard-precomisionado.pdf");
+      toast.success("PDF generado exitosamente");
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      toast.error("Error al generar el PDF");
+    }
+  };
+  
+  // Generar Excel para usuarios no autenticados
+  const generarExcel = () => {
+    try {
+      // Crear libro Excel
+      const wb = XLSX.utils.book_new();
+      
+      // Filtrar actividades según proyecto
+      const actividadesFiltradas = actividades.filter(act => 
+        filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
+      );
+      
+      // Filtrar ITRBs según proyecto
+      const itrbsFiltrados = itrbItems.filter(itrb => {
+        const actividad = actividades.find(act => act.id === itrb.actividadId);
+        return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
+      });
+      
+      // Hoja de actividades
+      if (actividadesFiltradas.length > 0) {
+        const wsData = actividadesFiltradas.map(act => ({
+          Nombre: act.nombre,
+          Sistema: act.sistema,
+          Subsistema: act.subsistema,
+          "Fecha Inicio": new Date(act.fechaInicio).toLocaleDateString('es-ES'),
+          "Fecha Fin": new Date(act.fechaFin).toLocaleDateString('es-ES'),
+          "Duración (días)": act.duracion
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "Actividades");
+      }
+      
+      // Hoja de ITR B
+      if (itrbsFiltrados.length > 0) {
+        const wsData = itrbsFiltrados.map(itrb => {
+          const actividad = actividades.find(act => act.id === itrb.actividadId);
+          return {
+            Descripción: itrb.descripcion,
+            Actividad: actividad?.nombre || "",
+            Sistema: actividad?.sistema || "",
+            Subsistema: actividad?.subsistema || "",
+            "Realizado/Total": `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
+            "Progreso (%)": itrb.cantidadTotal > 0 ? ((itrb.cantidadRealizada / itrb.cantidadTotal) * 100).toFixed(1) + "%" : "0%",
+            Estado: itrb.estado,
+            CCC: itrb.ccc ? "Sí" : "No",
+            "Fecha Límite": new Date(itrb.fechaLimite).toLocaleDateString('es-ES')
+          };
+        });
+        
+        const ws = XLSX.utils.json_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "ITR B");
+      }
+      
+      // Guardar Excel
+      XLSX.writeFile(wb, "dashboard-precomisionado.xlsx");
+      toast.success("Excel generado exitosamente");
+    } catch (error) {
+      console.error("Error al generar Excel:", error);
+      toast.error("Error al generar el Excel");
     }
   };
 
@@ -201,66 +369,98 @@ const PublicDashboard: React.FC = () => {
             >
               <SunMoon className="h-4 w-4" />
             </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={generarPDF}
+              className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              PDF
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={generarExcel}
+              className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Excel
+            </Button>
           </div>
         </div>
         
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
         
-        <Card className="mb-6 dark:bg-slate-800 dark:border-slate-700">
-          <CardHeader className="flex flex-row justify-between items-center pb-2">
-            <div>
-              <CardTitle className="text-xl">
-                Diagrama de Gantt
-              </CardTitle>
-              <CardDescription className="dark:text-slate-400">
-                Vista de actividades y ITR B por proyecto
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Select
-                value={configuracionGrafico.tamano}
-                onValueChange={(value: any) => handleTamanoGrafico(value)}
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Tamaño" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pequeno">Pequeño</SelectItem>
-                  <SelectItem value="mediano">Mediano</SelectItem>
-                  <SelectItem value="grande">Grande</SelectItem>
-                  <SelectItem value="completo">Pantalla completa</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button variant="outline" onClick={exportarGrafico} className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600">
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className={`p-0 overflow-hidden ${getGanttHeight()}`}>
-            <EnhancedGanttChart
-              filtros={filtros}
-              configuracion={configuracionGrafico}
-            />
-          </CardContent>
-        </Card>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="lg:col-span-2 dark:bg-slate-800 dark:border-slate-700">
-            <CardHeader>
-              <CardTitle>Resumen de Actividades</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Aquí se podría añadir un resumen de actividades o alguna visualización */}
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Próximamente: Gráfico de progreso por sistema
+        <Tabs 
+          defaultValue="gantt" 
+          className="w-full"
+          value={tabActual}
+          onValueChange={setTabActual}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <TabsList className="grid w-full md:w-auto grid-cols-3 mb-0">
+              <TabsTrigger value="gantt" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Gráfico Gantt</span>
+              </TabsTrigger>
+              <TabsTrigger value="critical-path" className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden sm:inline">Ruta Crítica</span>
+              </TabsTrigger>
+              <TabsTrigger value="alertas" className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden sm:inline">Alertas</span>
+              </TabsTrigger>
+            </TabsList>
+
+            {tabActual === "gantt" && (
+              <div className="flex gap-2">
+                <Select
+                  value={configuracionGrafico.tamano}
+                  onValueChange={(value: "pequeno" | "mediano" | "grande" | "completo") => 
+                    handleTamanoGrafico(value)
+                  }
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Tamaño" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pequeno">Pequeño</SelectItem>
+                    <SelectItem value="mediano">Mediano</SelectItem>
+                    <SelectItem value="grande">Grande</SelectItem>
+                    <SelectItem value="completo">Completo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
           
-          <AlertasWidget />
-        </div>
+          <TabsContent value="gantt" className="mt-0">
+            <Card className="dark:bg-slate-800 dark:border-slate-700">
+              <CardContent className={`p-0 overflow-hidden ${getGanttHeight()}`}>
+                <EnhancedGanttChart
+                  filtros={filtros}
+                  configuracion={configuracionGrafico}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="critical-path" className="mt-0">
+            <Card className="dark:bg-slate-800 dark:border-slate-700">
+              <CardContent className="p-0 overflow-hidden h-[600px]">
+                <CriticalPathView />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="alertas" className="mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
+              <AlertasWidget />
+            </div>
+          </TabsContent>
+        </Tabs>
         
         <div className="py-6 border-t text-center text-xs text-muted-foreground dark:border-slate-700">
           Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
