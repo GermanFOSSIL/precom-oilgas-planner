@@ -3,7 +3,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Download, FileSpreadsheet } from "lucide-react";
+import { Moon, Sun, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useLocation } from 'react-router-dom';
 import { Database } from "lucide-react";
 import { toast } from "sonner";
@@ -69,24 +69,27 @@ const Header: React.FC = () => {
                 <span>Gestión de ITR</span>
               </Link>
               
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="bg-green-600 hover:bg-green-700 text-white">
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={handleExportGantt}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar PDF con Gantt
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExportExcel}>
-                    <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    Exportar Excel
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border border-gray-200"
+                  onClick={handleExportGantt}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Gantt PDF
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border border-gray-200"
+                  onClick={handleExportExcel}
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Gantt Excel
+                </Button>
+              </div>
               
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 Cerrar Sesión

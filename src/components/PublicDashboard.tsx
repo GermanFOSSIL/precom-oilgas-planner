@@ -7,7 +7,7 @@ import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, SunMoon, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Calendar, SunMoon, AlertTriangle, Eye, EyeOff, FileText, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Login from "@/components/Login";
 import PublicHeader from "@/components/PublicHeader";
@@ -113,6 +113,35 @@ const PublicDashboard: React.FC = () => {
       });
   };
 
+  const handleExportGantt = () => {
+    try {
+      // Simple check to prevent errors in non-dashboard pages
+      const ganttContainer = document.querySelector('.gantt-chart-container');
+      if (!ganttContainer) {
+        toast.error("No se encontró un gráfico Gantt para exportar");
+        return;
+      }
+      
+      // Trigger PDF generation through window event
+      const exportEvent = new CustomEvent('export-gantt-pdf');
+      window.dispatchEvent(exportEvent);
+    } catch (error) {
+      console.error("Error al iniciar la exportación:", error);
+      toast.error("Error al iniciar la exportación del gráfico Gantt");
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      // Trigger Excel generation through window event
+      const exportEvent = new CustomEvent('export-gantt-excel');
+      window.dispatchEvent(exportEvent);
+    } catch (error) {
+      console.error("Error al iniciar la exportación a Excel:", error);
+      toast.error("Error al iniciar la exportación a Excel");
+    }
+  };
+
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
       <PublicHeader onLoginClick={handleLoginClick} />
@@ -181,6 +210,28 @@ const PublicDashboard: React.FC = () => {
             >
               <SunMoon className="h-4 w-4" />
             </Button>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border border-gray-200"
+                onClick={handleExportGantt}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Gantt PDF
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="border border-gray-200"
+                onClick={handleExportExcel}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Gantt Excel
+              </Button>
+            </div>
           </div>
         </div>
         
