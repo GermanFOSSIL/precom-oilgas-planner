@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { 
@@ -56,8 +57,8 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
   const { actividades, itrbItems, proyectos } = useAppContext();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   
-  const bindDrag = useDrag((state) => {
-    const { movement } = state;
+  // Fix for the useDrag implementation
+  const bindDrag = useDrag(({ movement }) => {
     setPosition({ x: movement[0], y: movement[1] });
   });
   
