@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import Login from "@/components/Login";
 import PublicHeader from "@/components/PublicHeader";
 import { toast } from "sonner";
+import CriticalPathView from "@/components/CriticalPathView";
 
 const PublicDashboard: React.FC = () => {
   const { 
@@ -252,7 +253,7 @@ const PublicDashboard: React.FC = () => {
           <TabsContent value="critical-path" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
               <CardContent className="p-0 overflow-hidden h-[600px]">
-                {/* Contenido de la ruta crítica */}
+                <CriticalPathView />
               </CardContent>
             </Card>
           </TabsContent>

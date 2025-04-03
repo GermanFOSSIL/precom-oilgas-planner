@@ -219,7 +219,7 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
                 <SelectValue placeholder="Seleccionar proyecto" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los proyectos</SelectItem>
+                <SelectItem value="todos">Todos los proyectos</SelectItem>
                 {proyectosDisponibles.map(p => (
                   <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
                 ))}
@@ -238,7 +238,7 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
                 <SelectValue placeholder="Seleccionar sistema" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los sistemas</SelectItem>
+                <SelectItem value="todos">Todos los sistemas</SelectItem>
                 {sistemasDisponibles.map(sistema => (
                   <SelectItem key={sistema} value={sistema}>{sistema}</SelectItem>
                 ))}
@@ -257,7 +257,7 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
                 <SelectValue placeholder="Seleccionar subsistema" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los subsistemas</SelectItem>
+                <SelectItem value="todos">Todos los subsistemas</SelectItem>
                 {subsistemasDisponibles.map(sub => (
                   <SelectItem key={sub} value={sub}>{sub}</SelectItem>
                 ))}
