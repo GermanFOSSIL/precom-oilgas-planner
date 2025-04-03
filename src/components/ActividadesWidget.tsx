@@ -210,13 +210,15 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
                     <Progress 
                       value={actividad.progreso} 
                       className="h-2" 
-                      indicatorClassName={
+                      // Fix: Remove indicatorClassName and style the indicator directly using the class prop
+                      // with conditional styling based on the state
+                      className={`h-2 ${
                         actividad.progreso === 100 
                           ? "bg-green-500" 
                           : actividad.estado === "vencida"
                             ? "bg-red-500"
                             : "bg-blue-500"
-                      }
+                      }`}
                     />
                     <div className="flex justify-between mt-1 text-xs text-muted-foreground">
                       <span>Progreso</span>

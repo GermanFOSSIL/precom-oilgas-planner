@@ -314,6 +314,7 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
   };
   
   // Drag handler para mover el widget
+  // Fix: useDrag returns an object, not a function, so we need to destructure it
   const bindDrag = useDrag(({ movement: [x, y], first, last }) => {
     if (first) {
       const startPos = { ...position };

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import KPICards from "@/components/KPICards";
@@ -7,6 +7,8 @@ import ActividadesTable from "@/components/ActividadesTable";
 import ITRBTable from "@/components/ITRBTable";
 import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import CriticalPathView from "@/components/CriticalPathView";
+import ActividadesWidget from "@/components/ActividadesWidget";
+import DashboardCustomWidget from "@/components/DashboardCustomWidget";
 import { 
   Calendar, 
   FileText, 
@@ -15,7 +17,8 @@ import {
   AlertTriangle,
   ZoomIn,
   ZoomOut,
-  LayoutGrid
+  LayoutGrid,
+  PlusCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,15 +28,33 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { ConfiguracionGrafico } from "@/types";
+import { ConfiguracionGrafico, GraficoPersonalizado } from "@/types";
 import { useAppContext } from "@/context/AppContext";
 import { toast } from "sonner";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { 
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 
 const Dashboard: React.FC = () => {
-  const { filtros, actividades, itrbItems, proyectos, getKPIs } = useAppContext();
+  const { filtros, actividades, itrbItems, proyectos, getKPIs, setFiltros } = useAppContext();
   
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
     tamano: "mediano",
@@ -42,6 +63,35 @@ const Dashboard: React.FC = () => {
 
   const [tabActual, setTabActual] = useState("gantt");
   
+  // Custom widgets
+  const [widgets, setWidgets] = useState<GraficoPersonalizado[]>([
+    {
+      id: "widget-1",
+      titulo: "Avance por Proyectos",
+      tipo: "barras",
+      datos: "avance",
+      color: "#3b82f6",
+      posicion: 1
+    },
+    {
+      id: "widget-2",
+      titulo: "Estado de ITR B",
+      tipo: "pastel",
+      datos: "itrb",
+      color: "#10b981",
+      posicion: 2
+    }
+  ]);
+
+  const [showWidgetDialog, setShowWidgetDialog] = useState(false);
+  const [editingWidget, setEditingWidget] = useState<GraficoPersonalizado | null>(null);
+  const [maximizedWidget, setMaximizedWidget] = useState<string | null>(null);
+
+  // Ensure filters are updated when the component mounts
+  useEffect(() => {
+    setFiltros({ ...filtros, timestamp: Date.now() });
+  }, []);
+
   const handleTamanoGrafico = (tamano: ConfiguracionGrafico["tamano"]) => {
     setConfiguracionGrafico({ ...configuracionGrafico, tamano });
   };
@@ -212,6 +262,45 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Functions to handle custom widgets
+  const handleCreateWidget = () => {
+    const newWidget: GraficoPersonalizado = {
+      id: `widget-${Date.now()}`,
+      titulo: editingWidget?.titulo || "Nuevo Gráfico",
+      tipo: editingWidget?.tipo || "barras",
+      datos: editingWidget?.datos || "avance",
+      color: editingWidget?.color || "#3b82f6",
+      posicion: widgets.length + 1
+    };
+    
+    if (editingWidget?.id) {
+      // Editing existing widget
+      setWidgets(widgets.map(w => w.id === editingWidget.id ? { ...newWidget, id: editingWidget.id } : w));
+    } else {
+      // Creating new widget
+      setWidgets([...widgets, newWidget]);
+    }
+    
+    setShowWidgetDialog(false);
+    setEditingWidget(null);
+    
+    toast.success(editingWidget?.id ? "Widget actualizado" : "Widget creado");
+  };
+  
+  const handleEditWidget = (widget: GraficoPersonalizado) => {
+    setEditingWidget({ ...widget });
+    setShowWidgetDialog(true);
+  };
+  
+  const handleRemoveWidget = (widgetId: string) => {
+    setWidgets(widgets.filter(w => w.id !== widgetId));
+    toast.success("Widget eliminado");
+  };
+  
+  const handleMaximizeWidget = (widgetId: string) => {
+    setMaximizedWidget(maximizedWidget === widgetId ? null : widgetId);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
@@ -325,7 +414,192 @@ const Dashboard: React.FC = () => {
             <CriticalPathView />
           </TabsContent>
         </Tabs>
+        
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Widgets Personalizados</h2>
+            <Button onClick={() => {
+              setEditingWidget(null);
+              setShowWidgetDialog(true);
+            }}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Nuevo Widget
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {widgets.map(widget => (
+              <DashboardCustomWidget 
+                key={widget.id}
+                widget={widget}
+                onEdit={() => handleEditWidget(widget)}
+                onRemove={() => handleRemoveWidget(widget.id)}
+                onMaximize={() => handleMaximizeWidget(widget.id)}
+                isMaximized={maximizedWidget === widget.id}
+              />
+            ))}
+            
+            {widgets.length === 0 && (
+              <div className="col-span-2 p-8 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-center">
+                <div className="flex flex-col items-center">
+                  <PlusCircle className="h-10 w-10 text-gray-400 mb-3" />
+                  <h3 className="text-lg font-medium mb-1">No hay widgets personalizados</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Cree widgets personalizados para visualizar la información más relevante para su proyecto
+                  </p>
+                  <Button onClick={() => {
+                    setEditingWidget(null);
+                    setShowWidgetDialog(true);
+                  }}>
+                    Crear primer widget
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-8">
+            <h2 className="text-xl font-bold mb-4">Actividades Recientes</h2>
+            <ActividadesWidget maxItems={5} />
+          </div>
+        </div>
       </main>
+      
+      {/* Widget Creation/Editing Dialog */}
+      <Dialog open={showWidgetDialog} onOpenChange={setShowWidgetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingWidget?.id ? "Editar Widget" : "Crear Nuevo Widget"}</DialogTitle>
+            <DialogDescription>
+              Configure las opciones para su widget personalizado
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="titulo">Título del Widget</Label>
+              <Input
+                id="titulo"
+                value={editingWidget?.titulo || ""}
+                onChange={(e) => setEditingWidget(prev => ({
+                  ...(prev || { 
+                    id: '', 
+                    tipo: 'barras', 
+                    datos: 'avance', 
+                    color: '#3b82f6', 
+                    posicion: 0 
+                  }),
+                  titulo: e.target.value
+                }))}
+                placeholder="Ej: Avance por Proyecto"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="tipo">Tipo de Gráfico</Label>
+              <Select
+                value={editingWidget?.tipo || "barras"}
+                onValueChange={(value: "barras" | "lineas" | "pastel" | "area") => setEditingWidget(prev => ({
+                  ...(prev || { 
+                    id: '', 
+                    titulo: '', 
+                    datos: 'avance', 
+                    color: '#3b82f6', 
+                    posicion: 0 
+                  }),
+                  tipo: value
+                }))}
+              >
+                <SelectTrigger id="tipo">
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="barras">Barras</SelectItem>
+                  <SelectItem value="lineas">Líneas</SelectItem>
+                  <SelectItem value="pastel">Pastel</SelectItem>
+                  <SelectItem value="area">Área</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="datos">Datos a Mostrar</Label>
+              <Select
+                value={editingWidget?.datos || "avance"}
+                onValueChange={(value: "avance" | "itrb" | "actividades" | "vencimientos") => setEditingWidget(prev => ({
+                  ...(prev || { 
+                    id: '', 
+                    titulo: '', 
+                    tipo: 'barras', 
+                    color: '#3b82f6', 
+                    posicion: 0 
+                  }),
+                  datos: value
+                }))}
+              >
+                <SelectTrigger id="datos">
+                  <SelectValue placeholder="Seleccionar datos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="avance">Avance por Proyecto</SelectItem>
+                  <SelectItem value="itrb">ITR B por Estado</SelectItem>
+                  <SelectItem value="actividades">Actividades por Sistema</SelectItem>
+                  <SelectItem value="vencimientos">Vencimientos por Mes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="color">Color Principal</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="color"
+                  type="color"
+                  value={editingWidget?.color || "#3b82f6"}
+                  onChange={(e) => setEditingWidget(prev => ({
+                    ...(prev || { 
+                      id: '', 
+                      titulo: '', 
+                      tipo: 'barras', 
+                      datos: 'avance', 
+                      posicion: 0 
+                    }),
+                    color: e.target.value
+                  }))}
+                  className="w-16 h-10 p-0"
+                />
+                <Input
+                  value={editingWidget?.color || "#3b82f6"}
+                  onChange={(e) => setEditingWidget(prev => ({
+                    ...(prev || { 
+                      id: '', 
+                      titulo: '', 
+                      tipo: 'barras', 
+                      datos: 'avance', 
+                      posicion: 0 
+                    }),
+                    color: e.target.value
+                  }))}
+                  placeholder="Ej: #3b82f6"
+                  className="flex-grow"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowWidgetDialog(false);
+              setEditingWidget(null);
+            }}>
+              Cancelar
+            </Button>
+            <FormSubmitButton onClick={handleCreateWidget} onComplete={() => setShowWidgetDialog(false)}>
+              {editingWidget?.id ? "Actualizar Widget" : "Crear Widget"}
+            </FormSubmitButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
