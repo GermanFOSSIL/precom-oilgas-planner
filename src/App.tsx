@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import ITRManagement from "./pages/ITRManagement";
 import LoginPage from "./pages/LoginPage";
 import AIAssistant from "./pages/AIAssistant";
+import ChatbotButton from "./components/ChatbotButton";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <ChatbotButton />
           </BrowserRouter>
         </TooltipProvider>
       </AppProvider>

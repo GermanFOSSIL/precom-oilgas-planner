@@ -2,8 +2,9 @@
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, LogIn } from "lucide-react";
+import { CalendarIcon, LogIn, Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Tooltip,
   TooltipContent,
@@ -37,6 +38,22 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ onLoginClick }) => {
         </div>
         
         <div className="flex items-center space-x-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" asChild>
+                  <Link to="/ai-assistant">
+                    <Bot className="h-4 w-4 mr-2" />
+                    Asistente IA
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Consulta nuestro asistente de IA</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

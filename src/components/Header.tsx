@@ -3,7 +3,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Moon, Sun, Download, FileSpreadsheet, FileText, Bot } from "lucide-react";
 import { useLocation } from 'react-router-dom';
 import { Database } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ const Header: React.FC = () => {
 
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
+  const isAIAssistantPage = location.pathname === '/ai-assistant';
 
   const handleExportGantt = () => {
     try {
@@ -64,6 +65,14 @@ const Header: React.FC = () => {
         <nav className="flex items-center space-x-4">
           {user ? (
             <>
+              <Link 
+                to="/ai-assistant" 
+                className={`flex items-center ${isAIAssistantPage ? 'text-indigo-500 font-semibold' : 'text-gray-700 dark:text-gray-300'} hover:text-indigo-500`}
+              >
+                <Bot className="h-5 w-5 mr-2" />
+                <span>Asistente IA</span>
+              </Link>
+              
               <Link to="/itr-management" className="text-gray-700 dark:text-gray-300 hover:underline flex items-center">
                 <Database className="h-5 w-5 mr-2" />
                 <span>Gestión de ITR</span>

@@ -1,4 +1,3 @@
-
 export interface Proyecto {
   id: string;
   titulo: string;
@@ -90,13 +89,11 @@ export interface AppContextType {
   getKPIs: (proyectoId?: string) => KPIs;
 }
 
-// Add the interface for API keys
 export interface APIKeys {
   openAI?: string;
   aiModel?: string;
 }
 
-// Ensure we have the KPIs interface defined
 export interface KPIs {
   avanceFisico: number;
   totalITRB: number;
@@ -107,19 +104,16 @@ export interface KPIs {
   proyectoId?: string;
 }
 
-// User type definition
 export interface User {
   email: string;
   role: "admin" | "tecnico" | "viewer";
   nombre: string;
 }
 
-// App theme definition
 export interface AppTheme {
   mode: "light" | "dark";
 }
 
-// Alert type definition
 export interface Alerta {
   id: string;
   tipo: "Vencimiento" | "Recordatorio" | "Sistema";
@@ -130,5 +124,4 @@ export interface Alerta {
   proyectoId?: string;
 }
 
-// Estado ITRB type
 export type EstadoITRB = "En curso" | "Completado" | "Pendiente" | "Vencido";
