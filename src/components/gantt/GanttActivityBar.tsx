@@ -43,6 +43,11 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
   isDateInRange,
   withSubsystem = true
 }) => {
+  // Ensure positions are calculated correctly
+  const startPosition = Math.max(calculatePosition(item.fechaInicio), 0);
+  const endPosition = Math.min(calculatePosition(item.fechaFin), 100);
+  const barWidth = endPosition - startPosition;
+
   return (
     <div 
       key={`activity-${item.id}`}
@@ -62,33 +67,34 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
       <div className="col-span-full h-full relative">
         {/* Main activity bar */}
         <div 
-          className="absolute h-5 top-1/2 -mt-2.5 rounded"
+          className="absolute h-6 top-1/2 -mt-3 rounded"
           style={{ 
-            left: `${calculatePosition(item.fechaInicio)}%`,
-            width: `${calculatePosition(item.fechaFin) - calculatePosition(item.fechaInicio)}%`,
-            backgroundColor: "#64748b",
-            opacity: 0.7
-          }}
-        />
-        
-        {/* Progress bar */}
-        <div 
-          className="absolute h-5 top-1/2 -mt-2.5 rounded"
-          style={{ 
-            left: `${calculatePosition(item.fechaInicio)}%`,
-            width: `${(calculatePosition(item.fechaFin) - calculatePosition(item.fechaInicio)) * item.progreso / 100}%`,
-            backgroundColor: item.tieneVencidos ? "#ef4444" : item.progreso === 100 ? "#22c55e" : "#f59e0b",
-            zIndex: 1
+            left: `${startPosition}%`,
+            width: `${barWidth}%`,
+            backgroundColor: "#94a3b8", // Base color for the activity bar
+            opacity: 0.9
           }}
           onMouseOver={(e) => handleMouseOver(e, item)}
           onMouseOut={handleMouseOut}
         >
-          <div className="h-full flex items-center px-2 truncate text-xs text-white">
-            {item.progreso}%
+          {/* Progress bar (colored portion) */}
+          <div 
+            className="h-full rounded"
+            style={{ 
+              width: `${item.progreso}%`,
+              backgroundColor: item.tieneVencidos ? "#ef4444" : 
+                              item.progreso === 100 ? "#22c55e" : "#f59e0b",
+            }}
+          >
+            {barWidth > 10 && (
+              <div className="h-full flex items-center px-2 truncate text-xs text-white">
+                {item.progreso}%
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Individual ITR items as bars */}
+        {/* Individual ITR items as bars - ensure they're spaced properly */}
         {item.itrbsAsociados.map((itrb, itrbIndex) => {
           const itrbStatus = itrb.estado || "En curso";
           
@@ -103,23 +109,25 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
           // Calculate the bar's position
           const barStart = Math.max(calculatePosition(itrbStartDate), 0);
           const barEnd = Math.min(calculatePosition(itrbEndDate), 100);
-          const barWidth = barEnd - barStart;
+          const itrbBarWidth = barEnd - barStart;
           
           // Progress calculation for the ITR
           const itrbProgress = itrb.cantidadRealizada !== undefined && itrb.cantidadTotal !== undefined
             ? Math.round((itrb.cantidadRealizada / itrb.cantidadTotal) * 100)
             : itrbStatus === "Completado" ? 100 : 0;
           
+          // Determine the y-position based on index (distribute evenly)
+          const yOffset = 8 + (itrbIndex * 4); // More spacing between ITR bars
+          
           return (
             <div 
               key={`itrb-${itrb.id}`}
-              className="absolute h-3 rounded-sm z-10 hover:h-4 hover:shadow-lg transition-all flex items-center"
+              className="absolute h-3 rounded-sm z-10 hover:h-4 hover:shadow-lg transition-all"
               style={{ 
                 left: `${barStart}%`,
-                width: `${barWidth}%`,
-                top: `calc(50% + 7px)`,
+                width: `${itrbBarWidth}%`,
+                top: `calc(50% + ${yOffset}px)`,
                 backgroundColor: getStatusColor(itrbStatus),
-                border: "1px solid rgba(255,255,255,0.5)"
               }}
               onMouseOver={(e) => handleItrbMouseOver(e, {
                 ...itrb,
@@ -133,7 +141,7 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
               })}
               onMouseOut={handleMouseOut}
             >
-              {barWidth > 5 && (
+              {itrbBarWidth > 5 && (
                 <div className="mx-1 text-white text-[10px] truncate">
                   {itrb.descripcion || `ITR ${itrbIndex + 1}`}
                 </div>

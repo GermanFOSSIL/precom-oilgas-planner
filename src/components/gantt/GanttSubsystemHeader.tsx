@@ -14,13 +14,13 @@ const GanttSubsystemHeader: React.FC<GanttSubsystemHeaderProps> = ({
 }) => {
   return (
     <div 
-      className={`
-        grid border-b
-        ${isDarkMode ? 'bg-indigo-700/50 text-white' : 'bg-indigo-300 text-gray-800'}
-      `}
-      style={{ gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)` }}
+      className="grid border-b"
+      style={{ 
+        gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
+        backgroundColor: "#a5b4fc" // Light indigo/purple color from image
+      }}
     >
-      <div className="p-1 pl-6 font-medium text-sm">
+      <div className="p-1 pl-6 font-medium text-sm text-gray-800">
         {subsistema}
       </div>
       <div className="col-span-full"></div>

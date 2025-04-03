@@ -14,13 +14,13 @@ const GanttSystemHeader: React.FC<GanttSystemHeaderProps> = ({
 }) => {
   return (
     <div 
-      className={`
-        grid border-b
-        ${isDarkMode ? 'bg-indigo-800 text-white' : 'bg-indigo-500 text-white'}
-      `}
-      style={{ gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)` }}
+      className="grid border-b"
+      style={{ 
+        gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
+        backgroundColor: "#6366f1" // Medium indigo/purple color from image
+      }}
     >
-      <div className="p-2 pl-4 font-semibold">
+      <div className="p-2 pl-4 font-semibold text-white">
         {sistema}
       </div>
       <div className="col-span-full"></div>

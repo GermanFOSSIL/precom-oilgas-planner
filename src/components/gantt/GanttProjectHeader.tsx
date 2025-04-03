@@ -14,13 +14,13 @@ const GanttProjectHeader: React.FC<GanttProjectHeaderProps> = ({
 }) => {
   return (
     <div 
-      className={`
-        grid border-b
-        ${isDarkMode ? 'bg-indigo-900 text-white' : 'bg-indigo-700 text-white'}
-      `}
-      style={{ gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)` }}
+      className="grid border-b"
+      style={{ 
+        gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
+        backgroundColor: "#4338ca" // Strong indigo/purple color from image
+      }}
     >
-      <div className="p-2 font-bold">
+      <div className="p-2 font-bold text-white">
         {proyecto}
       </div>
       <div className="col-span-full"></div>
