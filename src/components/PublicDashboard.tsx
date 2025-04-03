@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -118,7 +119,7 @@ const PublicDashboard: React.FC = () => {
       const kpisData = [
         ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
         ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
-        ["Subsistemas con CCC", `${kpis.subsistemasCCC}/${kpis.totalSubsistemas}`],
+        ["Subsistemas con MCC", `${kpis.subsistemasCCC}/${kpis.totalSubsistemas}`],
         ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
       ];
       
@@ -171,13 +172,13 @@ const PublicDashboard: React.FC = () => {
             actividad?.subsistema || "",
             `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
             itrb.estado,
-            itrb.ccc ? "Sí" : "No"
+            itrb.ccc ? "Sí" : "No" // Mantiene ccc en el código pero se muestra como MCC
           ];
         });
         
         (doc as any).autoTable({
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [['Descripción', 'Sistema', 'Subsistema', 'Realizado/Total', 'Estado', 'CCC']],
+          head: [['Descripción', 'Sistema', 'Subsistema', 'Realizado/Total', 'Estado', 'MCC']], // Cambiado de CCC a MCC
           body: itrbData,
           theme: 'striped',
           headStyles: { fillColor: [59, 130, 246] }
@@ -230,7 +231,7 @@ const PublicDashboard: React.FC = () => {
             "Realizado/Total": `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
             "Progreso (%)": itrb.cantidadTotal > 0 ? ((itrb.cantidadRealizada / itrb.cantidadTotal) * 100).toFixed(1) + "%" : "0%",
             Estado: itrb.estado,
-            CCC: itrb.ccc ? "Sí" : "No",
+            MCC: itrb.ccc ? "Sí" : "No", // Cambiado de CCC a MCC
             "Fecha Límite": new Date(itrb.fechaLimite).toLocaleDateString('es-ES')
           };
         });

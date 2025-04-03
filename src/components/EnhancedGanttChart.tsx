@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Actividad, ITRB, FiltrosDashboard, ConfiguracionGrafico } from "@/types";
@@ -51,11 +50,11 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
         return false;
       }
       
-      if (filtros.estadoITRB && itrb.estado !== filtros.estadoITRB) {
+      if (filtros.estadoITRB && filtros.estadoITRB !== "todos" && itrb.estado !== filtros.estadoITRB) {
         return false;
       }
       
-      if (filtros.ccc !== undefined && itrb.ccc !== filtros.ccc) {
+      if (filtros.mcc !== undefined && itrb.ccc !== filtros.mcc) {
         return false;
       }
       
@@ -119,7 +118,6 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
     };
   }, [currentStartDate, viewMode]);
   
-  // Destructure the timeConfig variables for easier access
   const { viewStartDate, viewEndDate, timeSlots, slotWidth } = timeConfig;
   
   const handleChangeViewMode = (mode: "month" | "week" | "day") => {
@@ -194,39 +192,50 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
       proyectoNombre: string;
       sistemas: {
         nombre: string;
-        actividades: Actividad[];
-        itrbsPorActividad: Record<string, ITRB[]>;
+        subsistemas: {
+          nombre: string;
+          actividades: Actividad[];
+          itrbsPorActividad: Record<string, ITRB[]>;
+        }[];
       }[];
     }[] = [];
     
     actividadesFiltradas.forEach(actividad => {
-      const proyectoIndex = resultado.findIndex(p => p.proyectoId === actividad.proyectoId);
+      let proyectoEntry = resultado.find(p => p.proyectoId === actividad.proyectoId);
       const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
       
-      if (proyectoIndex === -1) {
-        resultado.push({
+      if (!proyectoEntry) {
+        proyectoEntry = {
           proyectoId: actividad.proyectoId,
           proyectoNombre: proyecto ? proyecto.titulo : `Proyecto ${actividad.proyectoId}`,
-          sistemas: [{
-            nombre: actividad.sistema,
-            actividades: [actividad],
-            itrbsPorActividad: { [actividad.id]: [] }
-          }]
-        });
-      } else {
-        const sistemaIndex = resultado[proyectoIndex].sistemas.findIndex(s => s.nombre === actividad.sistema);
-        
-        if (sistemaIndex === -1) {
-          resultado[proyectoIndex].sistemas.push({
-            nombre: actividad.sistema,
-            actividades: [actividad],
-            itrbsPorActividad: { [actividad.id]: [] }
-          });
-        } else {
-          resultado[proyectoIndex].sistemas[sistemaIndex].actividades.push(actividad);
-          resultado[proyectoIndex].sistemas[sistemaIndex].itrbsPorActividad[actividad.id] = [];
-        }
+          sistemas: []
+        };
+        resultado.push(proyectoEntry);
       }
+      
+      let sistemaEntry = proyectoEntry.sistemas.find(s => s.nombre === actividad.sistema);
+      
+      if (!sistemaEntry) {
+        sistemaEntry = {
+          nombre: actividad.sistema,
+          subsistemas: []
+        };
+        proyectoEntry.sistemas.push(sistemaEntry);
+      }
+      
+      let subsistemaEntry = sistemaEntry.subsistemas.find(s => s.nombre === actividad.subsistema);
+      
+      if (!subsistemaEntry) {
+        subsistemaEntry = {
+          nombre: actividad.subsistema,
+          actividades: [],
+          itrbsPorActividad: {}
+        };
+        sistemaEntry.subsistemas.push(subsistemaEntry);
+      }
+      
+      subsistemaEntry.actividades.push(actividad);
+      subsistemaEntry.itrbsPorActividad[actividad.id] = [];
     });
     
     itrbFiltrados.forEach(itrb => {
@@ -234,15 +243,17 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
       const actividad = actividadesFiltradas.find(a => a.id === actividadId);
       
       if (actividad) {
-        const proyectoIndex = resultado.findIndex(p => p.proyectoId === actividad.proyectoId);
-        if (proyectoIndex !== -1) {
-          const sistemaIndex = resultado[proyectoIndex].sistemas.findIndex(s => s.nombre === actividad.sistema);
-          if (sistemaIndex !== -1) {
-            if (!resultado[proyectoIndex].sistemas[sistemaIndex].itrbsPorActividad[actividadId]) {
-              resultado[proyectoIndex].sistemas[sistemaIndex].itrbsPorActividad[actividadId] = [];
+        const proyectoEntry = resultado.find(p => p.proyectoId === actividad.proyectoId);
+        if (proyectoEntry) {
+          const sistemaEntry = proyectoEntry.sistemas.find(s => s.nombre === actividad.sistema);
+          if (sistemaEntry) {
+            const subsistemaEntry = sistemaEntry.subsistemas.find(s => s.nombre === actividad.subsistema);
+            if (subsistemaEntry) {
+              if (!subsistemaEntry.itrbsPorActividad[actividadId]) {
+                subsistemaEntry.itrbsPorActividad[actividadId] = [];
+              }
+              subsistemaEntry.itrbsPorActividad[actividadId].push(itrb);
             }
-            
-            resultado[proyectoIndex].sistemas[sistemaIndex].itrbsPorActividad[actividadId].push(itrb);
           }
         }
       }
@@ -337,92 +348,100 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
                 </div>
                 
                 {proyecto.sistemas.map((sistema, sistemaIndex) => (
-                  <div key={`${proyecto.proyectoId}-${sistema.nombre}`} className="mb-1">
+                  <div key={`${proyecto.proyectoId}-${sistema.nombre}`} className="mb-2">
                     <div className="sticky left-0 z-10 flex items-center h-7 bg-indigo-500 text-white pl-8 pr-2">
                       <div className="truncate w-[300px]">{sistema.nombre}</div>
                     </div>
                     
-                    {sistema.actividades.map((actividad, actividadIndex) => {
-                      const fechaInicio = new Date(actividad.fechaInicio);
-                      const fechaFin = new Date(actividad.fechaFin);
-                      const { left, width } = getItemPosition(fechaInicio, fechaFin);
-                      
-                      const activityItrbs = sistema.itrbsPorActividad[actividad.id] || [];
-                      
-                      if (width === 0) return null;
-                      
-                      return (
-                        <div key={actividad.id}>
-                          <div className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
-                            <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-12 pr-2 border-b w-[300px]">
-                              <div className="truncate text-sm">
-                                {actividad.nombre}
-                                <span className="text-xs text-gray-500 ml-1">
-                                  ({activityItrbs.length} ITR)
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div 
-                              className={`absolute h-5 rounded-sm shadow-md flex items-center justify-center text-xs text-white overflow-hidden
-                                        ${hoveredItem?.id === actividad.id ? "ring-2 ring-offset-2 ring-blue-500 z-20" : ""}`}
-                              style={{ 
-                                left: `${300 + left}px`, 
-                                width: `${width}px`,
-                                backgroundColor: "#64748b",
-                                borderColor: "#475569"
-                              }}
-                              onMouseEnter={() => setHoveredItem({ id: actividad.id, tipo: "actividad" })}
-                              onMouseLeave={() => setHoveredItem(null)}
-                            >
-                              {width > 50 && (
-                                <span className="px-2 truncate">
-                                  {actividad.nombre}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                    {sistema.subsistemas.map((subsistema, subsistemaIndex) => (
+                      <div key={`${proyecto.proyectoId}-${sistema.nombre}-${subsistema.nombre}`} className="mb-1">
+                        <div className="sticky left-0 z-10 flex items-center h-7 bg-indigo-300 dark:bg-indigo-600 text-black dark:text-white pl-12 pr-2">
+                          <div className="truncate w-[300px]">{subsistema.nombre}</div>
+                        </div>
+                        
+                        {subsistema.actividades.map((actividad, actividadIndex) => {
+                          const fechaInicio = new Date(actividad.fechaInicio);
+                          const fechaFin = new Date(actividad.fechaFin);
+                          const { left, width } = getItemPosition(fechaInicio, fechaFin);
                           
-                          {activityItrbs.map((itrb, itrbIndex) => {
-                            const fechaInicio = new Date(actividad.fechaInicio);
-                            const fechaLimite = new Date(itrb.fechaLimite);
-                            const { left, width } = getItemPosition(fechaInicio, fechaLimite);
-                            const colors = getColorByEstado(itrb.estado);
-                            
-                            if (width === 0) return null;
-                            
-                            return (
-                              <div key={itrb.id} className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
+                          const activityItrbs = subsistema.itrbsPorActividad[actividad.id] || [];
+                          
+                          if (width === 0) return null;
+                          
+                          return (
+                            <div key={actividad.id}>
+                              <div className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
                                 <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-16 pr-2 border-b w-[300px]">
-                                  <div className="truncate text-xs text-gray-600 dark:text-gray-400">
-                                    {itrb.descripcion.substring(0, 25)}{itrb.descripcion.length > 25 ? '...' : ''}
+                                  <div className="truncate text-sm">
+                                    {actividad.nombre}
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      ({activityItrbs.length} ITR)
+                                    </span>
                                   </div>
                                 </div>
                                 
                                 <div 
-                                  className={`absolute h-4 rounded-full flex items-center justify-center text-xs text-white overflow-hidden
-                                             ${hoveredItem?.id === itrb.id ? "ring-2 ring-offset-1 ring-blue-500 z-20" : ""}`}
+                                  className={`absolute h-5 rounded-sm shadow-md flex items-center justify-center text-xs text-white overflow-hidden
+                                            ${hoveredItem?.id === actividad.id ? "ring-2 ring-offset-2 ring-blue-500 z-20" : ""}`}
                                   style={{ 
                                     left: `${300 + left}px`, 
                                     width: `${width}px`,
-                                    backgroundColor: colors.bg,
-                                    borderColor: colors.border
+                                    backgroundColor: "#64748b",
+                                    borderColor: "#475569"
                                   }}
-                                  onMouseEnter={() => setHoveredItem({ id: itrb.id, tipo: "itrb" })}
+                                  onMouseEnter={() => setHoveredItem({ id: actividad.id, tipo: "actividad" })}
                                   onMouseLeave={() => setHoveredItem(null)}
                                 >
                                   {width > 50 && (
                                     <span className="px-2 truncate">
-                                      {itrb.descripcion} ({itrb.cantidadRealizada}/{itrb.cantidadTotal})
+                                      {actividad.nombre}
                                     </span>
                                   )}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
+                              
+                              {activityItrbs.map((itrb, itrbIndex) => {
+                                const fechaInicio = new Date(actividad.fechaInicio);
+                                const fechaLimite = new Date(itrb.fechaLimite);
+                                const { left, width } = getItemPosition(fechaInicio, fechaLimite);
+                                const colors = getColorByEstado(itrb.estado);
+                                
+                                if (width === 0) return null;
+                                
+                                return (
+                                  <div key={itrb.id} className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-20 pr-2 border-b w-[300px]">
+                                      <div className="truncate text-xs text-gray-600 dark:text-gray-400">
+                                        {itrb.descripcion.substring(0, 25)}{itrb.descripcion.length > 25 ? '...' : ''}
+                                      </div>
+                                    </div>
+                                    
+                                    <div 
+                                      className={`absolute h-4 rounded-full flex items-center justify-center text-xs text-white overflow-hidden
+                                                 ${hoveredItem?.id === itrb.id ? "ring-2 ring-offset-1 ring-blue-500 z-20" : ""}`}
+                                      style={{ 
+                                        left: `${300 + left}px`, 
+                                        width: `${width}px`,
+                                        backgroundColor: colors.bg,
+                                        borderColor: colors.border
+                                      }}
+                                      onMouseEnter={() => setHoveredItem({ id: itrb.id, tipo: "itrb" })}
+                                      onMouseLeave={() => setHoveredItem(null)}
+                                    >
+                                      {width > 50 && (
+                                        <span className="px-2 truncate">
+                                          {itrb.descripcion} ({itrb.cantidadRealizada}/{itrb.cantidadTotal})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

@@ -36,7 +36,7 @@ export interface ITRB {
   cantidadRealizada: number;
   fechaLimite: string;
   estado: EstadoITRB;
-  ccc: boolean;
+  ccc: boolean; // Mantenemos el nombre de la propiedad para compatibilidad, pero representa MCC
   observaciones?: string;
 }
 
@@ -68,7 +68,7 @@ export interface FiltrosDashboard {
   fechaFin?: string;
   busquedaActividad?: string;
   estadoITRB?: "Completado" | "En curso" | "Vencido" | "todos";
-  ccc?: boolean;
+  mcc?: boolean; // Cambiado de ccc a mcc
   tareaVencida?: boolean;
   timestamp?: number; // Para refrescar cache
 }
@@ -82,9 +82,17 @@ export interface AppTheme {
   mode: "light" | "dark";
 }
 
-// Configuración de KPIs
+// Configuración de KPIs ampliada
 export interface KPIConfig {
   itrVencidosMostrar: "total" | "diferencia" | "pendientes" | "completados";
+  nombreKPI1?: string;
+  nombreKPI2?: string;
+  nombreKPI3?: string;
+  nombreKPI4?: string;
+  kpiPersonalizado1?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasCCC";
+  kpiPersonalizado2?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasCCC";
+  kpiPersonalizado3?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasCCC";
+  kpiPersonalizado4?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasCCC";
 }
 
 // Nueva configuración para Ruta Crítica
