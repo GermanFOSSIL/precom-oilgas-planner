@@ -25,6 +25,13 @@ const ReportGenerator: React.FC = () => {
     setOpciones({ ...opciones, [key]: value });
   };
 
+  const handleOrientationChange = (value: "vertical" | "horizontal") => {
+    setOpciones({
+      ...opciones,
+      orientacion: value
+    });
+  };
+
   const generarReporte = async () => {
     setIsGenerating(true);
     try {
@@ -280,7 +287,7 @@ const ReportGenerator: React.FC = () => {
               id="orientacion"
               className="w-full border rounded px-3 py-2 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
               value={opciones.orientacion}
-              onChange={(e) => handleOpcionChange("orientacion", e.target.value)}
+              onChange={(e) => handleOrientationChange(e.target.value as "vertical" | "horizontal")}
             >
               <option value="horizontal">Horizontal</option>
               <option value="vertical">Vertical</option>

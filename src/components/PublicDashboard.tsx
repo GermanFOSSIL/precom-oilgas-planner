@@ -392,10 +392,10 @@ const PublicDashboard: React.FC = () => {
     if (typeof checked === 'boolean') {
       setMostrarSubsistemas(checked);
       
-      setConfiguracionGrafico(prev => ({
-        ...prev,
+      setConfiguracionGrafico({
+        ...configuracionGrafico,
         mostrarSubsistemas: checked
-      }));
+      });
     }
   };
 

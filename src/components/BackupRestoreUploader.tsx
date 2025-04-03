@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -47,11 +48,11 @@ const BackupRestoreUploader = () => {
   };
   
   const [restoreOptions, setRestoreOptions] = useState<BackupOptions>({
-    proyectos: true,
-    actividades: true,
-    itrbItems: true,
-    alertas: true,
-    kpiConfig: true
+    includeProyectos: true,
+    includeActividades: true,
+    includeITRB: true,
+    includeAlertas: true,
+    includeKpiConfig: true
   });
   
   const [backupFile, setBackupFile] = useState<File | null>(null);
@@ -154,7 +155,7 @@ const BackupRestoreUploader = () => {
             
             console.log("Datos de backup leídos correctamente:", Object.keys(data));
             
-            if (restoreOptions.proyectos && data.proyectos && typeof setProyectos === 'function') {
+            if (restoreOptions.includeProyectos && data.proyectos && typeof setProyectos === 'function') {
               try {
                 console.log("Restaurando proyectos:", data.proyectos.length);
                 setProyectos(data.proyectos);
@@ -164,7 +165,7 @@ const BackupRestoreUploader = () => {
               }
             }
             
-            if (restoreOptions.actividades && data.actividades && typeof setActividades === 'function') {
+            if (restoreOptions.includeActividades && data.actividades && typeof setActividades === 'function') {
               try {
                 console.log("Restaurando actividades:", data.actividades.length);
                 setActividades(data.actividades);
@@ -174,7 +175,7 @@ const BackupRestoreUploader = () => {
               }
             }
             
-            if (restoreOptions.itrbItems && data.itrbItems && typeof setItrbItems === 'function') {
+            if (restoreOptions.includeITRB && data.itrbItems && typeof setItrbItems === 'function') {
               try {
                 console.log("Restaurando ITRBs:", data.itrbItems.length);
                 setItrbItems(data.itrbItems);
@@ -184,7 +185,7 @@ const BackupRestoreUploader = () => {
               }
             }
             
-            if (restoreOptions.alertas && data.alertas && typeof setAlertas === 'function') {
+            if (restoreOptions.includeAlertas && data.alertas && typeof setAlertas === 'function') {
               try {
                 console.log("Restaurando alertas:", data.alertas.length);
                 setAlertas(data.alertas);
@@ -194,7 +195,7 @@ const BackupRestoreUploader = () => {
               }
             }
             
-            if (restoreOptions.kpiConfig && data.kpiConfig && typeof updateKPIConfig === 'function') {
+            if (restoreOptions.includeKpiConfig && data.kpiConfig && typeof updateKPIConfig === 'function') {
               try {
                 console.log("Restaurando configuración de KPIs");
                 updateKPIConfig(data.kpiConfig);
@@ -324,8 +325,8 @@ const BackupRestoreUploader = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="proyectos-restore" 
-                  checked={restoreOptions.proyectos}
-                  onCheckedChange={() => handleRestoreOptionChange('proyectos')}
+                  checked={restoreOptions.includeProyectos}
+                  onCheckedChange={() => handleRestoreOptionChange('includeProyectos')}
                 />
                 <Label htmlFor="proyectos-restore">Proyectos</Label>
               </div>
@@ -333,8 +334,8 @@ const BackupRestoreUploader = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="actividades-restore" 
-                  checked={restoreOptions.actividades}
-                  onCheckedChange={() => handleRestoreOptionChange('actividades')}
+                  checked={restoreOptions.includeActividades}
+                  onCheckedChange={() => handleRestoreOptionChange('includeActividades')}
                 />
                 <Label htmlFor="actividades-restore">Actividades</Label>
               </div>
@@ -342,8 +343,8 @@ const BackupRestoreUploader = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="itrbs-restore" 
-                  checked={restoreOptions.itrbItems}
-                  onCheckedChange={() => handleRestoreOptionChange('itrbItems')}
+                  checked={restoreOptions.includeITRB}
+                  onCheckedChange={() => handleRestoreOptionChange('includeITRB')}
                 />
                 <Label htmlFor="itrbs-restore">ITR B</Label>
               </div>
@@ -351,8 +352,8 @@ const BackupRestoreUploader = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="alertas-restore" 
-                  checked={restoreOptions.alertas}
-                  onCheckedChange={() => handleRestoreOptionChange('alertas')}
+                  checked={restoreOptions.includeAlertas}
+                  onCheckedChange={() => handleRestoreOptionChange('includeAlertas')}
                 />
                 <Label htmlFor="alertas-restore">Alertas</Label>
               </div>
@@ -360,8 +361,8 @@ const BackupRestoreUploader = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="config-restore" 
-                  checked={restoreOptions.kpiConfig}
-                  onCheckedChange={() => handleRestoreOptionChange('kpiConfig')}
+                  checked={restoreOptions.includeKpiConfig}
+                  onCheckedChange={() => handleRestoreOptionChange('includeKpiConfig')}
                 />
                 <Label htmlFor="config-restore">Configuración de KPIs</Label>
               </div>

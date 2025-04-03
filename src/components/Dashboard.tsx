@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { useAppContext } from "@/context/AppContext";
@@ -57,6 +58,16 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -443,10 +454,10 @@ const Dashboard: React.FC = () => {
     if (typeof checked === 'boolean') {
       setMostrarSubsistemas(checked);
 
-      setConfiguracionGrafico(prev => ({
-        ...prev,
+      setConfiguracionGrafico({
+        ...configuracionGrafico,
         mostrarSubsistemas: checked
-      }));
+      });
     }
   };
 
@@ -459,6 +470,7 @@ const Dashboard: React.FC = () => {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
+    // Actualizar la posición de los gráficos
     const updatedGraficos = items.map((grafico, index) => ({ ...grafico, posicion: index }));
 
     setGraficosPersonalizados(updatedGraficos);

@@ -36,7 +36,7 @@ export interface ITRB {
   cantidadRealizada: number;
   fechaLimite: string;
   estado: EstadoITRB;
-  mcc: boolean; // This was previously modified from ccc to mcc
+  mcc: boolean; 
   observaciones?: string;
   codigoITR?: string;
 }
@@ -71,13 +71,13 @@ export interface FiltrosDashboard {
   estadoITRB?: "Completado" | "En curso" | "Vencido" | "todos";
   mcc?: boolean;
   tareaVencida?: boolean;
-  timestamp?: number; // Para refrescar cache
+  timestamp?: number; 
 }
 
 export interface ConfiguracionGrafico {
   tamano: "pequeno" | "mediano" | "grande" | "completo";
   mostrarLeyenda: boolean;
-  mostrarSubsistemas?: boolean; // Add this property
+  mostrarSubsistemas: boolean; // Changed from optional to required
 }
 
 export interface AppTheme {
@@ -127,7 +127,7 @@ export interface GraficoPersonalizado {
   tipo: "barras" | "lineas" | "pastel" | "area";
   datos: "avance" | "itrb" | "actividades" | "vencimientos";
   filtro?: Partial<FiltrosDashboard>;
-  color: string; // This is required
+  color: string;
   posicion: number;
 }
 
@@ -141,12 +141,12 @@ export interface OpcionesReporte {
   incluirITRB: boolean;
 }
 
-// Add BackupOptions interface
+// Updated BackupOptions interface with correct property names
 export interface BackupOptions {
   includeProyectos: boolean;
   includeActividades: boolean;
   includeITRB: boolean;
   includeAlertas: boolean;
+  includeKpiConfig?: boolean;
   proyectoSeleccionado?: string;
-  kpiConfig?: boolean;
 }
