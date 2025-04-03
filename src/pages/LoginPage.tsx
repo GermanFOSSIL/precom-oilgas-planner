@@ -20,10 +20,13 @@ const LoginPage: React.FC = () => {
     navigate("/");
   };
 
-  // Adding a null onCancel since the Login component requires it but we don't need it on this page
+  // Creating a proper full-page login experience
   return (
-    <div>
-      <Login onSuccess={handleLoginSuccess} onCancel={null} />
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
+      <PublicHeader />
+      <div className="flex-1 flex items-center justify-center">
+        <Login onSuccess={handleLoginSuccess} onCancel={null} />
+      </div>
     </div>
   );
 };

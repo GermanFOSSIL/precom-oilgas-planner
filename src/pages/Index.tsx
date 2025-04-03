@@ -7,10 +7,12 @@ import AdminPanel from "@/components/AdminPanel";
 import PublicDashboard from "@/components/PublicDashboard";
 import { useAppContext } from "@/context/AppContext";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 // Contenedor que determina qué componente mostrar según el estado de autenticación
 const AppContainer: React.FC = () => {
   const { user, isAdmin, isTecnico, logout } = useAppContext();
+  const navigate = useNavigate();
   
   // Verificar autenticación cada vez que se monta el componente
   useEffect(() => {
@@ -26,12 +28,13 @@ const AppContainer: React.FC = () => {
       if (hoursPassed > 4) {
         logout();
         toast.info("La sesión ha expirado, por favor inicie sesión nuevamente.");
+        navigate('/login');
       }
     }
     
     // Update last session time
     localStorage.setItem("lastSession", now.toString());
-  }, [logout]);
+  }, [logout, navigate]);
   
   // Si no hay usuario autenticado, mostrar el dashboard público
   if (!user) {
@@ -48,11 +51,7 @@ const AppContainer: React.FC = () => {
 };
 
 const Index: React.FC = () => {
-  return (
-    <AppProvider>
-      <AppContainer />
-    </AppProvider>
-  );
+  return <AppContainer />;
 };
 
 export default Index;
