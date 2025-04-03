@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -881,3 +882,229 @@ const AdminPanel: React.FC = () => {
               </FormSubmitButton>
             </DialogFooter>
           </DialogContent>
+        </Dialog>
+
+        {/* Add dialogs for new activity and ITRB which were missing */}
+        <Dialog open={showNewActivityDialog} onOpenChange={setShowNewActivityDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nueva Actividad</DialogTitle>
+              <DialogDescription>
+                Complete la información de la actividad
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-3">
+              <div className="space-y-2">
+                <Label htmlFor="proyectoId">Proyecto</Label>
+                <Select 
+                  value={nuevaActividad.proyectoId}
+                  onValueChange={(value) => setNuevaActividad({...nuevaActividad, proyectoId: value})}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccionar proyecto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {proyectos.map(proyecto => (
+                      <SelectItem key={proyecto.id} value={proyecto.id}>
+                        {proyecto.titulo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="nombre">Nombre de la Actividad</Label>
+                <Input 
+                  id="nombre" 
+                  value={nuevaActividad.nombre}
+                  onChange={(e) => setNuevaActividad({...nuevaActividad, nombre: e.target.value})}
+                  placeholder="Ej: Montaje Tuberías"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sistema">Sistema</Label>
+                  <Input 
+                    id="sistema" 
+                    value={nuevaActividad.sistema}
+                    onChange={(e) => setNuevaActividad({...nuevaActividad, sistema: e.target.value})}
+                    placeholder="Ej: Eléctrico"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="subsistema">Subsistema</Label>
+                  <Input 
+                    id="subsistema" 
+                    value={nuevaActividad.subsistema}
+                    onChange={(e) => setNuevaActividad({...nuevaActividad, subsistema: e.target.value})}
+                    placeholder="Ej: Alumbrado"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fechaInicio">Fecha Inicio</Label>
+                  <Input 
+                    id="fechaInicio" 
+                    type="date"
+                    value={nuevaActividad.fechaInicio}
+                    onChange={handleFechaInicioChange}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="fechaFin">Fecha Fin</Label>
+                  <Input 
+                    id="fechaFin" 
+                    type="date"
+                    value={nuevaActividad.fechaFin}
+                    onChange={handleFechaFinChange}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="duracion">Duración (días)</Label>
+                <Input 
+                  id="duracion" 
+                  type="number"
+                  value={nuevaActividad.duracion}
+                  onChange={(e) => setNuevaActividad({...nuevaActividad, duracion: parseInt(e.target.value) || 0})}
+                  min="1"
+                  readOnly
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowNewActivityDialog(false)}>
+                Cancelar
+              </Button>
+              <FormSubmitButton onClick={handleCrearActividad} onComplete={() => setShowNewActivityDialog(false)}>
+                Crear Actividad
+              </FormSubmitButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={showNewITRBDialog} onOpenChange={setShowNewITRBDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nuevo ITR B</DialogTitle>
+              <DialogDescription>
+                Complete la información del ITR B
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-3">
+              <div className="space-y-2">
+                <Label htmlFor="actividadId">Actividad</Label>
+                <Select 
+                  value={nuevoITRB.actividadId}
+                  onValueChange={(value) => setNuevoITRB({...nuevoITRB, actividadId: value})}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccionar actividad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {actividades
+                      .filter(actividad => proyectoActual === "todos" || actividad.proyectoId === proyectoActual)
+                      .map(actividad => (
+                        <SelectItem key={actividad.id} value={actividad.id}>
+                          {actividad.nombre} ({actividad.sistema} - {actividad.subsistema})
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="descripcion">Descripción</Label>
+                <Input 
+                  id="descripcion" 
+                  value={nuevoITRB.descripcion}
+                  onChange={(e) => setNuevoITRB({...nuevoITRB, descripcion: e.target.value})}
+                  placeholder="Ej: ITR B-01 Verificación de tensión"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cantidadTotal">Cantidad Total</Label>
+                  <Input 
+                    id="cantidadTotal" 
+                    type="number"
+                    value={nuevoITRB.cantidadTotal}
+                    onChange={(e) => setNuevoITRB({...nuevoITRB, cantidadTotal: parseInt(e.target.value) || 1})}
+                    min="1"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="cantidadRealizada">Cantidad Realizada</Label>
+                  <Input 
+                    id="cantidadRealizada" 
+                    type="number"
+                    value={nuevoITRB.cantidadRealizada}
+                    onChange={(e) => setNuevoITRB({...nuevoITRB, cantidadRealizada: parseInt(e.target.value) || 0})}
+                    min="0"
+                    max={nuevoITRB.cantidadTotal}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="fechaLimite">Fecha Límite</Label>
+                <Input 
+                  id="fechaLimite" 
+                  type="date"
+                  value={nuevoITRB.fechaLimite}
+                  onChange={(e) => setNuevoITRB({...nuevoITRB, fechaLimite: e.target.value})}
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2 py-2">
+                <Checkbox 
+                  id="mcc" 
+                  checked={nuevoITRB.mcc}
+                  onCheckedChange={(checked) => 
+                    setNuevoITRB({...nuevoITRB, mcc: checked === true})
+                  }
+                />
+                <Label htmlFor="mcc" className="cursor-pointer">Requiere MCC</Label>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="observaciones">Observaciones</Label>
+                <Textarea 
+                  id="observaciones"
+                  value={nuevoITRB.observaciones || ""}
+                  onChange={(e) => setNuevoITRB({...nuevoITRB, observaciones: e.target.value})}
+                  placeholder="Observaciones adicionales..."
+                  rows={2}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowNewITRBDialog(false)}>
+                Cancelar
+              </Button>
+              <FormSubmitButton onClick={handleCrearITRB} onComplete={() => setShowNewITRBDialog(false)}>
+                Crear ITR B
+              </FormSubmitButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </main>
+    </div>
+  );
+};
+
+export default AdminPanel;
