@@ -1,3 +1,4 @@
+
 export interface Proyecto {
   id: string;
   titulo: string;
@@ -87,7 +88,7 @@ export interface AppContextType {
   updateAPIKeys: (keys: Partial<APIKeys>) => void;
 }
 
-// Agregamos la interfaz para las API keys
+// Add the interface for API keys
 export interface APIKeys {
   openAI?: string;
   aiModel?: string;

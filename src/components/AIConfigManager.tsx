@@ -52,7 +52,7 @@ const AIConfigManager: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <Alert variant="info" className="bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800">
+        <Alert className="bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Información</AlertTitle>
           <AlertDescription>

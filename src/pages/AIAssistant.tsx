@@ -4,9 +4,8 @@ import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Download, Mail, BrainCog, Bot } from "lucide-react";
+import { Send, Download, Mail, Bot } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 

@@ -9,7 +9,8 @@ import {
   Alerta, 
   AppTheme,
   FiltrosDashboard,
-  KPIConfig
+  KPIConfig,
+  APIKeys
 } from "@/types";
 
 interface AppContextType {
@@ -66,6 +67,10 @@ interface AppContextType {
   
   // KPIs y estadísticas
   getKPIs: (proyectoId?: string) => KPIs;
+  
+  // API Keys
+  apiKeys: APIKeys;
+  updateAPIKeys: (keys: Partial<APIKeys>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -84,6 +89,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Configuración de KPIs
   const [kpiConfig, setKPIConfig] = useState<KPIConfig>({
     itrVencidosMostrar: "total", // valores posibles: "total", "diferencia", "pendientes", "completados"
+  });
+  
+  // API Keys
+  const [apiKeys, setApiKeys] = useState<APIKeys>({
+    openAI: '',
+    aiModel: 'gpt-4o'
   });
   
   // Propiedades derivadas
@@ -125,6 +136,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const storedKPIConfig = localStorage.getItem("kpiConfig");
     if (storedKPIConfig) {
       setKPIConfig(JSON.parse(storedKPIConfig));
+    }
+    
+    const storedAPIKeys = localStorage.getItem("apiKeys");
+    if (storedAPIKeys) {
+      setApiKeys(JSON.parse(storedAPIKeys));
     }
   }, []);
 
@@ -209,9 +225,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem("kpiConfig", JSON.stringify(kpiConfig));
   }, [kpiConfig]);
 
+  useEffect(() => {
+    localStorage.setItem("apiKeys", JSON.stringify(apiKeys));
+  }, [apiKeys]);
+
   // Función para actualizar la configuración de KPIs
   const updateKPIConfig = (config: Partial<KPIConfig>) => {
     setKPIConfig(prev => ({ ...prev, ...config }));
+  };
+
+  // Función para actualizar las API Keys
+  const updateAPIKeys = (keys: Partial<APIKeys>) => {
+    setApiKeys(prev => ({ ...prev, ...keys }));
   };
 
   // Funciones de autenticación
@@ -438,6 +463,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setFiltros,
         kpiConfig,
         updateKPIConfig,
+        apiKeys,
+        updateAPIKeys,
         getKPIs
       }}
     >
