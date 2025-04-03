@@ -138,7 +138,7 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="w-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+      <div className="w-full overflow-y-auto flex-1">
         <ScrollArea className="w-full">
           <div className="min-w-[800px] relative">
             <GanttDateHeaders axisDates={axisDates} viewMode={viewMode} isDarkMode={isDarkMode} />
