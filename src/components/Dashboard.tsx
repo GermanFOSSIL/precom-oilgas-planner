@@ -67,33 +67,27 @@ const Dashboard: React.FC = () => {
     getKPIs
   } = useAppContext();
 
-  // Definir configuración por defecto
   const defaultConfiguracionGrafico: ConfiguracionGrafico = {
     tamano: "mediano",
     mostrarLeyenda: true,
     mostrarSubsistemas: true
   };
 
-  // Estado para la configuración del gráfico
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>(defaultConfiguracionGrafico);
   
-  // Estados para la interfaz
   const [tabActual, setTabActual] = useState("gantt");
   const [exportingChart, setExportingChart] = useState(false);
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
   const [codigoITRFilter, setCodigoITRFilter] = useState("");
   const [modoFiltroAvanzado, setModoFiltroAvanzado] = useState(false);
   
-  // Referencia para el gráfico Gantt
   const ganttChartRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Asegurar que el timestamp siempre sea string
   const ensureStringTimestamp = (timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
     return typeof timestamp === 'number' ? String(timestamp) : timestamp;
   };
 
-  // Actualizar filtros al cargar el componente
   useEffect(() => {
     setFiltros({
       ...filtros,
@@ -101,12 +95,10 @@ const Dashboard: React.FC = () => {
     });
   }, [setFiltros, filtros]);
 
-  // Obtener sistemas disponibles
   const sistemasDisponibles = Array.from(
     new Set(actividades.map(act => act.sistema))
   );
 
-  // Obtener subsistemas filtrados
   const subsistemasFiltrados = Array.from(
     new Set(
       actividades
@@ -115,7 +107,6 @@ const Dashboard: React.FC = () => {
     )
   );
 
-  // Manejar cambios en filtros
   const handleFiltroChange = (key: keyof FiltrosDashboard, value: any) => {
     if (key === 'timestamp') {
       setFiltros({ ...filtros, [key]: ensureStringTimestamp(value) });
@@ -124,18 +115,15 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Manejar cambio de tamaño del gráfico
   const handleTamanoGrafico = (tamano: ConfiguracionGrafico["tamano"]) => {
     setConfiguracionGrafico({ ...configuracionGrafico, tamano });
   };
 
-  // Manejar cierre de sesión
   const handleResetSession = () => {
     logout();
     window.location.reload();
   };
 
-  // Obtener altura del gráfico según configuración
   const getGanttHeight = () => {
     const tamano = configuracionGrafico?.tamano || "mediano";
     
@@ -148,7 +136,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Capturar el gráfico Gantt
   const captureGanttChart = async (): Promise<string | null> => {
     try {
       const ganttContainers = Array.from(document.querySelectorAll('.gantt-chart-container'));
@@ -212,7 +199,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Generar datos del Gantt para Excel
   const generateGanttDataForExcel = () => {
     const ganttData = actividades.filter(act =>
       filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
@@ -241,7 +227,6 @@ const Dashboard: React.FC = () => {
     return ganttData;
   };
 
-  // Generar PDF
   const generarPDF = async () => {
     try {
       setExportingChart(true);
@@ -327,7 +312,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Generar Excel
   const generarExcel = async () => {
     try {
       setExportingChart(true);
@@ -414,7 +398,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Manejar toggle de subsistemas
   const handleSubsistemaToggle = (checked: boolean | "indeterminate") => {
     if (typeof checked === 'boolean') {
       setMostrarSubsistemas(checked);
@@ -425,7 +408,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Obtener configuración del gráfico
   const getGanttConfiguration = () => {
     return {
       ...defaultConfiguracionGrafico,
@@ -439,7 +421,6 @@ const Dashboard: React.FC = () => {
       <PublicHeader />
 
       <main className="flex-1 container mx-auto px-4 py-6">
-        {/* Header con selector de proyecto y botones */}
         <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
           <div className="flex items-center gap-2 w-full md:w-auto">
             <ProyectoSelector />
@@ -459,9 +440,7 @@ const Dashboard: React.FC = () => {
             </Button>
           </div>
 
-          {/* Filtros y botones de exportación */}
           <div className="flex flex-wrap gap-2 justify-end w-full md:w-auto">
-            {/* Menú desplegable de filtros */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-1">
@@ -543,7 +522,6 @@ const Dashboard: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Filtro avanzado */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -603,7 +581,6 @@ const Dashboard: React.FC = () => {
               </PopoverContent>
             </Popover>
 
-            {/* Botón de tema */}
             <Button
               variant="outline"
               onClick={toggleTheme}
@@ -612,7 +589,6 @@ const Dashboard: React.FC = () => {
               <SunMoon className="h-4 w-4" />
             </Button>
 
-            {/* Menú de exportación */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -638,10 +614,8 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI Cards */}
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
 
-        {/* Tabs de Gantt, Ruta Crítica, Alertas */}
         <Tabs
           defaultValue="gantt"
           className="w-full"
