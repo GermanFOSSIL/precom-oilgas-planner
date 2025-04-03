@@ -1,4 +1,3 @@
-
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -127,4 +126,14 @@ export interface GraficoPersonalizado {
   filtro?: Partial<FiltrosDashboard>;
   color: string;
   posicion: number;
+}
+
+// New interface for exported report options
+export interface OpcionesReporte {
+  incluirGantt: boolean;
+  formatoGantt: "imagen" | "tabla";
+  orientacion: "vertical" | "horizontal";
+  incluirKPIs: boolean;
+  incluirActividades: boolean;
+  incluirITRB: boolean;
 }

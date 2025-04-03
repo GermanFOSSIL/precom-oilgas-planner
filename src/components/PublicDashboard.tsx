@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
@@ -27,7 +26,9 @@ import {
   Search, 
   Download,
   SunMoon,
-  AlertTriangle
+  AlertTriangle,
+  Image,
+  FileSpreadsheet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
@@ -37,6 +38,7 @@ import ProyectoSelector from "@/components/ProyectoSelector";
 import AlertasWidget from "@/components/AlertasWidget";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
+import html2canvas from 'html2canvas';
 
 const PublicDashboard: React.FC = () => {
   const { 
@@ -57,6 +59,8 @@ const PublicDashboard: React.FC = () => {
   });
   
   const [tabActual, setTabActual] = useState("gantt");
+  const ganttChartRef = useRef<HTMLDivElement | null>(null);
+  const [exportingChart, setExportingChart] = useState(false);
 
   useEffect(() => {
     setFiltros({ ...filtros, timestamp: Date.now() });
@@ -82,10 +86,6 @@ const PublicDashboard: React.FC = () => {
     setConfiguracionGrafico({ ...configuracionGrafico, tamano });
   };
 
-  const exportarGrafico = () => {
-    generarPDF();
-  };
-
   const handleResetSession = () => {
     logout();
     window.location.reload();
@@ -101,9 +101,106 @@ const PublicDashboard: React.FC = () => {
     }
   };
 
-  const generarPDF = () => {
+  const captureGanttChart = async (): Promise<string | null> => {
     try {
-      const doc = new window.jsPDF();
+      const ganttContainers = Array.from(document.querySelectorAll('.gantt-chart-container'));
+      const visibleGanttContainer = ganttContainers.find(el => 
+        el instanceof HTMLElement && 
+        el.offsetParent !== null && 
+        window.getComputedStyle(el).display !== 'none'
+      ) as HTMLElement;
+      
+      if (!visibleGanttContainer) {
+        console.warn("No se pudo encontrar un diagrama de Gantt visible en el DOM");
+        
+        const ganttElement = document.querySelector('.recharts-wrapper') as HTMLElement;
+        if (!ganttElement) {
+          toast.error("No se pudo encontrar el diagrama de Gantt para exportar");
+          return null;
+        }
+        
+        const canvas = await html2canvas(ganttElement, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null,
+          logging: false
+        });
+        
+        return canvas.toDataURL('image/png');
+      }
+      
+      const clonedContainer = visibleGanttContainer.cloneNode(true) as HTMLElement;
+      
+      clonedContainer.style.position = 'absolute';
+      clonedContainer.style.left = '-9999px';
+      clonedContainer.style.width = `${visibleGanttContainer.scrollWidth}px`;
+      clonedContainer.style.height = `${visibleGanttContainer.scrollHeight}px`;
+      document.body.appendChild(clonedContainer);
+      
+      const canvas = await html2canvas(clonedContainer, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false,
+        width: visibleGanttContainer.scrollWidth,
+        height: visibleGanttContainer.scrollHeight
+      });
+      
+      document.body.removeChild(clonedContainer);
+      
+      return canvas.toDataURL('image/png');
+    } catch (error) {
+      console.error("Error al capturar el diagrama de Gantt:", error);
+      toast.error("No se pudo capturar el diagrama de Gantt. Intente nuevamente.");
+      return null;
+    }
+  };
+
+  const generateGanttDataForExcel = () => {
+    const ganttData = actividades.filter(act => 
+      filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
+    ).map(act => {
+      const proyecto = proyectos.find(p => p.id === act.proyectoId);
+      const itrbAsociados = itrbItems.filter(i => i.actividadId === act.id);
+      const itrbCompletados = itrbAsociados.filter(i => i.estado === "Completado").length;
+      const totalItrb = itrbAsociados.length;
+      const avance = totalItrb > 0 ? Math.round((itrbCompletados / totalItrb) * 100) : 0;
+      
+      return {
+        Proyecto: proyecto?.titulo || 'N/A',
+        ID: act.id,
+        Actividad: act.nombre,
+        Sistema: act.sistema,
+        Subsistema: act.subsistema,
+        'Fecha Inicio': new Date(act.fechaInicio).toLocaleDateString('es-ES'),
+        'Fecha Fin': new Date(act.fechaFin).toLocaleDateString('es-ES'),
+        'Duración (días)': act.duracion,
+        'ITRBs Completados': `${itrbCompletados}/${totalItrb}`,
+        'Avance (%)': `${avance}%`,
+        'Estado': avance === 100 ? 'Completado' : avance > 0 ? 'En curso' : 'No iniciado'
+      };
+    });
+    
+    return ganttData;
+  };
+
+  const generarPDF = async () => {
+    try {
+      setExportingChart(true);
+      
+      const ganttImageData = await captureGanttChart();
+      if (!ganttImageData) {
+        toast.error("No se pudo capturar el diagrama de Gantt");
+        setExportingChart(false);
+        return;
+      }
+      
+      const doc = new window.jsPDF({
+        orientation: "landscape",
+        unit: "mm"
+      });
       
       doc.text("Dashboard - Plan de Precomisionado", 14, 20);
       doc.text("Fecha: " + new Date().toLocaleDateString('es-ES'), 14, 30);
@@ -116,135 +213,127 @@ const PublicDashboard: React.FC = () => {
       
       doc.text(`Proyecto: ${proyectoNombre}`, 14, 40);
       
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      const imgWidth = pageWidth - 28;
+      const imgHeight = imgWidth * 0.5;
+      
+      try {
+        doc.addImage(ganttImageData, 'PNG', 14, 45, imgWidth, imgHeight);
+      } catch (err) {
+        console.error("Error al agregar imagen del diagrama de Gantt:", err);
+        doc.text("Error al incluir el diagrama de Gantt", 14, 45);
+      }
+      
       const kpisData = [
         ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
         ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
-        ["Subsistemas con MCC", `${kpis.subsistemasCCC}/${kpis.totalSubsistemas}`],
+        ["Subsistemas con MCC", `${kpis.subsistemasMCC}/${kpis.totalSubsistemas}`],
         ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
       ];
       
       (doc as any).autoTable({
-        startY: 45,
+        startY: 45 + imgHeight + 10,
         head: [["Indicador", "Valor"]],
         body: kpisData,
         theme: 'grid',
         headStyles: { fillColor: [59, 130, 246] }
       });
       
-      const actividadesFiltradas = actividades.filter(act => 
-        filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
-      );
-      
-      if (actividadesFiltradas.length > 0) {
-        doc.text("Actividades", 14, (doc as any).lastAutoTable.finalY + 15);
-        
-        const actividadesData = actividadesFiltradas.map(act => [
-          act.nombre,
-          act.sistema,
-          act.subsistema,
-          new Date(act.fechaInicio).toLocaleDateString('es-ES'),
-          new Date(act.fechaFin).toLocaleDateString('es-ES'),
-          `${act.duracion} días`
-        ]);
-        
-        (doc as any).autoTable({
-          startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [['Nombre', 'Sistema', 'Subsistema', 'Inicio', 'Fin', 'Duración']],
-          body: actividadesData,
-          theme: 'striped',
-          headStyles: { fillColor: [59, 130, 246] }
-        });
-      }
-      
-      const itrbsFiltrados = itrbItems.filter(itrb => {
-        const actividad = actividades.find(act => act.id === itrb.actividadId);
-        return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
-      });
-      
-      if (itrbsFiltrados.length > 0) {
-        doc.text("ITR B", 14, (doc as any).lastAutoTable.finalY + 15);
-        
-        const itrbData = itrbsFiltrados.map(itrb => {
-          const actividad = actividades.find(act => act.id === itrb.actividadId);
-          return [
-            itrb.descripcion,
-            actividad?.sistema || "",
-            actividad?.subsistema || "",
-            `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
-            itrb.estado,
-            itrb.ccc ? "Sí" : "No" // Mantiene ccc en el código pero se muestra como MCC
-          ];
-        });
-        
-        (doc as any).autoTable({
-          startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [['Descripción', 'Sistema', 'Subsistema', 'Realizado/Total', 'Estado', 'MCC']], // Cambiado de CCC a MCC
-          body: itrbData,
-          theme: 'striped',
-          headStyles: { fillColor: [59, 130, 246] }
-        });
-      }
-      
-      doc.save("dashboard-precomisionado.pdf");
-      toast.success("PDF generado exitosamente");
+      doc.save("gantt-chart-precomisionado.pdf");
+      toast.success("PDF del diagrama de Gantt generado exitosamente");
     } catch (error) {
       console.error("Error al generar PDF:", error);
       toast.error("Error al generar el PDF");
+    } finally {
+      setExportingChart(false);
     }
   };
 
-  const generarExcel = () => {
+  const generarExcel = async () => {
     try {
+      setExportingChart(true);
+      
       const wb = XLSX.utils.book_new();
       
-      const actividadesFiltradas = actividades.filter(act => 
-        filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
-      );
+      const ganttData = generateGanttDataForExcel();
       
-      const itrbsFiltrados = itrbItems.filter(itrb => {
-        const actividad = actividades.find(act => act.id === itrb.actividadId);
-        return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
+      const wsData = [
+        ["DIAGRAMA DE GANTT - PLAN DE PRECOMISIONADO", "", "", "", "", "", "", "", "", ""],
+        ["Proyecto: " + (filtros.proyecto !== "todos" ? 
+          proyectos.find(p => p.id === filtros.proyecto)?.titulo || "Todos los proyectos" : 
+          "Todos los proyectos"), "", "", "", "", "", "", "", "", ""],
+        ["Fecha de exportación: " + new Date().toLocaleDateString('es-ES'), "", "", "", "", "", "", "", "", ""],
+        [""],
+        ["Proyecto", "ID", "Actividad", "Sistema", "Subsistema", "Fecha Inicio", "Fecha Fin", "Duración (días)", "ITRBs Completados", "Avance (%)", "Estado"]
+      ];
+      
+      ganttData.forEach(row => {
+        wsData.push([
+          row.Proyecto,
+          row.ID,
+          row.Actividad,
+          row.Sistema,
+          row.Subsistema,
+          row["Fecha Inicio"],
+          row["Fecha Fin"],
+          row["Duración (días)"],
+          row["ITRBs Completados"],
+          row["Avance (%)"],
+          row.Estado
+        ]);
       });
       
-      if (actividadesFiltradas.length > 0) {
-        const wsData = actividadesFiltradas.map(act => ({
-          Nombre: act.nombre,
-          Sistema: act.sistema,
-          Subsistema: act.subsistema,
-          "Fecha Inicio": new Date(act.fechaInicio).toLocaleDateString('es-ES'),
-          "Fecha Fin": new Date(act.fechaFin).toLocaleDateString('es-ES'),
-          "Duración (días)": act.duracion
-        }));
-        
-        const ws = XLSX.utils.json_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, "Actividades");
-      }
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
       
-      if (itrbsFiltrados.length > 0) {
-        const wsData = itrbsFiltrados.map(itrb => {
-          const actividad = actividades.find(act => act.id === itrb.actividadId);
-          return {
-            Descripción: itrb.descripcion,
-            Actividad: actividad?.nombre || "",
-            Sistema: actividad?.sistema || "",
-            Subsistema: actividad?.subsistema || "",
-            "Realizado/Total": `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
-            "Progreso (%)": itrb.cantidadTotal > 0 ? ((itrb.cantidadRealizada / itrb.cantidadTotal) * 100).toFixed(1) + "%" : "0%",
-            Estado: itrb.estado,
-            MCC: itrb.ccc ? "Sí" : "No", // Cambiado de CCC a MCC
-            "Fecha Límite": new Date(itrb.fechaLimite).toLocaleDateString('es-ES')
-          };
-        });
-        
-        const ws = XLSX.utils.json_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, "ITR B");
-      }
+      const colWidths = [
+        { wch: 20 },
+        { wch: 10 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 15 }
+      ];
       
-      XLSX.writeFile(wb, "dashboard-precomisionado.xlsx");
-      toast.success("Excel generado exitosamente");
+      ws['!cols'] = colWidths;
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 10 } }
+      ];
+      
+      XLSX.utils.book_append_sheet(wb, ws, "Gantt Chart");
+      
+      const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
+      
+      const kpisData = [
+        ["KPIs - PLAN DE PRECOMISIONADO", ""],
+        [""],
+        ["Indicador", "Valor"],
+        ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
+        ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
+        ["ITR B Completados (%)", `${kpis.totalITRB > 0 ? ((kpis.realizadosITRB / kpis.totalITRB) * 100).toFixed(1) : 0}%`],
+        ["Subsistemas con MCC", `${kpis.subsistemasMCC}/${kpis.totalSubsistemas}`],
+        ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
+      ];
+      
+      const wsKPIs = XLSX.utils.aoa_to_sheet(kpisData);
+      wsKPIs['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+      XLSX.utils.book_append_sheet(wb, wsKPIs, "KPIs");
+      
+      XLSX.writeFile(wb, "gantt-chart-precomisionado.xlsx");
+      toast.success("Excel del diagrama de Gantt generado exitosamente");
     } catch (error) {
       console.error("Error al generar Excel:", error);
       toast.error("Error al generar el Excel");
+    } finally {
+      setExportingChart(false);
     }
   };
 
@@ -353,19 +442,21 @@ const PublicDashboard: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={generarPDF}
+              disabled={exportingChart}
               className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600"
             >
-              <Download className="h-4 w-4 mr-2" />
-              PDF
+              <Image className="h-4 w-4 mr-2" />
+              Gantt PDF
             </Button>
             
             <Button 
               variant="outline" 
               onClick={generarExcel}
+              disabled={exportingChart}
               className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600"
             >
-              <FileText className="h-4 w-4 mr-2" />
-              Excel
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Gantt Excel
             </Button>
           </div>
         </div>
@@ -419,10 +510,12 @@ const PublicDashboard: React.FC = () => {
           <TabsContent value="gantt" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
               <CardContent className={`p-0 overflow-hidden ${getGanttHeight()}`}>
-                <EnhancedGanttChart
-                  filtros={filtros}
-                  configuracion={configuracionGrafico}
-                />
+                <div ref={ganttChartRef} className="w-full h-full">
+                  <EnhancedGanttChart
+                    filtros={filtros}
+                    configuracion={configuracionGrafico}
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
