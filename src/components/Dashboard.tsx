@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
 import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import AlertasWidget from "@/components/AlertasWidget";
+
 import {
   Select,
   SelectContent,
