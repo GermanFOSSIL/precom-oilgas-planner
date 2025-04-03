@@ -53,7 +53,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   };
 
   // Handle time navigation
-  const navigateTime = (direction: "prev" | "next") => {
+  const navigateTime = (direction: "prev" | "next" | "today") => {
     const { newStartDate, newEndDate } = calculateNewDateRange(
       currentStartDate,
       currentEndDate,

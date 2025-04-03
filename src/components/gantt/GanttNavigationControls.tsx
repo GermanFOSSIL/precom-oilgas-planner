@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,7 +24,7 @@ interface GanttNavigationControlsProps {
   currentEndDate: Date;
   viewMode: "month" | "week" | "day";
   zoomLevel: number;
-  onNavigate: (direction: "prev" | "next") => void;
+  onNavigate: (direction: "prev" | "next" | "today") => void;
   onViewModeChange: (viewMode: "month" | "week" | "day") => void;
   onZoomChange: (direction: "in" | "out") => void;
 }
