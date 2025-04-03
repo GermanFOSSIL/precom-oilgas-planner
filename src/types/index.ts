@@ -78,6 +78,7 @@ export interface FiltrosDashboard {
   ccc?: boolean;
   tareaVencida?: boolean;
   busquedaActividad?: string;
+  timestamp?: number; // Add timestamp property to handle cache refreshing
 }
 
 export interface ConfiguracionGrafico {

@@ -56,6 +56,7 @@ export interface FiltrosDashboard {
   estadoITRB?: "Completado" | "En curso" | "Vencido" | "todos";
   ccc?: boolean;
   tareaVencida?: boolean;
+  timestamp?: number; // Adding timestamp for cache refreshing
 }
 
 export interface ConfiguracionGrafico {
