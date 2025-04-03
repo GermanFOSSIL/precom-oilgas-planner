@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -263,7 +264,10 @@ const PublicDashboard: React.FC = () => {
       </main>
       
       {showLogin && (
-        <Login onSuccess={handleLoginSuccess} onCancel={() => setShowLogin(false)} />
+        <Login 
+          onSuccess={handleLoginSuccess} 
+          onCancel={() => setShowLogin(false)} 
+        />
       )}
     </div>
   );

@@ -143,3 +143,12 @@ export interface BackupOptions {
   includeKpiConfig: boolean;
   proyectoSeleccionado?: string;
 }
+
+export interface LoginProps {
+  onSuccess: (email: string) => void;
+  onCancel: () => void;
+}
+
+export interface PublicHeaderProps {
+  onLoginClick?: () => void;
+}
