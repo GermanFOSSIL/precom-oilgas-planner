@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppContext } from "@/context/AppContext";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, FileText, AlertTriangle, ArrowUpFromLine } from "lucide-react";
+import { CheckCircle, FileText, AlertTriangle, ArrowUpFromLine, AlertCircle } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 interface KPICardsProps {
