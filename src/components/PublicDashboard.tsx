@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
@@ -42,13 +42,20 @@ const PublicDashboard: React.FC = () => {
     theme, 
     toggleTheme,
     actividades,
-    itrbItems
+    itrbItems,
+    logout  // Add logout to clear user session
   } = useAppContext();
 
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>({
     tamano: "mediano",
     mostrarLeyenda: true
   });
+
+  // Effect to clear cache when component mounts
+  useEffect(() => {
+    // Force refresh filtros to ensure updated state
+    setFiltros({ ...filtros, timestamp: Date.now() });
+  }, []);
 
   const sistemasDisponibles = Array.from(
     new Set(actividades.map(act => act.sistema))
@@ -75,6 +82,13 @@ const PublicDashboard: React.FC = () => {
     alert("Exportación de gráfico no implementada aún");
   };
 
+  // Limpiar sesión y recargar la página
+  const handleResetSession = () => {
+    logout();
+    // Forzar recarga completa para limpiar cualquier caché del navegador
+    window.location.reload();
+  };
+
   // Ajustar altura del gráfico según tamaño seleccionado
   const getGanttHeight = () => {
     switch (configuracionGrafico.tamano) {
@@ -94,6 +108,20 @@ const PublicDashboard: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
           <div className="flex items-center gap-2 w-full md:w-auto">
             <ProyectoSelector />
+            
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleResetSession}
+              title="Restablecer sesión"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </Button>
           </div>
           
           <div className="flex flex-wrap gap-2 justify-end w-full md:w-auto">
@@ -150,7 +178,7 @@ const PublicDashboard: React.FC = () => {
             <Button
               variant="outline"
               onClick={() => handleFiltroChange("tareaVencida", !filtros.tareaVencida)}
-              className={filtros.tareaVencida ? "bg-red-100 dark:bg-red-900" : ""}
+              className={filtros.tareaVencida ? "bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700" : ""}
             >
               <Filter className="h-4 w-4 mr-2" />
               Vencidas
@@ -166,7 +194,11 @@ const PublicDashboard: React.FC = () => {
               />
             </div>
             
-            <Button variant="outline" onClick={toggleTheme}>
+            <Button 
+              variant="outline" 
+              onClick={toggleTheme}
+              className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600"
+            >
               <SunMoon className="h-4 w-4" />
             </Button>
           </div>
@@ -174,13 +206,13 @@ const PublicDashboard: React.FC = () => {
         
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
         
-        <Card className="mb-6">
+        <Card className="mb-6 dark:bg-slate-800 dark:border-slate-700">
           <CardHeader className="flex flex-row justify-between items-center pb-2">
             <div>
               <CardTitle className="text-xl">
                 Diagrama de Gantt
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-slate-400">
                 Vista de actividades y ITR B por proyecto
               </CardDescription>
             </div>
@@ -200,7 +232,7 @@ const PublicDashboard: React.FC = () => {
                 </SelectContent>
               </Select>
               
-              <Button variant="outline" onClick={exportarGrafico}>
+              <Button variant="outline" onClick={exportarGrafico} className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600">
                 <Download className="h-4 w-4 mr-2" />
                 Exportar
               </Button>
@@ -215,7 +247,7 @@ const PublicDashboard: React.FC = () => {
         </Card>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 dark:bg-slate-800 dark:border-slate-700">
             <CardHeader>
               <CardTitle>Resumen de Actividades</CardTitle>
             </CardHeader>
@@ -230,7 +262,7 @@ const PublicDashboard: React.FC = () => {
           <AlertasWidget />
         </div>
         
-        <div className="py-6 border-t text-center text-xs text-muted-foreground">
+        <div className="py-6 border-t text-center text-xs text-muted-foreground dark:border-slate-700">
           Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
         </div>
       </main>

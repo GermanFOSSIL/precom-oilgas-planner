@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { 
   User, 
@@ -221,6 +220,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = () => {
     setUser(null);
+    
+    // Reset filtros to default
+    setFiltros({ proyecto: "todos" });
+    
+    // Clear localStorage completely to avoid stale data
+    localStorage.clear();
+    
+    // Set default theme
+    setTheme({ mode: "light" });
   };
 
   // Funciones para gestión de tema

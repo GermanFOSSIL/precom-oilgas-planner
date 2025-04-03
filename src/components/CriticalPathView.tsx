@@ -11,7 +11,9 @@ import {
   Clock, 
   AlertCircle, 
   Filter,
-  CalendarIcon
+  CalendarIcon,
+  CheckCircle,
+  Info
 } from "lucide-react";
 import {
   LineChart,
@@ -22,16 +24,27 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
 } from "recharts";
 import { 
   ChartContainer, 
   ChartTooltip, 
   ChartTooltipContent 
 } from "@/components/ui/chart";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const CriticalPathView: React.FC = () => {
-  const { itrbItems, actividades, proyectos } = useAppContext();
-  const [filtroProyecto, setFiltroProyecto] = useState<string | null>(null);
+  const { itrbItems, actividades, proyectos, filtros } = useAppContext();
+  
+  // Filtrar por proyecto si hay uno seleccionado
+  const filtroProyecto = filtros.proyecto !== "todos" ? filtros.proyecto : null;
   
   // Obtener elementos vencidos
   const itemsVencidos = useMemo(() => {
@@ -62,6 +75,15 @@ const CriticalPathView: React.FC = () => {
       .sort((a, b) => b.diasRetraso - a.diasRetraso);
   }, [itrbItems, actividades, proyectos, filtroProyecto]);
 
+  // Contabilizar ITRB en curso y completados
+  const itemsEnFecha = useMemo(() => {
+    return itrbItems
+      .filter(item => item.estado === "Completado" || item.estado === "En curso")
+      .filter(item => !filtroProyecto || 
+        actividades.find(a => a.id === item.actividadId)?.proyectoId === filtroProyecto
+      );
+  }, [itrbItems, actividades, filtroProyecto]);
+
   // Calcular datos para el gráfico de tendencia
   const datosTendencia = useMemo(() => {
     // Agrupar por días de retraso
@@ -81,6 +103,23 @@ const CriticalPathView: React.FC = () => {
     ];
   }, [itemsVencidos]);
 
+  // Datos para gráfico de estado
+  const datosEstado = useMemo(() => {
+    const completados = itrbItems.filter(item => item.estado === "Completado" && 
+      (!filtroProyecto || actividades.find(a => a.id === item.actividadId)?.proyectoId === filtroProyecto)).length;
+    
+    const enCurso = itrbItems.filter(item => item.estado === "En curso" && 
+      (!filtroProyecto || actividades.find(a => a.id === item.actividadId)?.proyectoId === filtroProyecto)).length;
+    
+    const vencidos = itemsVencidos.length;
+    
+    return [
+      { name: "Completados", value: completados, color: "#22c55e" },
+      { name: "En curso", value: enCurso, color: "#f59e0b" },
+      { name: "Vencidos", value: vencidos, color: "#ef4444" }
+    ];
+  }, [itrbItems, actividades, filtroProyecto, itemsVencidos]);
+
   // Agrupar por sistemas para ver distribución
   const sistemaConMasVencidos = useMemo(() => {
     const sistemas: {[key: string]: number} = {};
@@ -96,6 +135,19 @@ const CriticalPathView: React.FC = () => {
     return Object.entries(sistemas)
       .sort((a, b) => b[1] - a[1])
       .map(([sistema, cantidad]) => ({ sistema, cantidad }));
+  }, [itemsVencidos]);
+
+  // Contar subsistemas vencidos
+  const subsistemesVencidos = useMemo(() => {
+    const subsistemas = new Set<string>();
+    
+    itemsVencidos.forEach(item => {
+      if (item.actividad) {
+        subsistemas.add(`${item.actividad.sistema}:${item.actividad.subsistema}`);
+      }
+    });
+    
+    return subsistemas.size;
   }, [itemsVencidos]);
 
   // Helper para calcular el rango de retraso
@@ -121,7 +173,7 @@ const CriticalPathView: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
         <div className="w-16 h-16 text-green-500 mb-4">
-          <CheckCircleIcon className="w-full h-full" />
+          <CheckCircle className="w-full h-full" />
         </div>
         <h2 className="text-xl font-semibold mb-2">¡No hay elementos vencidos!</h2>
         <p className="text-muted-foreground">
@@ -134,7 +186,7 @@ const CriticalPathView: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 dark:bg-slate-800 dark:border-slate-700">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
               <AlertTriangle className="mr-2 h-5 w-5 text-red-500" />
@@ -155,9 +207,9 @@ const CriticalPathView: React.FC = () => {
                   data={datosTendencia}
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="nombre" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-700" />
+                  <XAxis dataKey="nombre" className="dark:fill-slate-400" />
+                  <YAxis className="dark:fill-slate-400" />
                   <Tooltip content={<ChartTooltipContent />} />
                   <Legend />
                   <Line
@@ -174,36 +226,72 @@ const CriticalPathView: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="dark:bg-slate-800 dark:border-slate-700">
           <CardHeader>
-            <CardTitle className="flex items-center text-lg">
-              <Clock className="mr-2 h-5 w-5 text-orange-500" />
-              Sistemas Críticos
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center text-lg">
+                <Clock className="mr-2 h-5 w-5 text-orange-500" />
+                Estado de ITR B
+              </CardTitle>
+              
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <Info className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Resumen de ITR B por estado</p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            </div>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[250px] pr-4">
-              <div className="space-y-4">
-                {sistemaConMasVencidos.slice(0, 6).map((sistema, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{sistema.sistema}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {sistema.cantidad} {sistema.cantidad === 1 ? "elemento" : "elementos"}
-                      </div>
-                    </div>
-                    <Badge variant={idx < 3 ? "destructive" : "outline"}>
-                      {sistema.cantidad}
-                    </Badge>
-                  </div>
-                ))}
+            <div className="h-[180px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={datosEstado}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {datosEstado.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between items-center p-2 rounded-md bg-slate-100 dark:bg-slate-700">
+                <span>ITR B Vencidos:</span>
+                <Badge variant="destructive">{itemsVencidos.length}</Badge>
               </div>
-            </ScrollArea>
+              <div className="flex justify-between items-center p-2 rounded-md bg-slate-100 dark:bg-slate-700">
+                <span>Subsistemas Afectados:</span>
+                <Badge variant="destructive">{subsistemesVencidos}</Badge>
+              </div>
+              <div className="flex justify-between items-center p-2 rounded-md bg-slate-100 dark:bg-slate-700">
+                <span>ITR B En Fecha:</span>
+                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700">
+                  {itemsEnFecha.length}
+                </Badge>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="dark:bg-slate-800 dark:border-slate-700">
         <CardHeader>
           <CardTitle className="flex items-center text-lg">
             <AlertCircle className="mr-2 h-5 w-5 text-red-500" />
@@ -214,17 +302,17 @@ const CriticalPathView: React.FC = () => {
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-6">
               {itemsVencidos.map((item, idx) => (
-                <div key={item.id} className="relative pl-8 pb-6 border-l-2 border-dashed border-gray-200 last:border-0">
+                <div key={item.id} className="relative pl-8 pb-6 border-l-2 border-dashed border-gray-200 dark:border-gray-700 last:border-0">
                   {/* Indicador de impacto */}
                   <div className={`absolute top-0 left-0 w-4 h-4 rounded-full ${getColorPorImpacto(item.impacto)}`}></div>
                   
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700">
                           {item.diasRetraso} {item.diasRetraso === 1 ? "día" : "días"} de retraso
                         </Badge>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="dark:border-gray-600">
                           {item.impacto}
                         </Badge>
                       </div>
@@ -255,7 +343,7 @@ const CriticalPathView: React.FC = () => {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="text-xs"
+                        className="text-xs dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600"
                         onClick={() => {
                           // Aquí se podría implementar una acción para ir a editar el elemento
                           alert(`Ir a editar elemento vencido: ${item.id}`);
@@ -274,22 +362,5 @@ const CriticalPathView: React.FC = () => {
     </div>
   );
 };
-
-// Componente ícono que no está definido en lucide-react
-const CheckCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
-);
 
 export default CriticalPathView;
