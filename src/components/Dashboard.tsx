@@ -810,7 +810,7 @@ const Dashboard: React.FC = () => {
           <CardHeader>
             <CardTitle>Gráficos Personalizados</CardTitle>
             <CardDescription>
-              Arrastra y suelta para reordenar, edita o elimina los gráficos.
+              Arrastra y suelta para reordenar, edita o elimina los gr��ficos.
             </CardDescription>
           </CardHeader>
           <CardContent>

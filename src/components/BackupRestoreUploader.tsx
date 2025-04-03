@@ -7,21 +7,31 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, FileUp, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { BackupOptions } from "@/types";
+import { BackupOptions, Proyecto } from "@/types";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 const BackupRestoreUploader = () => {
   const { 
+    proyectos, 
     setProyectos, 
     setActividades, 
     setItrbItems, 
     setAlertas,
-    updateKPIConfig 
+    updateKPIConfig,
+    addProyecto
   } = useAppContext();
   
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [backupData, setBackupData] = useState<any>(null);
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [targetProyectoId, setTargetProyectoId] = useState<string>("new");
+  const [newProyectoNombre, setNewProyectoNombre] = useState<string>("");
   
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -48,10 +58,10 @@ const BackupRestoreUploader = () => {
       
       // Leer el archivo
       const fileContent = await readFileAsText(file);
-      let backupData;
+      let parsedData;
       
       try {
-        backupData = JSON.parse(fileContent);
+        parsedData = JSON.parse(fileContent);
       } catch (error) {
         setError("El archivo no contiene un formato JSON válido");
         clearInterval(progressInterval);
@@ -61,7 +71,7 @@ const BackupRestoreUploader = () => {
       }
       
       // Validar estructura mínima del backup
-      if (!backupData || typeof backupData !== "object") {
+      if (!parsedData || typeof parsedData !== "object") {
         setError("El formato del backup es inválido");
         clearInterval(progressInterval);
         setIsUploading(false);
@@ -69,55 +79,27 @@ const BackupRestoreUploader = () => {
         return;
       }
       
-      // Restaurar datos
-      if (backupData.proyectos && Array.isArray(backupData.proyectos)) {
-        setProyectos(backupData.proyectos);
-      }
-      
-      if (backupData.actividades && Array.isArray(backupData.actividades)) {
-        setActividades(backupData.actividades);
-      }
-      
-      if (backupData.itrbItems && Array.isArray(backupData.itrbItems)) {
-        setItrbItems(backupData.itrbItems);
-      }
-      
-      if (backupData.alertas && Array.isArray(backupData.alertas)) {
-        setAlertas(backupData.alertas);
-      }
-      
-      if (backupData.kpiConfig && typeof backupData.kpiConfig === "object") {
-        updateKPIConfig(backupData.kpiConfig);
-      }
+      // Guardar datos del backup para su uso posterior
+      setBackupData(parsedData);
       
       // Finalizar carga
       clearInterval(progressInterval);
       setProgress(100);
       
-      // Mostrar mensaje de éxito
-      toast.success("Backup restaurado exitosamente", {
-        description: "Los datos han sido cargados en la aplicación"
-      });
+      // Si hay proyectos en el backup, proponemos el nombre del primero
+      if (parsedData.proyectos && Array.isArray(parsedData.proyectos) && parsedData.proyectos.length > 0) {
+        setNewProyectoNombre(parsedData.proyectos[0].titulo);
+      }
       
+      // Mostrar diálogo para seleccionar proyecto
       setTimeout(() => {
         setIsUploading(false);
-        setProgress(0);
-        // Limpiar el input de archivo
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        
-        // Recargar la página después de una breve pausa para asegurar que 
-        // todos los datos son cargados correctamente en la interfaz
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-        
-      }, 1000);
+        setShowRestoreDialog(true);
+      }, 500);
       
     } catch (error) {
-      console.error("Error al restaurar backup:", error);
-      setError(`Error al restaurar el backup: ${error instanceof Error ? error.message : "Error desconocido"}`);
+      console.error("Error al leer backup:", error);
+      setError(`Error al leer el backup: ${error instanceof Error ? error.message : "Error desconocido"}`);
       setIsUploading(false);
       setProgress(0);
     }
@@ -141,6 +123,106 @@ const BackupRestoreUploader = () => {
   const triggerFileUpload = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  const handleRestoreBackup = () => {
+    if (!backupData) return;
+    
+    try {
+      let targetProyectoIdToUse = targetProyectoId;
+      
+      // Si es un nuevo proyecto, crearlo
+      if (targetProyectoId === "new") {
+        if (!newProyectoNombre.trim()) {
+          toast.error("Debe ingresar un nombre para el nuevo proyecto");
+          return;
+        }
+        
+        const now = new Date().toISOString();
+        const nuevoProyecto: Proyecto = {
+          id: `proyecto-${Date.now()}`,
+          titulo: newProyectoNombre,
+          descripcion: backupData.proyectos && backupData.proyectos.length > 0 
+            ? backupData.proyectos[0].descripcion || "" 
+            : "",
+          fechaCreacion: now,
+          fechaActualizacion: now
+        };
+        
+        addProyecto(nuevoProyecto);
+        targetProyectoIdToUse = nuevoProyecto.id;
+      }
+      
+      // Mapear proyectos del backup al proyecto seleccionado
+      if (backupData.proyectos && Array.isArray(backupData.proyectos)) {
+        // Si es un nuevo proyecto, no necesitamos preservar los existentes
+        if (targetProyectoId === "new") {
+          setProyectos([...proyectos]);
+        } else {
+          // Si se eligió un proyecto existente, no tocamos los proyectos
+          // ya que solo importaremos al proyecto seleccionado
+        }
+      }
+      
+      // Procesar actividades: solo importar las del proyecto original que correspondan
+      if (backupData.actividades && Array.isArray(backupData.actividades)) {
+        const actividadesModificadas = [...backupData.actividades];
+        
+        if (backupData.proyectos && backupData.proyectos.length > 0) {
+          const proyectoOriginalId = backupData.proyectos[0].id;
+          
+          // Actualizar proyectoId de las actividades para que apunten al proyecto seleccionado
+          actividadesModificadas.forEach(act => {
+            if (act.proyectoId === proyectoOriginalId) {
+              act.proyectoId = targetProyectoIdToUse;
+            }
+          });
+        }
+        
+        // Fusionar con las actividades existentes
+        const actividadesExistentes = [...actividades];
+        setActividades([...actividadesExistentes, ...actividadesModificadas]);
+      }
+      
+      // Procesar ITRBs: deben asignarse a las actividades correctas
+      if (backupData.itrbItems && Array.isArray(backupData.itrbItems)) {
+        setItrbItems([...backupData.itrbItems]);
+      }
+      
+      // Procesar alertas
+      if (backupData.alertas && Array.isArray(backupData.alertas)) {
+        setAlertas([...backupData.alertas]);
+      }
+      
+      // Procesar configuración de KPIs
+      if (backupData.kpiConfig && typeof backupData.kpiConfig === "object") {
+        updateKPIConfig(backupData.kpiConfig);
+      }
+      
+      toast.success("Backup restaurado exitosamente", {
+        description: targetProyectoId === "new" 
+          ? `Se ha creado un nuevo proyecto: ${newProyectoNombre}` 
+          : "Los datos han sido cargados en el proyecto seleccionado"
+      });
+      
+      // Limpiar el input de archivo y cerrar el diálogo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setShowRestoreDialog(false);
+      setBackupData(null);
+      
+      // Recargar la página después de una breve pausa
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
+    } catch (error) {
+      console.error("Error al restaurar backup:", error);
+      toast.error("Error al restaurar el backup", {
+        description: error instanceof Error ? error.message : "Error desconocido"
+      });
     }
   };
 
@@ -200,6 +282,60 @@ const BackupRestoreUploader = () => {
           <p><strong>Nota:</strong> La restauración reemplazará todos los datos actuales por los del backup.</p>
           <p className="mt-1">Se recomienda crear un backup de los datos actuales antes de realizar una restauración.</p>
         </div>
+        
+        <Dialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Configuración de restauración</DialogTitle>
+              <DialogDescription>
+                Seleccione el proyecto donde desea cargar los datos del backup
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-3">
+              <div className="space-y-2">
+                <Label htmlFor="proyecto-destino">Proyecto destino</Label>
+                <Select
+                  value={targetProyectoId}
+                  onValueChange={setTargetProyectoId}
+                >
+                  <SelectTrigger id="proyecto-destino">
+                    <SelectValue placeholder="Seleccione proyecto destino" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">Crear nuevo proyecto</SelectItem>
+                    {proyectos.map(proyecto => (
+                      <SelectItem key={proyecto.id} value={proyecto.id}>
+                        {proyecto.titulo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {targetProyectoId === "new" && (
+                <div className="space-y-2">
+                  <Label htmlFor="nuevo-proyecto">Nombre del nuevo proyecto</Label>
+                  <Input
+                    id="nuevo-proyecto"
+                    value={newProyectoNombre}
+                    onChange={(e) => setNewProyectoNombre(e.target.value)}
+                    placeholder="Ej: Planta de Procesamiento"
+                  />
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRestoreDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleRestoreBackup}>
+                Restaurar datos
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
