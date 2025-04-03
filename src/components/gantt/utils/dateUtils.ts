@@ -22,8 +22,16 @@ export const getAxisDates = (startDate: Date, endDate: Date, viewMode: string): 
   switch (viewMode) {
     case "day":
       // Para vista diaria, mostrar intervalos de hora
-      const dayInterval = { start: startDate, end: endDate };
-      return eachDayOfInterval(dayInterval);
+      const hoursInDay = [];
+      const dayStart = new Date(startDate);
+      dayStart.setHours(0, 0, 0, 0);
+      
+      for (let i = 0; i <= 23; i++) {
+        const hourDate = new Date(dayStart);
+        hourDate.setHours(i, 0, 0, 0);
+        hoursInDay.push(hourDate);
+      }
+      return hoursInDay;
       
     case "week":
       // Para vista semanal, mostrar cada día
@@ -32,15 +40,9 @@ export const getAxisDates = (startDate: Date, endDate: Date, viewMode: string): 
       
     case "month":
     default:
-      // Para vista mensual, mostrar cada semana
+      // Para vista mensual, mostrar cada día
       const monthInterval = { start: startDate, end: endDate };
-      const allDays = eachDayOfInterval(monthInterval);
-      
-      // Filtrar para mostrar solo algunos días para evitar sobrecargar el eje
-      if (allDays.length > 60) {
-        return allDays.filter((_, index) => index % 3 === 0);
-      }
-      return allDays;
+      return eachDayOfInterval(monthInterval);
   }
 };
 
@@ -62,17 +64,19 @@ export const calculateNewDateRange = (
     switch (viewMode) {
       case "day":
         newStartDate = startOfDay(today);
+        newEndDate = addDays(newStartDate, 1);
         break;
       case "week":
         newStartDate = startOfWeek(today, { locale: es });
+        newEndDate = addDays(newStartDate, 7);
         break;
       case "month":
       default:
         newStartDate = startOfMonth(today);
+        newEndDate = addMonths(newStartDate, 1);
         break;
     }
     
-    newEndDate = new Date(newStartDate.getTime() + duration);
     return { newStartDate, newEndDate };
   }
 

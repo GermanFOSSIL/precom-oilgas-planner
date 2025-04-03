@@ -1,24 +1,13 @@
 
-import React from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-  Cell,
-} from "recharts";
-import { format, addDays } from "date-fns";
+import React, { useState, useEffect, useMemo } from "react";
+import { format, isToday, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
-import { formatXAxis, getAxisDates } from "./utils/dateUtils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { getAxisDates, formatXAxis } from "./utils/dateUtils";
+import { getRowBackgroundColor, getStatusColor } from "./utils/colorUtils";
 import GanttTooltip from "./GanttTooltip";
-import { getColorByProgress } from "./utils/colorUtils";
 
-interface BarData {
+interface GanttData {
   id: string;
   nombre: string;
   sistema: string;
@@ -35,13 +24,13 @@ interface BarData {
 }
 
 interface GanttBarChartProps {
-  data: BarData[];
+  data: GanttData[];
   currentStartDate: Date;
   currentEndDate: Date;
   zoomLevel: number;
   viewMode: "month" | "week" | "day";
   mostrarSubsistemas: boolean;
-  mostrarLeyenda: boolean;
+  mostrarLeyenda?: boolean;
 }
 
 const GanttBarChart: React.FC<GanttBarChartProps> = ({
@@ -51,239 +40,369 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   zoomLevel,
   viewMode,
   mostrarSubsistemas,
-  mostrarLeyenda,
+  mostrarLeyenda = true
 }) => {
-  // Función para generar los ticks del eje X basados en el rango de fechas
-  const generateXAxisTicks = () => {
-    const ticks = getAxisDates(currentStartDate, currentEndDate, viewMode).map(date => date.getTime());
-    return ticks;
+  const [hoveredItem, setHoveredItem] = useState<GanttData | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Determine if dark mode is active
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
+    setIsDarkMode(isDark);
+    
+    // Set up observer for theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "class") {
+          setIsDarkMode(document.documentElement.classList.contains("dark"));
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
+  // Group data by project, system, subsystem
+  const groupedData = useMemo(() => {
+    const result: Record<string, Record<string, string[]>> = {};
+    
+    data.forEach(item => {
+      if (!result[item.proyecto]) {
+        result[item.proyecto] = {};
+      }
+      
+      if (!result[item.proyecto][item.sistema]) {
+        result[item.proyecto][item.sistema] = [];
+      }
+      
+      if (!result[item.proyecto][item.sistema].includes(item.subsistema)) {
+        result[item.proyecto][item.sistema].push(item.subsistema);
+      }
+    });
+    
+    return result;
+  }, [data]);
+
+  // Get dates for the timeline based on the current view mode
+  const axisDates = useMemo(() => {
+    return getAxisDates(currentStartDate, currentEndDate, viewMode);
+  }, [currentStartDate, currentEndDate, viewMode]);
+
+  // Function to determine if a date is within displayed range
+  const isDateInRange = (date: Date) => {
+    return isWithinInterval(date, { start: currentStartDate, end: currentEndDate });
   };
 
-  // Función para obtener el color de fondo de la barra según la actividad
-  const getBarBackgroundColor = (activity: any) => {
-    if (activity.tieneVencidos) return "#ef4444"; // Rojo para vencidos
-    return activity.color || "#94a3b8"; // Color por defecto o el asignado
+  // Function to calculate position as percentage
+  const calculatePosition = (date: Date): number => {
+    const totalDuration = currentEndDate.getTime() - currentStartDate.getTime();
+    const timeFromStart = date.getTime() - currentStartDate.getTime();
+    return (timeFromStart / totalDuration) * 100;
   };
 
-  // Añadir índices para alternar colores de fondo por fila
-  const dataWithRowIndex = data.map((item, index) => ({
-    ...item,
-    rowIndex: index
-  }));
+  // Handle mouse over for tooltip
+  const handleMouseOver = (event: React.MouseEvent, item: GanttData) => {
+    setHoveredItem(item);
+    setTooltipPosition({ x: event.clientX, y: event.clientY });
+  };
+
+  // Handle mouse out for tooltip
+  const handleMouseOut = () => {
+    setHoveredItem(null);
+  };
+
+  // Calculate gridTemplateColumns for the date headers
+  const gridTemplateColumns = useMemo(() => {
+    return axisDates.map(() => "1fr").join(" ");
+  }, [axisDates]);
 
   return (
-    <div className="flex-1 overflow-x-auto">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={dataWithRowIndex}
-          layout="vertical"
-          barCategoryGap={6 * zoomLevel}
-          margin={{ top: 20, right: 30, left: 180, bottom: 20 }}
-          className="gantt-chart"
-        >
-          <defs>
-            <pattern id="completado" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
-              <rect width="10" height="10" fill="#22c55e" fillOpacity="0.8" />
-            </pattern>
-            <pattern id="en-curso" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
-              <rect width="10" height="10" fill="#f59e0b" fillOpacity="0.8" />
-            </pattern>
-          </defs>
-          
-          <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-          
-          <XAxis
-            dataKey="fechaInicio"
-            type="number"
-            domain={[currentStartDate.getTime(), currentEndDate.getTime()]}
-            tickFormatter={(date) => formatXAxis(date, viewMode)}
-            scale="time"
-            ticks={generateXAxisTicks()}
-            height={50}
-            tickLine={true}
-            axisLine={true}
-            padding={{ left: 0, right: 0 }}
-            tick={({ x, y, payload }) => {
-              // Formato personalizado para las fechas en el eje X
-              const date = new Date(payload.value);
-              const dayNumber = format(date, 'd');
-              const monthName = format(date, 'MMM', { locale: es });
-              
-              return (
-                <g transform={`translate(${x},${y})`}>
-                  <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" fontSize={11}>
-                    {dayNumber}
-                  </text>
-                  {(viewMode === "month" && parseInt(dayNumber) === 1) && (
-                    <text x={0} y={0} dy={32} textAnchor="middle" fill="#666" fontSize={10}>
-                      {monthName}
-                    </text>
-                  )}
-                </g>
-              );
-            }}
-          />
-          
-          <YAxis
-            dataKey="nombre"
-            type="category"
-            width={180}
-            tick={({ x, y, payload, index }) => {
-              const activity = dataWithRowIndex.find(item => item.nombre === payload.value);
-              if (!activity) return null;
-              
-              // Alternar colores de fondo para las filas
-              const rowBackground = activity.rowIndex % 2 === 0 ? "#f8fafc" : "#f1f5f9";
-              
-              return (
-                <g transform={`translate(${x},${y})`}>
-                  <rect 
-                    x={-180} 
-                    y={-12} 
-                    width={180} 
-                    height={24} 
-                    fill={rowBackground} 
-                    className="dark:opacity-20"
-                  />
-                  <text x={-5} y={0} dy={4} textAnchor="end" fontSize={12} fill="#334155" className="dark:fill-white">
-                    {payload.value}
-                  </text>
-                  {mostrarSubsistemas && (
-                    <text x={-5} y={16} textAnchor="end" fontSize={10} fill="#64748b" className="dark:fill-gray-400">
-                      {activity.sistema} / {activity.subsistema}
-                    </text>
-                  )}
-                </g>
-              );
-            }}
-          />
-          
-          <Tooltip content={<GanttTooltip mostrarSubsistemas={mostrarSubsistemas} />} />
-          
-          {mostrarLeyenda && (
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              layout="horizontal"
-              align="center"
-              wrapperStyle={{ paddingTop: "10px", borderTop: "1px solid #e2e8f0" }}
-              payload={[
-                { value: 'Completado', type: 'rect', color: '#22c55e' },
-                { value: 'En curso', type: 'rect', color: '#f59e0b' },
-                { value: 'Vencido', type: 'rect', color: '#ef4444' },
-                { value: 'Actividad', type: 'rect', color: '#94a3b8' }
-              ]}
-            />
-          )}
-          
-          <ReferenceLine
-            x={new Date().getTime()}
-            stroke="#ef4444"
-            strokeWidth={2}
-            strokeDasharray="3 3"
-            label={{ 
-              value: 'Hoy', 
-              position: 'insideTopRight', 
-              fill: '#ef4444',
-              fontSize: 10,
-              offset: 5
-            }}
-          />
-          
-          <Bar
-            dataKey="duracion"
-            name="Duración"
-            minPointSize={2}
-            barSize={20 * zoomLevel}
-            shape={({ x, y, width, height, payload }: any) => {
-              const actividad = payload;
-              const fechaInicio = actividad.fechaInicio.getTime();
-              const fechaFin = actividad.fechaFin.getTime();
-              
-              // Calcular posición y ancho de la barra en el rango visible
-              const xStart = Math.max(
-                x, 
-                (fechaInicio - currentStartDate.getTime()) / 
-                (currentEndDate.getTime() - currentStartDate.getTime()) * width + x
-              );
-              
-              const xEnd = Math.min(
-                x + width,
-                (fechaFin - currentStartDate.getTime()) / 
-                (currentEndDate.getTime() - currentStartDate.getTime()) * width + x
-              );
-              
-              const barWidth = Math.max(xEnd - xStart, 2);
-              
-              // Determinar el color principal de la barra
-              const baseColor = getBarBackgroundColor(actividad);
-              
-              return (
-                <g>
-                  {/* Barra principal */}
-                  <rect
-                    x={xStart}
-                    y={y}
-                    width={barWidth}
-                    height={height}
-                    fill={baseColor}
-                    rx={3}
-                    ry={3}
-                    stroke={actividad.tieneVencidos ? "#b91c1c" : "#475569"}
-                    strokeWidth={1}
-                  />
-                  
-                  {/* Barra de progreso */}
-                  {actividad.progreso > 0 && (
-                    <rect
-                      x={xStart}
-                      y={y}
-                      width={barWidth * (actividad.progreso / 100)}
-                      height={height}
-                      fill={actividad.progreso === 100 ? "#22c55e" : "#f59e0b"}
-                      rx={3}
-                      ry={3}
-                      fillOpacity={0.8}
-                    />
-                  )}
-                  
-                  {/* Texto de progreso dentro de la barra */}
-                  {barWidth > 50 && (
-                    <text
-                      x={xStart + barWidth / 2}
-                      y={y + height / 2}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fill="#fff"
-                      fontWeight="bold"
-                      fontSize={11}
-                      stroke="#00000033"
-                      strokeWidth={0.5}
-                    >
-                      {actividad.progreso}%
-                    </text>
-                  )}
-                  
-                  {/* Barra con patrones para indicadores especiales */}
-                  {actividad.tieneMCC && (
-                    <rect
-                      x={xStart}
-                      y={y}
-                      width={4}
-                      height={height}
-                      fill="#3b82f6"
-                    />
-                  )}
-                </g>
-              );
+    <div className="w-full h-full flex flex-col">
+      <ScrollArea className="w-full h-full">
+        <div className="min-w-[800px] relative">
+          {/* Date Headers */}
+          <div 
+            className="grid sticky top-0 z-20 border-b shadow-sm"
+            style={{ 
+              gridTemplateColumns: `minmax(200px, auto) ${gridTemplateColumns}`,
+              backgroundColor: isDarkMode ? "#1e293b" : "#ffffff"
             }}
           >
-            {dataWithRowIndex.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+            <div className="p-2 border-r border-gray-200 dark:border-gray-700 font-medium">
+              {viewMode === "month" ? "Mes" : viewMode === "week" ? "Semana" : "Día"}
+            </div>
+            
+            {axisDates.map((date, index) => (
+              <div 
+                key={index} 
+                className={`
+                  text-center text-xs py-2 border-r border-gray-200 dark:border-gray-700
+                  ${isToday(date) ? 'bg-blue-50 dark:bg-blue-900/20 font-bold' : ''}
+                `}
+              >
+                {viewMode === "month" 
+                  ? format(date, "d", { locale: es })
+                  : viewMode === "week"
+                    ? format(date, "EEE d", { locale: es })
+                    : format(date, "HH:mm")
+                }
+              </div>
             ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+          </div>
+
+          {/* Today indicator */}
+          {isDateInRange(new Date()) && (
+            <div 
+              className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+              style={{ 
+                left: `calc(200px + ${calculatePosition(new Date())}% * (100% - 200px) / 100)`,
+              }}
+            >
+              <div className="absolute -top-1.5 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
+                Hoy
+              </div>
+            </div>
+          )}
+
+          {/* Gantt Content */}
+          <div className="w-full">
+            {Object.entries(groupedData).map(([proyecto, sistemas], proyectoIndex) => (
+              <React.Fragment key={`proyecto-${proyectoIndex}`}>
+                {/* Project Header */}
+                <div 
+                  className={`
+                    grid border-b
+                    ${isDarkMode ? 'bg-indigo-900 text-white' : 'bg-indigo-700 text-white'}
+                  `}
+                  style={{ gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)` }}
+                >
+                  <div className="p-2 font-bold">
+                    {proyecto}
+                  </div>
+                  <div className="col-span-full"></div>
+                </div>
+
+                {Object.entries(sistemas).map(([sistema, subsistemas], sistemaIndex) => (
+                  <React.Fragment key={`sistema-${proyectoIndex}-${sistemaIndex}`}>
+                    {/* System Header */}
+                    <div 
+                      className={`
+                        grid border-b
+                        ${isDarkMode ? 'bg-indigo-800 text-white' : 'bg-indigo-500 text-white'}
+                      `}
+                      style={{ gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)` }}
+                    >
+                      <div className="p-2 pl-4 font-semibold">
+                        {sistema}
+                      </div>
+                      <div className="col-span-full"></div>
+                    </div>
+
+                    {mostrarSubsistemas && subsistemas.map((subsistema, subsistemaIndex) => (
+                      <React.Fragment key={`subsistema-${proyectoIndex}-${sistemaIndex}-${subsistemaIndex}`}>
+                        {/* Subsystem Header */}
+                        <div 
+                          className={`
+                            grid border-b
+                            ${isDarkMode ? 'bg-indigo-700/50 text-white' : 'bg-indigo-300 text-gray-800'}
+                          `}
+                          style={{ gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)` }}
+                        >
+                          <div className="p-1 pl-6 font-medium text-sm">
+                            {subsistema}
+                          </div>
+                          <div className="col-span-full"></div>
+                        </div>
+
+                        {/* Activities for this subsystem */}
+                        {data
+                          .filter(item => item.proyecto === proyecto && item.sistema === sistema && item.subsistema === subsistema)
+                          .map((item, itemIndex) => (
+                            <div 
+                              key={`activity-${item.id}`}
+                              className="grid border-b relative"
+                              style={{ 
+                                gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
+                                backgroundColor: getRowBackgroundColor(itemIndex, isDarkMode)
+                              }}
+                            >
+                              <div className="p-2 pl-8 border-r border-gray-200 dark:border-gray-700 flex items-center">
+                                <span className="text-sm truncate">{item.nombre}</span>
+                                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                  ({item.itrbsAsociados.length} ITR)
+                                </span>
+                              </div>
+                              
+                              <div className="col-span-full h-full relative">
+                                {/* Main activity bar */}
+                                <div 
+                                  className="absolute h-5 top-1/2 -mt-2.5 rounded"
+                                  style={{ 
+                                    left: `${calculatePosition(item.fechaInicio)}%`,
+                                    width: `${calculatePosition(item.fechaFin) - calculatePosition(item.fechaInicio)}%`,
+                                    backgroundColor: "#64748b",
+                                    opacity: 0.7
+                                  }}
+                                />
+                                
+                                {/* Progress bar */}
+                                <div 
+                                  className="absolute h-5 top-1/2 -mt-2.5 rounded"
+                                  style={{ 
+                                    left: `${calculatePosition(item.fechaInicio)}%`,
+                                    width: `${(calculatePosition(item.fechaFin) - calculatePosition(item.fechaInicio)) * item.progreso / 100}%`,
+                                    backgroundColor: item.tieneVencidos ? "#ef4444" : item.progreso === 100 ? "#22c55e" : "#f59e0b",
+                                    zIndex: 1
+                                  }}
+                                  onMouseOver={(e) => handleMouseOver(e, item)}
+                                  onMouseOut={handleMouseOut}
+                                >
+                                  <div className="h-full flex items-center px-2 truncate text-xs text-white">
+                                    {item.progreso}%
+                                  </div>
+                                </div>
+
+                                {/* Individual ITR items */}
+                                {item.itrbsAsociados.map((itrb, itrbIndex) => {
+                                  const itrbStatus = itrb.estado || "En curso";
+                                  const itrbDate = new Date(itrb.fechaLimite);
+                                  
+                                  if (!isDateInRange(itrbDate)) return null;
+                                  
+                                  return (
+                                    <div 
+                                      key={`itrb-${itrb.id}`}
+                                      className="absolute w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 z-10"
+                                      style={{ 
+                                        left: `${calculatePosition(itrbDate)}%`,
+                                        top: "50%",
+                                        transform: "translate(-50%, -50%)",
+                                        backgroundColor: getStatusColor(itrbStatus)
+                                      }}
+                                      title={`${itrb.descripcion} (${itrbStatus})`}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                      </React.Fragment>
+                    ))}
+
+                    {/* If subsystems are hidden, show activities directly under system */}
+                    {!mostrarSubsistemas && (
+                      <>
+                        {data
+                          .filter(item => item.proyecto === proyecto && item.sistema === sistema)
+                          .map((item, itemIndex) => (
+                            <div 
+                              key={`activity-direct-${item.id}`}
+                              className="grid border-b relative"
+                              style={{ 
+                                gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
+                                backgroundColor: getRowBackgroundColor(itemIndex, isDarkMode)
+                              }}
+                            >
+                              <div className="p-2 pl-6 border-r border-gray-200 dark:border-gray-700 flex items-center">
+                                <span className="text-sm truncate">{item.nombre}</span>
+                                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                  ({item.itrbsAsociados.length} ITR)
+                                </span>
+                              </div>
+                              
+                              <div className="col-span-full h-full relative">
+                                {/* Main activity bar */}
+                                <div 
+                                  className="absolute h-5 top-1/2 -mt-2.5 rounded"
+                                  style={{ 
+                                    left: `${calculatePosition(item.fechaInicio)}%`,
+                                    width: `${calculatePosition(item.fechaFin) - calculatePosition(item.fechaInicio)}%`,
+                                    backgroundColor: "#64748b",
+                                    opacity: 0.7
+                                  }}
+                                />
+                                
+                                {/* Progress bar */}
+                                <div 
+                                  className="absolute h-5 top-1/2 -mt-2.5 rounded"
+                                  style={{ 
+                                    left: `${calculatePosition(item.fechaInicio)}%`,
+                                    width: `${(calculatePosition(item.fechaFin) - calculatePosition(item.fechaInicio)) * item.progreso / 100}%`,
+                                    backgroundColor: item.tieneVencidos ? "#ef4444" : item.progreso === 100 ? "#22c55e" : "#f59e0b"
+                                  }}
+                                  onMouseOver={(e) => handleMouseOver(e, item)}
+                                  onMouseOut={handleMouseOut}
+                                >
+                                  <div className="h-full flex items-center px-2 truncate text-xs text-white">
+                                    {item.progreso}%
+                                  </div>
+                                </div>
+
+                                {/* Individual ITR items */}
+                                {item.itrbsAsociados.map((itrb, itrbIndex) => {
+                                  const itrbStatus = itrb.estado || "En curso";
+                                  const itrbDate = new Date(itrb.fechaLimite);
+                                  
+                                  if (!isDateInRange(itrbDate)) return null;
+                                  
+                                  return (
+                                    <div 
+                                      key={`itrb-direct-${itrb.id}`}
+                                      className="absolute w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 z-10"
+                                      style={{ 
+                                        left: `${calculatePosition(itrbDate)}%`,
+                                        top: "50%",
+                                        transform: "translate(-50%, -50%)",
+                                        backgroundColor: getStatusColor(itrbStatus)
+                                      }}
+                                      title={`${itrb.descripcion} (${itrbStatus})`}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                      </>
+                    )}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </ScrollArea>
+      
+      {/* Tooltip */}
+      {hoveredItem && (
+        <GanttTooltip 
+          item={hoveredItem} 
+          position={tooltipPosition} 
+        />
+      )}
+
+      {/* Legend */}
+      {mostrarLeyenda && (
+        <div className="flex justify-center mt-4 space-x-4 pb-4">
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded mr-2 bg-estado-completado"></div>
+            <span className="text-sm">Completado</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded mr-2 bg-estado-curso"></div>
+            <span className="text-sm">En curso</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded mr-2 bg-estado-vencido"></div>
+            <span className="text-sm">Vencido</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#64748b" }}></div>
+            <span className="text-sm">Actividad</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
-import { addDays } from "date-fns";
+import { addDays, addWeeks, addMonths, startOfDay, startOfWeek, startOfMonth } from "date-fns";
+import { es } from "date-fns/locale";
 
 // Import our refactored components
 import GanttLoadingState from "./gantt/GanttLoadingState";
@@ -25,8 +26,32 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const [loading, setLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
-  const [currentStartDate, setCurrentStartDate] = useState<Date>(new Date());
-  const [currentEndDate, setCurrentEndDate] = useState<Date>(addDays(new Date(), 30));
+  
+  // Initialize view based on current date
+  const today = new Date();
+  const [currentStartDate, setCurrentStartDate] = useState<Date>(() => {
+    switch (viewMode) {
+      case "day":
+        return startOfDay(today);
+      case "week":
+        return startOfWeek(today, { locale: es });
+      case "month":
+      default:
+        return startOfMonth(today);
+    }
+  });
+  
+  const [currentEndDate, setCurrentEndDate] = useState<Date>(() => {
+    switch (viewMode) {
+      case "day":
+        return addDays(currentStartDate, 1);
+      case "week":
+        return addDays(currentStartDate, 7);
+      case "month":
+      default:
+        return addMonths(currentStartDate, 1);
+    }
+  });
   
   const mostrarSubsistemas = configuracion.mostrarSubsistemas !== undefined 
     ? configuracion.mostrarSubsistemas 
@@ -52,6 +77,22 @@ const GanttChart: React.FC<GanttChartProps> = ({
     }
   };
 
+  // Handle view mode changes
+  const handleViewModeChange = (newMode: "month" | "week" | "day") => {
+    setViewMode(newMode);
+    
+    // Update date range based on new view mode
+    const { newStartDate, newEndDate } = calculateNewDateRange(
+      currentStartDate,
+      currentEndDate,
+      "today", // Reset to today when changing view mode
+      newMode
+    );
+    
+    setCurrentStartDate(newStartDate);
+    setCurrentEndDate(newEndDate);
+  };
+
   // Handle time navigation
   const navigateTime = (direction: "prev" | "next" | "today") => {
     const { newStartDate, newEndDate } = calculateNewDateRange(
@@ -63,11 +104,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     
     setCurrentStartDate(newStartDate);
     setCurrentEndDate(newEndDate);
-  };
-
-  // Handle view mode changes
-  const handleViewModeChange = (newMode: "month" | "week" | "day") => {
-    setViewMode(newMode);
   };
 
   if (loading) {

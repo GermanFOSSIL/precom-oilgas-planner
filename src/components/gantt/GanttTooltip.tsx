@@ -1,89 +1,110 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface GanttTooltipProps {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-  mostrarSubsistemas: boolean;
+  item: {
+    nombre: string;
+    sistema: string;
+    subsistema: string;
+    fechaInicio: Date;
+    fechaFin: Date;
+    progreso: number;
+    tieneVencidos: boolean;
+    proyecto: string;
+    itrbsAsociados: any[];
+  };
+  position: {
+    x: number;
+    y: number;
+  };
 }
 
-const GanttTooltip: React.FC<GanttTooltipProps> = ({
-  active,
-  payload,
-  label,
-  mostrarSubsistemas,
-}) => {
-  if (!active || !payload || !payload.length) return null;
-
-  const data = payload[0].payload;
-  const fechaInicio = format(data.fechaInicio, "dd MMM yyyy", { locale: es });
-  const fechaFin = format(data.fechaFin, "dd MMM yyyy", { locale: es });
-  const duracion = `${data.duracion} días`;
-  const progreso = `${data.progreso}%`;
-  const estado = data.progreso === 100 
-    ? "Completado" 
-    : data.tieneVencidos 
-      ? "Vencido" 
-      : data.progreso > 0 
-        ? "En curso" 
-        : "No iniciado";
-  
-  const getBadgeColor = () => {
-    if (data.tieneVencidos) return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-    if (data.progreso === 100) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-    if (data.progreso > 0) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-    return "bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200";
+const GanttTooltip: React.FC<GanttTooltipProps> = ({ item, position }) => {
+  // Calculate the tooltip position (adjust to keep it in viewport)
+  const tooltipStyle = {
+    top: `${position.y + 10}px`,
+    left: `${position.x + 10}px`,
   };
-
+  
+  // Calculate estado based on progress and vencidos
+  const getEstado = () => {
+    if (item.tieneVencidos) return "Vencido";
+    if (item.progreso === 100) return "Completado";
+    if (item.progreso > 0) return "En curso";
+    return "Pendiente";
+  };
+  
   return (
-    <div className="bg-white dark:bg-slate-800 p-3 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-w-xs">
-      <div className="font-medium text-slate-900 dark:text-white mb-1">{data.nombre}</div>
+    <div
+      className="fixed z-50 bg-white dark:bg-slate-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-md p-3 text-sm min-w-[250px] max-w-[350px]"
+      style={tooltipStyle}
+    >
+      <h3 className="font-bold text-base mb-1 border-b pb-1">{item.nombre}</h3>
       
-      {mostrarSubsistemas && (
-        <div className="text-xs text-slate-600 dark:text-slate-300 mb-2">
-          <span className="font-medium">Sistema:</span> {data.sistema} / {data.subsistema}
+      <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+        <div className="text-gray-500 dark:text-gray-400">Proyecto:</div>
+        <div className="font-medium">{item.proyecto}</div>
+        
+        <div className="text-gray-500 dark:text-gray-400">Sistema:</div>
+        <div className="font-medium">{item.sistema}</div>
+        
+        <div className="text-gray-500 dark:text-gray-400">Subsistema:</div>
+        <div className="font-medium">{item.subsistema}</div>
+        
+        <div className="text-gray-500 dark:text-gray-400">Fecha inicio:</div>
+        <div className="font-medium">
+          {format(item.fechaInicio, "dd/MM/yyyy", { locale: es })}
+        </div>
+        
+        <div className="text-gray-500 dark:text-gray-400">Fecha fin:</div>
+        <div className="font-medium">
+          {format(item.fechaFin, "dd/MM/yyyy", { locale: es })}
+        </div>
+        
+        <div className="text-gray-500 dark:text-gray-400">Progreso:</div>
+        <div className="font-medium">{item.progreso}%</div>
+        
+        <div className="text-gray-500 dark:text-gray-400">Estado:</div>
+        <div className="font-medium">
+          <span 
+            className={`inline-block w-2 h-2 rounded-full mr-1 ${
+              getEstado() === "Completado" ? "bg-green-500" : 
+              getEstado() === "En curso" ? "bg-amber-500" : 
+              getEstado() === "Vencido" ? "bg-red-500" : "bg-gray-500"
+            }`}
+          />
+          {getEstado()}
+        </div>
+        
+        <div className="text-gray-500 dark:text-gray-400">ITRs:</div>
+        <div className="font-medium">{item.itrbsAsociados.length}</div>
+      </div>
+      
+      {item.itrbsAsociados.length > 0 && (
+        <div className="mt-2 border-t pt-1">
+          <h4 className="font-semibold text-xs">ITRs asociados:</h4>
+          <ul className="mt-1 text-xs max-h-[100px] overflow-y-auto">
+            {item.itrbsAsociados.slice(0, 5).map((itrb, index) => (
+              <li key={index} className="mb-1 flex items-center">
+                <span 
+                  className={`inline-block w-2 h-2 rounded-full mr-1 ${
+                    itrb.estado === "Completado" ? "bg-green-500" : 
+                    itrb.estado === "En curso" ? "bg-amber-500" : 
+                    itrb.estado === "Vencido" ? "bg-red-500" : "bg-gray-500"
+                  }`}
+                />
+                <span className="truncate">{itrb.descripcion}</span>
+              </li>
+            ))}
+            {item.itrbsAsociados.length > 5 && (
+              <li className="text-gray-500 italic">
+                Y {item.itrbsAsociados.length - 5} más...
+              </li>
+            )}
+          </ul>
         </div>
       )}
-      
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
-        <div className="text-xs">
-          <span className="font-medium text-slate-500 dark:text-slate-400">Inicio:</span>
-          <span className="ml-1 text-slate-700 dark:text-slate-300">{fechaInicio}</span>
-        </div>
-        <div className="text-xs">
-          <span className="font-medium text-slate-500 dark:text-slate-400">Fin:</span>
-          <span className="ml-1 text-slate-700 dark:text-slate-300">{fechaFin}</span>
-        </div>
-        <div className="text-xs">
-          <span className="font-medium text-slate-500 dark:text-slate-400">Duración:</span>
-          <span className="ml-1 text-slate-700 dark:text-slate-300">{duracion}</span>
-        </div>
-        <div className="text-xs">
-          <span className="font-medium text-slate-500 dark:text-slate-400">Avance:</span>
-          <span className="ml-1 text-slate-700 dark:text-slate-300">{progreso}</span>
-        </div>
-      </div>
-      
-      <div className="mt-2 pt-2 border-t border-gray-100 dark:border-slate-700">
-        <span className={`text-xs px-2 py-1 rounded-full ${getBadgeColor()}`}>
-          {estado}
-        </span>
-        
-        {data.tieneMCC && (
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 ml-1">
-            MCC
-          </span>
-        )}
-        
-        {data.itrbsAsociados && data.itrbsAsociados.length > 0 && (
-          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            {data.itrbsAsociados.length} ITRBs asociados
-          </div>
-        )}
-      </div>
     </div>
   );
 };
