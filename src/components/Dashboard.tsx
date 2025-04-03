@@ -42,6 +42,17 @@ const Dashboard: React.FC = () => {
 
   const [tabActual, setTabActual] = useState("gantt");
   
+  const handleTamanoGrafico = (tamano: ConfiguracionGrafico["tamano"]) => {
+    setConfiguracionGrafico({ ...configuracionGrafico, tamano });
+  };
+  
+  const handleMostrarLeyenda = () => {
+    setConfiguracionGrafico({ 
+      ...configuracionGrafico, 
+      mostrarLeyenda: !configuracionGrafico.mostrarLeyenda 
+    });
+  };
+  
   const generarPDF = () => {
     try {
       const doc = new jsPDF();

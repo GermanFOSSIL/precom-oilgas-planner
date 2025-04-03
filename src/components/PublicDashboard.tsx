@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import PublicHeader from "@/components/PublicHeader";
 import ProyectoSelector from "@/components/ProyectoSelector";
 import AlertasWidget from "@/components/AlertasWidget";
+import { toast } from "sonner";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -59,9 +59,7 @@ const PublicDashboard: React.FC = () => {
   
   const [tabActual, setTabActual] = useState("gantt");
 
-  // Effect to clear cache when component mounts
   useEffect(() => {
-    // Force refresh filtros to ensure updated state
     setFiltros({ ...filtros, timestamp: Date.now() });
   }, []);
 
@@ -89,14 +87,11 @@ const PublicDashboard: React.FC = () => {
     generarPDF();
   };
 
-  // Limpiar sesión y recargar la página
   const handleResetSession = () => {
     logout();
-    // Forzar recarga completa para limpiar cualquier caché del navegador
     window.location.reload();
   };
 
-  // Ajustar altura del gráfico según tamaño seleccionado
   const getGanttHeight = () => {
     switch (configuracionGrafico.tamano) {
       case "pequeno": return "h-[400px]";
@@ -106,27 +101,22 @@ const PublicDashboard: React.FC = () => {
       default: return "h-[600px]";
     }
   };
-  
-  // Generar PDF para usuarios no autenticados
+
   const generarPDF = () => {
     try {
       const doc = new jsPDF();
       
-      // Título
       doc.text("Dashboard - Plan de Precomisionado", 14, 20);
       doc.text("Fecha: " + new Date().toLocaleDateString('es-ES'), 14, 30);
       
-      // Obtener KPIs para el proyecto seleccionado
       const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
       
-      // Proyecto actual
       const proyectoNombre = filtros.proyecto !== "todos" ? 
         proyectos.find(p => p.id === filtros.proyecto)?.titulo || "Todos los proyectos" : 
         "Todos los proyectos";
       
       doc.text(`Proyecto: ${proyectoNombre}`, 14, 40);
       
-      // Tabla de KPIs
       const kpisData = [
         ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
         ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
@@ -142,7 +132,6 @@ const PublicDashboard: React.FC = () => {
         headStyles: { fillColor: [59, 130, 246] }
       });
       
-      // Tabla de actividades filtradas por proyecto
       const actividadesFiltradas = actividades.filter(act => 
         filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
       );
@@ -168,7 +157,6 @@ const PublicDashboard: React.FC = () => {
         });
       }
       
-      // Tabla de ITR B filtrados por proyecto
       const itrbsFiltrados = itrbItems.filter(itrb => {
         const actividad = actividades.find(act => act.id === itrb.actividadId);
         return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
@@ -205,25 +193,20 @@ const PublicDashboard: React.FC = () => {
       toast.error("Error al generar el PDF");
     }
   };
-  
-  // Generar Excel para usuarios no autenticados
+
   const generarExcel = () => {
     try {
-      // Crear libro Excel
       const wb = XLSX.utils.book_new();
       
-      // Filtrar actividades según proyecto
       const actividadesFiltradas = actividades.filter(act => 
         filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
       );
       
-      // Filtrar ITRBs según proyecto
       const itrbsFiltrados = itrbItems.filter(itrb => {
         const actividad = actividades.find(act => act.id === itrb.actividadId);
         return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
       });
       
-      // Hoja de actividades
       if (actividadesFiltradas.length > 0) {
         const wsData = actividadesFiltradas.map(act => ({
           Nombre: act.nombre,
@@ -238,7 +221,6 @@ const PublicDashboard: React.FC = () => {
         XLSX.utils.book_append_sheet(wb, ws, "Actividades");
       }
       
-      // Hoja de ITR B
       if (itrbsFiltrados.length > 0) {
         const wsData = itrbsFiltrados.map(itrb => {
           const actividad = actividades.find(act => act.id === itrb.actividadId);
@@ -259,7 +241,6 @@ const PublicDashboard: React.FC = () => {
         XLSX.utils.book_append_sheet(wb, ws, "ITR B");
       }
       
-      // Guardar Excel
       XLSX.writeFile(wb, "dashboard-precomisionado.xlsx");
       toast.success("Excel generado exitosamente");
     } catch (error) {
