@@ -11,7 +11,7 @@ interface KPICardsProps {
 }
 
 const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
-  const { getKPIs, itrbItems, actividades } = useAppContext();
+  const { getKPIs, itrbItems, actividades, kpiConfig } = useAppContext();
   
   const kpis = getKPIs(proyectoId);
   
@@ -55,6 +55,9 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
   const vencidosFaltantes = itrbsVencidos.filter(item => item.estado !== "Completado").length;
   const totalVencidos = vencidosCompletados + vencidosFaltantes;
   
+  // Calculamos la diferencia entre completados y pendientes (para mostrar según configuración)
+  const diferenciaVencidos = vencidosCompletados - vencidosFaltantes;
+  
   // Datos para el gráfico de vencidos
   const vencidosData = [
     { name: 'Completados', value: vencidosCompletados, color: "#22c55e" },
@@ -75,6 +78,49 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
       );
     }
     return null;
+  };
+  
+  // Renderizar el dato de ITR B Vencidos según la configuración del usuario
+  const renderDatoITRBVencidos = () => {
+    switch (kpiConfig.itrVencidosMostrar) {
+      case "total":
+        return (
+          <>
+            <h3 className="text-2xl font-bold text-red-500">{totalVencidos}</h3>
+            <span className="text-xs text-muted-foreground">en total</span>
+          </>
+        );
+      case "diferencia":
+        return (
+          <>
+            <h3 className={`text-2xl font-bold ${diferenciaVencidos >= 0 ? "text-green-500" : "text-red-500"}`}>
+              {diferenciaVencidos >= 0 ? "+" : ""}{diferenciaVencidos}
+            </h3>
+            <span className="text-xs text-muted-foreground">diferencia</span>
+          </>
+        );
+      case "pendientes":
+        return (
+          <>
+            <h3 className="text-2xl font-bold text-red-500">{vencidosFaltantes}</h3>
+            <span className="text-xs text-muted-foreground">pendientes</span>
+          </>
+        );
+      case "completados":
+        return (
+          <>
+            <h3 className="text-2xl font-bold text-green-500">{vencidosCompletados}</h3>
+            <span className="text-xs text-muted-foreground">completados</span>
+          </>
+        );
+      default:
+        return (
+          <>
+            <h3 className="text-2xl font-bold text-red-500">{totalVencidos}</h3>
+            <span className="text-xs text-muted-foreground">en total</span>
+          </>
+        );
+    }
   };
   
   return (
@@ -221,8 +267,7 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
                 <p className="text-sm font-medium text-muted-foreground mb-1">ITR B Vencidos</p>
               </div>
               <div className="flex items-baseline gap-1">
-                <h3 className="text-2xl font-bold text-red-500">{totalVencidos}</h3>
-                <span className="text-xs text-muted-foreground">en total</span>
+                {renderDatoITRBVencidos()}
               </div>
               <div className="text-xs mt-1 flex flex-col">
                 <span className="text-green-500 flex items-center">

@@ -1,34 +1,28 @@
-
-// Definición de tipos de datos para la aplicación
-
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
   email: string;
   role: UserRole;
   nombre?: string;
-  proyectosAsignados?: string[]; // IDs de proyectos asignados al usuario
 }
 
 export interface Proyecto {
   id: string;
   titulo: string;
-  descripcion?: string;
+  descripcion: string;
   fechaCreacion: string;
   fechaActualizacion: string;
-  responsable?: string; // email del responsable
 }
 
 export interface Actividad {
   id: string;
-  proyectoId: string; // Relación con el proyecto
+  proyectoId: string;
   nombre: string;
   sistema: string;
   subsistema: string;
   fechaInicio: string;
   fechaFin: string;
   duracion: number;
-  observaciones?: string;
 }
 
 export type EstadoITRB = "En curso" | "Completado" | "Vencido";
@@ -47,12 +41,12 @@ export interface ITRB {
 
 export interface Alerta {
   id: string;
-  tipo: "Vencimiento" | "CCC Pendiente" | "Falta Ejecución";
+  tipo: "Vencimiento" | "Alerta" | "Información";
   mensaje: string;
   fechaCreacion: string;
   leida: boolean;
-  itemsRelacionados?: string[]; // IDs de ITRBs relacionados
-  proyectoId: string;
+  itemsRelacionados?: string[];
+  proyectoId?: string;
 }
 
 export interface KPIs {
@@ -60,28 +54,25 @@ export interface KPIs {
   totalITRB: number;
   realizadosITRB: number;
   subsistemasCCC: number;
-  actividadesVencidas: number;
-  // Nuevos KPIs
   totalSubsistemas: number;
+  actividadesVencidas: number;
   proyectoId?: string;
+}
+
+export interface FiltrosDashboard {
+  proyecto: string | "todos";
+}
+
+export interface ConfiguracionGrafico {
+  tamano: "pequeno" | "mediano" | "grande";
+  mostrarLeyenda: boolean;
 }
 
 export interface AppTheme {
   mode: "light" | "dark";
 }
 
-export interface FiltrosDashboard {
-  proyecto: string | "todos";
-  sistema?: string;
-  subsistema?: string;
-  estadoITRB?: EstadoITRB;
-  ccc?: boolean;
-  tareaVencida?: boolean;
-  busquedaActividad?: string;
-  timestamp?: number; // Add timestamp property to handle cache refreshing
-}
-
-export interface ConfiguracionGrafico {
-  tamano: "pequeno" | "mediano" | "grande" | "completo";
-  mostrarLeyenda: boolean;
+// Nueva interfaz para la configuración de KPIs
+export interface KPIConfig {
+  itrVencidosMostrar: "total" | "diferencia" | "pendientes" | "completados";
 }

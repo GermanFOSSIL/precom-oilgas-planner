@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as LabelPrimitive from "@radix-ui/react-label"
 import { Slot } from "@radix-ui/react-slot"
@@ -12,6 +13,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
+import { FormSubmitButton } from "@/components/ui/form-submit-button"
 
 const Form = FormProvider
 
@@ -173,4 +175,5 @@ export {
   FormDescription,
   FormMessage,
   FormField,
+  FormSubmitButton,
 }

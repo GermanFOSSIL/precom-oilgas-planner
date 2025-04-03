@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { 
   User, 
@@ -8,7 +9,8 @@ import {
   Proyecto, 
   Alerta, 
   AppTheme,
-  FiltrosDashboard
+  FiltrosDashboard,
+  KPIConfig
 } from "@/types";
 
 interface AppContextType {
@@ -57,6 +59,10 @@ interface AppContextType {
   filtros: FiltrosDashboard;
   setFiltros: (filtros: FiltrosDashboard) => void;
   
+  // Configuración de KPIs
+  kpiConfig: KPIConfig;
+  updateKPIConfig: (config: Partial<KPIConfig>) => void;
+  
   // KPIs y estadísticas
   getKPIs: (proyectoId?: string) => KPIs;
 }
@@ -73,6 +79,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [proyectoActual, setProyectoActual] = useState<string | "todos">("todos");
   const [theme, setTheme] = useState<AppTheme>({ mode: "light" });
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ proyecto: "todos" });
+  
+  // Configuración de KPIs
+  const [kpiConfig, setKPIConfig] = useState<KPIConfig>({
+    itrVencidosMostrar: "total", // valores posibles: "total", "diferencia", "pendientes", "completados"
+  });
   
   // Propiedades derivadas
   const isAdmin = user?.role === "admin";
@@ -108,6 +119,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme) {
       setTheme(JSON.parse(storedTheme));
+    }
+    
+    const storedKPIConfig = localStorage.getItem("kpiConfig");
+    if (storedKPIConfig) {
+      setKPIConfig(JSON.parse(storedKPIConfig));
     }
   }, []);
 
@@ -187,6 +203,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       document.documentElement.classList.remove("dark");
     }
   }, [theme]);
+  
+  useEffect(() => {
+    localStorage.setItem("kpiConfig", JSON.stringify(kpiConfig));
+  }, [kpiConfig]);
+
+  // Función para actualizar la configuración de KPIs
+  const updateKPIConfig = (config: Partial<KPIConfig>) => {
+    setKPIConfig(prev => ({ ...prev, ...config }));
+  };
 
   // Funciones de autenticación
   const login = async (email: string, password?: string): Promise<boolean> => {
@@ -408,6 +433,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteAlerta,
         filtros,
         setFiltros,
+        kpiConfig,
+        updateKPIConfig,
         getKPIs
       }}
     >

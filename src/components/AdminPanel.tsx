@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,8 @@ import {
   Edit2,
   Trash2,
   Save,
-  File
+  File,
+  Check
 } from "lucide-react";
 import {
   Dialog,
@@ -62,7 +62,7 @@ import ActividadesTable from "@/components/ActividadesTable";
 import ITRBTable from "@/components/ITRBTable";
 import UserManagement from "@/components/UserManagement";
 import ReportGenerator from "@/components/ReportGenerator";
-import { FiltrosDashboard, ConfiguracionGrafico, Proyecto, Actividad, ITRB } from "@/types";
+import { FiltrosDashboard, ConfiguracionGrafico, Proyecto, Actividad, ITRB, KPIConfig } from "@/types";
 
 const AdminPanel: React.FC = () => {
   const { 
@@ -82,7 +82,9 @@ const AdminPanel: React.FC = () => {
     itrbItems,
     addITRB,
     proyectoActual,
-    setProyectoActual
+    setProyectoActual,
+    kpiConfig,
+    updateKPIConfig
   } = useAppContext();
   
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -141,6 +143,12 @@ const AdminPanel: React.FC = () => {
     addProyecto(proyecto);
     setNuevoProyecto({ titulo: "", descripcion: "" });
     toast.success("Proyecto creado exitosamente");
+    
+    // Cerrar diálogo automáticamente
+    const dialogTrigger = document.querySelector<HTMLButtonElement>('[data-state="open"]');
+    if (dialogTrigger) {
+      dialogTrigger.click();
+    }
   };
 
   const handleEditarProyecto = (proyecto: Proyecto) => {
@@ -211,8 +219,10 @@ const AdminPanel: React.FC = () => {
       fechaFin: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       duracion: 7
     });
-    setShowNewActivityDialog(false);
+    
+    // Mostrar mensaje y cerrar diálogo automáticamente
     toast.success("Actividad creada exitosamente");
+    setShowNewActivityDialog(false);
   };
 
   const handleCrearITRB = () => {
@@ -239,8 +249,10 @@ const AdminPanel: React.FC = () => {
       ccc: false,
       observaciones: ""
     });
-    setShowNewITRBDialog(false);
+    
+    // Mostrar mensaje y cerrar diálogo automáticamente
     toast.success("ITR B creado exitosamente");
+    setShowNewITRBDialog(false);
   };
 
   const handleFechaInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -380,6 +392,14 @@ const AdminPanel: React.FC = () => {
 
   const handleGenerarExcel = () => {
     toast.info("Funcionalidad de exportación a Excel en desarrollo");
+  };
+  
+  // Manejar cambio de configuración para un KPI específico
+  const handleKPIConfigChange = (option: keyof KPIConfig, value: any) => {
+    updateKPIConfig({ [option]: value });
+    toast.success("Configuración actualizada", {
+      description: "La visualización de KPIs ha sido actualizada."
+    });
   };
 
   return (
@@ -743,7 +763,37 @@ const AdminPanel: React.FC = () => {
                   </div>
                 </div>
                 
-                <div>
+                <div className="border-t pt-4">
+                  <h3 className="text-lg font-medium mb-4">Configuración de KPIs</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="itrVencidosMostrar">
+                        ITR B Vencidos - Datos a mostrar
+                      </Label>
+                      <Select 
+                        value={kpiConfig.itrVencidosMostrar}
+                        onValueChange={(value) => handleKPIConfigChange("itrVencidosMostrar", value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Seleccionar visualización" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="total">Total de vencidos</SelectItem>
+                          <SelectItem value="diferencia">Diferencia (completados - pendientes)</SelectItem>
+                          <SelectItem value="pendientes">Pendientes vencidos</SelectItem>
+                          <SelectItem value="completados">Completados fuera de fecha</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Seleccione qué dato desea ver destacado en el KPI de ITR B Vencidos
+                      </p>
+                    </div>
+                    
+                    {/* Aquí se pueden agregar más opciones de configuración para otros KPIs */}
+                  </div>
+                </div>
+                
+                <div className="border-t pt-4">
                   <h3 className="text-lg font-medium mb-2">Apariencia</h3>
                   <div className="flex items-center space-x-2">
                     <Button variant="outline" onClick={toggleTheme}>
@@ -753,7 +803,7 @@ const AdminPanel: React.FC = () => {
                   </div>
                 </div>
                 
-                <div>
+                <div className="border-t pt-4">
                   <h3 className="text-lg font-medium mb-2">Acerca de</h3>
                   <p className="text-sm text-muted-foreground">
                     Plan de Precomisionado v1.0.0<br />
@@ -841,201 +891,4 @@ const AdminPanel: React.FC = () => {
                 </Select>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="nombreActividad">Nombre *</Label>
-                <Input 
-                  id="nombreActividad"
-                  value={nuevaActividad.nombre}
-                  onChange={(e) => setNuevaActividad({...nuevaActividad, nombre: e.target.value})}
-                  placeholder="Ej: Montaje de equipos"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="sistema">Sistema *</Label>
-                  <Input 
-                    id="sistema"
-                    value={nuevaActividad.sistema}
-                    onChange={(e) => setNuevaActividad({...nuevaActividad, sistema: e.target.value})}
-                    placeholder="Ej: Eléctrico"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subsistema">Subsistema *</Label>
-                  <Input 
-                    id="subsistema"
-                    value={nuevaActividad.subsistema}
-                    onChange={(e) => setNuevaActividad({...nuevaActividad, subsistema: e.target.value})}
-                    placeholder="Ej: Iluminación"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fechaInicio">Fecha Inicio</Label>
-                  <Input 
-                    id="fechaInicio"
-                    type="date"
-                    value={nuevaActividad.fechaInicio}
-                    onChange={handleFechaInicioChange}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fechaFin">Fecha Fin</Label>
-                  <Input 
-                    id="fechaFin"
-                    type="date"
-                    value={nuevaActividad.fechaFin}
-                    onChange={handleFechaFinChange}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="duracion">Duración (días)</Label>
-                <Input 
-                  id="duracion"
-                  type="number"
-                  value={nuevaActividad.duracion}
-                  onChange={(e) => setNuevaActividad({...nuevaActividad, duracion: parseInt(e.target.value)})}
-                  min={1}
-                  readOnly
-                />
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowNewActivityDialog(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCrearActividad}>
-                <Save className="h-4 w-4 mr-2" />
-                Guardar Actividad
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
-        {/* Nuevo ITR B Dialog */}
-        <Dialog open={showNewITRBDialog} onOpenChange={setShowNewITRBDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Crear Nuevo ITR B</DialogTitle>
-              <DialogDescription>
-                Asocie el ITR B a una actividad existente
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-3">
-              <div className="space-y-2">
-                <Label htmlFor="actividadId">Actividad Asociada *</Label>
-                <Select 
-                  value={nuevoITRB.actividadId}
-                  onValueChange={(value) => setNuevoITRB({...nuevoITRB, actividadId: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar actividad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {actividades
-                      .filter(act => proyectoActual === "todos" || act.proyectoId === proyectoActual)
-                      .map(actividad => (
-                        <SelectItem key={actividad.id} value={actividad.id}>
-                          {actividad.nombre} ({actividad.sistema} - {actividad.subsistema})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="descripcionITRB">Descripción *</Label>
-                <Input 
-                  id="descripcionITRB"
-                  value={nuevoITRB.descripcion}
-                  onChange={(e) => setNuevoITRB({...nuevoITRB, descripcion: e.target.value})}
-                  placeholder="Ej: Revisión de montaje de luminarias"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cantidadTotal">Cantidad Total</Label>
-                  <Input 
-                    id="cantidadTotal"
-                    type="number"
-                    value={nuevoITRB.cantidadTotal}
-                    onChange={(e) => setNuevoITRB({...nuevoITRB, cantidadTotal: parseInt(e.target.value)})}
-                    min={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cantidadRealizada">Cantidad Realizada</Label>
-                  <Input 
-                    id="cantidadRealizada"
-                    type="number"
-                    value={nuevoITRB.cantidadRealizada}
-                    onChange={(e) => setNuevoITRB({...nuevoITRB, cantidadRealizada: parseInt(e.target.value)})}
-                    min={0}
-                    max={nuevoITRB.cantidadTotal}
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fechaLimite">Fecha Límite</Label>
-                  <Input 
-                    id="fechaLimite"
-                    type="date"
-                    value={nuevoITRB.fechaLimite}
-                    onChange={(e) => setNuevoITRB({...nuevoITRB, fechaLimite: e.target.value})}
-                  />
-                </div>
-                <div className="flex items-center space-x-2 pt-8">
-                  <input
-                    type="checkbox"
-                    id="ccc"
-                    checked={nuevoITRB.ccc}
-                    onChange={(e) => setNuevoITRB({...nuevoITRB, ccc: e.target.checked})}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor="ccc">Marcar como CCC</Label>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="observaciones">Observaciones</Label>
-                <Textarea 
-                  id="observaciones"
-                  value={nuevoITRB.observaciones || ""}
-                  onChange={(e) => setNuevoITRB({...nuevoITRB, observaciones: e.target.value})}
-                  placeholder="Observaciones adicionales..."
-                  rows={3}
-                />
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowNewITRBDialog(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCrearITRB}>
-                <Save className="h-4 w-4 mr-2" />
-                Guardar ITR B
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
-        <div className="py-6 border-t mt-6 text-center text-xs text-muted-foreground">
-          Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default AdminPanel;
+              <div className="
