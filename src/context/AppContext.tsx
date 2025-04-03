@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from "react";
 import { 
   User, 
   Actividad, 
@@ -32,7 +32,7 @@ interface AppContextType {
   deleteProyecto: (id: string) => void;
   proyectoActual: string | "todos";
   setProyectoActual: (id: string | "todos") => void;
-  setProyectos: (proyectos: Proyecto[]) => void; // Añadido para backups
+  setProyectos: (proyectos: Proyecto[]) => void; // Required for backups
   
   // Actividades
   actividades: Actividad[];
@@ -54,7 +54,7 @@ interface AppContextType {
   addAlerta: (alerta: Alerta) => void;
   markAlertaAsRead: (id: string) => void;
   deleteAlerta: (id: string) => void;
-  setAlertas: (alertas: Alerta[]) => void; // Añadido para backups
+  setAlertas: (alertas: Alerta[]) => void; // Required for backups
   
   // Filtros
   filtros: FiltrosDashboard;
@@ -417,6 +417,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteProyecto,
         proyectoActual,
         setProyectoActual,
+        setProyectos,
         actividades,
         setActividades,
         addActividad,
@@ -432,6 +433,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addAlerta,
         markAlertaAsRead,
         deleteAlerta,
+        setAlertas,
         filtros,
         setFiltros,
         kpiConfig,
