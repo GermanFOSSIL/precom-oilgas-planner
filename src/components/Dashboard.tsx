@@ -57,7 +57,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import {
   Form,
   FormControl,
@@ -70,20 +70,6 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-
-type DropResult = {
-  draggableId: string;
-  type: string;
-  source: {
-    index: number;
-    droppableId: string;
-  };
-  destination?: {
-    droppableId: string;
-    index: number;
-  };
-  reason: string;
-};
 
 const formSchema = z.object({
   titulo: z.string().min(2, {
@@ -143,7 +129,7 @@ const Dashboard: React.FC = () => {
   const [editandoGraficoId, setEditandoGraficoId] = useState<string | null>(null);
 
   useEffect(() => {
-    setFiltros({ ...filtros, timestamp: Date.now().toString() });
+    setFiltros({ ...filtros, timestamp: String(Date.now()) });
   }, []);
 
   const sistemasDisponibles = Array.from(
@@ -159,8 +145,8 @@ const Dashboard: React.FC = () => {
   );
 
   const handleFiltroChange = (key: keyof FiltrosDashboard, value: any) => {
-    if (key === 'timestamp' && typeof value === 'string') {
-      setFiltros({ ...filtros, [key]: Number(value) });
+    if (key === 'timestamp') {
+      setFiltros({ ...filtros, [key]: String(value) });
     } else {
       setFiltros({ ...filtros, [key]: value });
     }
@@ -460,7 +446,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const onDragEnd = (result: any) => {
+  const onDragEnd = (result: DropResult) => {
     if (!result.destination) {
       return;
     }

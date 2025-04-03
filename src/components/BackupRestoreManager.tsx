@@ -30,7 +30,7 @@ const BackupRestoreManager = () => {
     includeActividades: true,
     includeITRB: true,
     includeAlertas: true,
-    includeKpiConfig: true // Changed from kpiConfig to includeKpiConfig
+    includeKpiConfig: true
   });
   
   const [progress, setProgress] = useState(0);
@@ -76,7 +76,7 @@ const BackupRestoreManager = () => {
         backupData.alertas = alertas;
       }
       
-      if (backupOptions.includeKpiConfig) { // Changed from kpiConfig to includeKpiConfig
+      if (backupOptions.includeKpiConfig) {
         backupData.kpiConfig = kpiConfig;
       }
       

@@ -1,3 +1,4 @@
+
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
