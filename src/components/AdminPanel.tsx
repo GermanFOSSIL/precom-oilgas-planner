@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,7 @@ import {
   Edit2,
   Trash2,
   Save,
-  FilePdf
+  File
 } from "lucide-react";
 import {
   Dialog,
@@ -91,17 +90,14 @@ const AdminPanel: React.FC = () => {
     mostrarLeyenda: true
   });
 
-  // Estados para el nuevo proyecto
   const [nuevoProyecto, setNuevoProyecto] = useState<Omit<Proyecto, "id" | "fechaCreacion" | "fechaActualizacion">>({
     titulo: "",
     descripcion: ""
   });
   
-  // Estado para el proyecto en edición
   const [proyectoEditando, setProyectoEditando] = useState<Proyecto | null>(null);
   const [showEditProyectoDialog, setShowEditProyectoDialog] = useState(false);
 
-  // Estados para la nueva actividad
   const [nuevaActividad, setNuevaActividad] = useState<Omit<Actividad, "id">>({
     proyectoId: proyectoActual !== "todos" ? proyectoActual : "",
     nombre: "",
@@ -112,7 +108,6 @@ const AdminPanel: React.FC = () => {
     duracion: 7
   });
 
-  // Estados para el nuevo ITR B
   const [nuevoITRB, setNuevoITRB] = useState<Omit<ITRB, "id" | "estado">>({
     actividadId: "",
     descripcion: "",
@@ -123,7 +118,6 @@ const AdminPanel: React.FC = () => {
     observaciones: ""
   });
 
-  // Handler para crear un nuevo proyecto
   const handleCrearProyecto = () => {
     if (!nuevoProyecto.titulo.trim()) {
       toast.error("El título del proyecto es obligatorio");
@@ -143,14 +137,12 @@ const AdminPanel: React.FC = () => {
     setNuevoProyecto({ titulo: "", descripcion: "" });
     toast.success("Proyecto creado exitosamente");
   };
-  
-  // Handler para editar un proyecto
+
   const handleEditarProyecto = (proyecto: Proyecto) => {
     setProyectoEditando({...proyecto});
     setShowEditProyectoDialog(true);
   };
-  
-  // Handler para guardar los cambios del proyecto
+
   const handleGuardarProyecto = () => {
     if (proyectoEditando) {
       if (!proyectoEditando.titulo.trim()) {
@@ -170,12 +162,10 @@ const AdminPanel: React.FC = () => {
       });
     }
   };
-  
-  // Handler para eliminar un proyecto
+
   const handleEliminarProyecto = (id: string) => {
     deleteProyecto(id);
     
-    // Si se elimina el proyecto actualmente seleccionado, cambiar a "todos"
     if (proyectoActual === id) {
       setProyectoActual("todos");
     }
@@ -183,7 +173,6 @@ const AdminPanel: React.FC = () => {
     toast.success("Proyecto eliminado exitosamente");
   };
 
-  // Handler para crear una nueva actividad
   const handleCrearActividad = () => {
     if (!nuevaActividad.nombre.trim() || !nuevaActividad.sistema.trim() || !nuevaActividad.subsistema.trim()) {
       toast.error("Todos los campos son obligatorios");
@@ -195,7 +184,6 @@ const AdminPanel: React.FC = () => {
       return;
     }
 
-    // Calcular la duración en días
     const inicio = new Date(nuevaActividad.fechaInicio);
     const fin = new Date(nuevaActividad.fechaFin);
     const duracionDias = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
@@ -219,7 +207,6 @@ const AdminPanel: React.FC = () => {
     toast.success("Actividad creada exitosamente");
   };
 
-  // Handler para crear un nuevo ITR B
   const handleCrearITRB = () => {
     if (!nuevoITRB.actividadId || !nuevoITRB.descripcion.trim()) {
       toast.error("La actividad y descripción son obligatorias");
@@ -245,7 +232,6 @@ const AdminPanel: React.FC = () => {
     toast.success("ITR B creado exitosamente");
   };
 
-  // Handler para cambiar la fecha de inicio y actualizar la duración
   const handleFechaInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fechaInicio = e.target.value;
     const fechaFin = nuevaActividad.fechaFin;
@@ -255,7 +241,6 @@ const AdminPanel: React.FC = () => {
       fechaInicio
     }));
     
-    // Actualizar duración si ambas fechas son válidas
     if (fechaInicio && fechaFin) {
       const inicio = new Date(fechaInicio);
       const fin = new Date(fechaFin);
@@ -270,7 +255,6 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  // Handler para cambiar la fecha de fin y actualizar la duración
   const handleFechaFinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fechaFin = e.target.value;
     const fechaInicio = nuevaActividad.fechaInicio;
@@ -280,7 +264,6 @@ const AdminPanel: React.FC = () => {
       fechaFin
     }));
     
-    // Actualizar duración si ambas fechas son válidas
     if (fechaInicio && fechaFin) {
       const inicio = new Date(fechaInicio);
       const fin = new Date(fechaFin);
@@ -295,24 +278,20 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  // Función para generar PDF
   const handleGenerarPDF = () => {
     const doc = new window.jsPDF();
     const title = proyectoActual !== "todos" 
       ? `Plan de Precomisionado - ${proyectos.find(p => p.id === proyectoActual)?.titulo || 'Todos los proyectos'}`
       : "Plan de Precomisionado - Todos los proyectos";
     
-    // Configuración de estilos
     doc.setFontSize(18);
     doc.text(title, 14, 20);
     doc.setFontSize(12);
     
-    // Fecha y usuario
     const fechaActual = new Date().toLocaleDateString('es-ES');
     doc.text(`Generado por: ${user?.nombre || user?.email}`, 14, 30);
     doc.text(`Fecha: ${fechaActual}`, 14, 36);
     
-    // Tabla de actividades
     doc.setFontSize(14);
     doc.text("Actividades", 14, 50);
     
@@ -342,7 +321,6 @@ const AdminPanel: React.FC = () => {
       doc.text("No hay actividades para mostrar", 14, 60);
     }
     
-    // Tabla de ITR B
     const lastPosition = (doc as any).lastAutoTable?.finalY || 90;
     doc.setFontSize(14);
     doc.text("ITR B", 14, lastPosition + 10);
@@ -377,8 +355,7 @@ const AdminPanel: React.FC = () => {
       doc.text("No hay ITR B para mostrar", 14, lastPosition + 15);
     }
     
-    // Footer
-    const pageCount = (doc as any).internal.getNumberOfPages();
+    const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
@@ -390,15 +367,12 @@ const AdminPanel: React.FC = () => {
     toast.success("PDF generado exitosamente");
   };
 
-  // Función para generar Excel
   const handleGenerarExcel = () => {
-    // Implementar en una siguiente fase
     toast.info("Funcionalidad de exportación a Excel en desarrollo");
   };
 
   return (
     <div className={`min-h-screen flex ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
-      {/* Sidebar */}
       <aside className="w-64 bg-white dark:bg-slate-800 border-r dark:border-slate-700 h-screen sticky top-0 flex flex-col">
         <div className="p-4 border-b dark:border-slate-700 flex items-center space-x-2">
           <Layers className="h-6 w-6 text-indigo-500" />
@@ -450,15 +424,17 @@ const AdminPanel: React.FC = () => {
             </Button>
           )}
           
-          <Button 
-            variant={activeTab === "reportes" ? "default" : "ghost"} 
-            className="w-full justify-start" 
-            size="sm"
-            onClick={() => setActiveTab("reportes")}
-          >
-            <FilePdf className="h-4 w-4 mr-2" />
-            Reportes
-          </Button>
+          {isAdmin && (
+            <Button 
+              variant={activeTab === "reportes" ? "default" : "ghost"} 
+              className="w-full justify-start" 
+              size="sm"
+              onClick={() => setActiveTab("reportes")}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Reportes
+            </Button>
+          )}
           
           {isAdmin && (
             <Button 
@@ -510,7 +486,6 @@ const AdminPanel: React.FC = () => {
         </div>
       </aside>
       
-      {/* Contenido principal */}
       <main className="flex-1 p-6 overflow-auto">
         <div className="mb-6 flex justify-between items-center">
           <h1 className="text-2xl font-bold">
@@ -814,7 +789,40 @@ const AdminPanel: React.FC = () => {
         )}
         
         {activeTab === "reportes" && (
-          <ReportGenerator />
+          <Card>
+            <CardHeader>
+              <CardTitle>Reportes</CardTitle>
+              <div className="text-sm text-muted-foreground">
+                Genere informes y reportes de su plan de precomisionado
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">Exportar datos</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Seleccione el formato en el que desea exportar los datos
+                </p>
+                <div className="flex flex-col md:flex-row gap-4">
+                  <Button onClick={handleGenerarPDF} className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Generar PDF
+                  </Button>
+                  <Button onClick={handleGenerarExcel} variant="outline" className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Generar Excel
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2 pt-4 border-t">
+                <h3 className="text-lg font-medium">Filtrar información</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  El reporte incluirá la información según el proyecto seleccionado actualmente
+                </p>
+                <ProyectoSelector />
+              </div>
+            </CardContent>
+          </Card>
         )}
         
         {activeTab === "usuarios" && isAdmin && (
@@ -860,7 +868,6 @@ const AdminPanel: React.FC = () => {
           </Card>
         )}
         
-        {/* Diálogo de edición de proyecto */}
         <Dialog open={showEditProyectoDialog} onOpenChange={setShowEditProyectoDialog}>
           <DialogContent>
             <DialogHeader>
