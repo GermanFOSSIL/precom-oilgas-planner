@@ -1,475 +1,517 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
-import { Actividad, ITRB, FiltrosDashboard, ConfiguracionGrafico } from "@/types";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Calendar, ZoomIn, ZoomOut, ArrowLeft, ArrowRight } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, addMonths, subMonths, addWeeks, subWeeks, isWithinInterval } from "date-fns";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine,
+  Cell,
+} from "recharts";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
+import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-interface GanttChartProps {
+interface EnhancedGanttChartProps {
   filtros: FiltrosDashboard;
   configuracion: ConfiguracionGrafico;
 }
 
-const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion }) => {
+const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({ 
+  filtros, 
+  configuracion 
+}) => {
   const { actividades, itrbItems, proyectos } = useAppContext();
-  
+  const [loading, setLoading] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
-  const [currentStartDate, setCurrentStartDate] = useState(new Date());
-  const [hoveredItem, setHoveredItem] = useState<{ id: string, tipo: "actividad" | "itrb" } | null>(null);
+  const [currentStartDate, setCurrentStartDate] = useState<Date>(new Date());
+  const [currentEndDate, setCurrentEndDate] = useState<Date>(addDays(new Date(), 30));
   
+  // Determinar si mostrar subsistemas basado en la configuración
+  const mostrarSubsistemas = configuracion.mostrarSubsistemas !== undefined 
+    ? configuracion.mostrarSubsistemas 
+    : true;
+
+  useEffect(() => {
+    // Simular carga de datos
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Filtrar actividades según los filtros aplicados
   const actividadesFiltradas = useMemo(() => {
     return actividades.filter(actividad => {
+      // Filtrar por proyecto
       if (filtros.proyecto !== "todos" && actividad.proyectoId !== filtros.proyecto) {
         return false;
       }
       
-      if (filtros.sistema && actividad.sistema !== filtros.sistema) {
+      // Filtrar por sistema
+      if (filtros.sistema && filtros.sistema !== "todos" && actividad.sistema !== filtros.sistema) {
         return false;
       }
       
-      if (filtros.subsistema && actividad.subsistema !== filtros.subsistema) {
+      // Filtrar por subsistema
+      if (filtros.subsistema && filtros.subsistema !== "todos" && actividad.subsistema !== filtros.subsistema) {
         return false;
       }
       
-      if (filtros.busquedaActividad && !actividad.nombre.toLowerCase().includes(filtros.busquedaActividad.toLowerCase())) {
-        return false;
+      // Filtrar por búsqueda de actividad o código ITR
+      if (filtros.busquedaActividad) {
+        const busquedaMinuscula = filtros.busquedaActividad.toLowerCase();
+        
+        // Buscar en el nombre de la actividad
+        if (actividad.nombre.toLowerCase().includes(busquedaMinuscula)) {
+          return true;
+        }
+        
+        // Buscar en los ITRs asociados a esta actividad
+        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
+        return itrbsAsociados.some(itrb => 
+          itrb.descripcion.toLowerCase().includes(busquedaMinuscula)
+        );
+      }
+      
+      // Filtrar por estado de ITRB
+      if (filtros.estadoITRB && filtros.estadoITRB !== "todos") {
+        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
+        return itrbsAsociados.some(itrb => itrb.estado === filtros.estadoITRB);
+      }
+      
+      // Filtrar por tareas vencidas
+      if (filtros.tareaVencida) {
+        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
+        return itrbsAsociados.some(itrb => itrb.estado === "Vencido");
+      }
+      
+      // Filtrar por CCC
+      if (filtros.ccc) {
+        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
+        return itrbsAsociados.some(itrb => itrb.ccc);
       }
       
       return true;
     });
-  }, [actividades, filtros]);
-  
-  const itrbFiltrados = useMemo(() => {
-    const actividadesIds = actividadesFiltradas.map(a => a.id);
-    
-    return itrbItems.filter(itrb => {
-      if (!actividadesIds.includes(itrb.actividadId)) {
-        return false;
-      }
-      
-      if (filtros.estadoITRB && filtros.estadoITRB !== "todos" && itrb.estado !== filtros.estadoITRB) {
-        return false;
-      }
-      
-      if (filtros.mcc !== undefined && itrb.ccc !== filtros.mcc) {
-        return false;
-      }
-      
-      if (filtros.tareaVencida && itrb.estado !== "Vencido") {
-        return false;
-      }
-      
-      return true;
-    });
-  }, [itrbItems, actividadesFiltradas, filtros]);
-  
-  const timeConfig = useMemo(() => {
-    let start = new Date(currentStartDate);
-    let end, slots, width;
-    
-    switch (viewMode) {
-      case "month":
-        start.setDate(1);
-        end = addMonths(start, 3);
-        slots = [];
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-          slots.push(new Date(d));
-        }
-        width = 20;
-        break;
-      case "week":
-        const dayOfWeek = start.getDay();
-        start = new Date(start.setDate(start.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)));
-        end = addWeeks(start, 4);
-        slots = [];
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-          slots.push(new Date(d));
-        }
-        width = 40;
-        break;
-      case "day":
-        start.setHours(0, 0, 0, 0);
-        end = new Date(start);
-        end.setDate(end.getDate() + 14);
-        slots = [];
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-          slots.push(new Date(d));
-        }
-        width = 80;
-        break;
-      default:
-        start.setDate(1);
-        end = addMonths(start, 3);
-        slots = [];
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-          slots.push(new Date(d));
-        }
-        width = 20;
-    }
-    
-    return { 
-      viewStartDate: start,
-      viewEndDate: end,
-      timeSlots: slots,
-      slotWidth: width
-    };
-  }, [currentStartDate, viewMode]);
-  
-  const { viewStartDate, viewEndDate, timeSlots, slotWidth } = timeConfig;
-  
-  const handleChangeViewMode = (mode: "month" | "week" | "day") => {
-    setViewMode(mode);
-  };
-  
-  const handleNavigateBack = () => {
-    switch (viewMode) {
-      case "month":
-        setCurrentStartDate(subMonths(currentStartDate, 1));
-        break;
-      case "week":
-        setCurrentStartDate(subWeeks(currentStartDate, 1));
-        break;
-      case "day":
-        const newDate = new Date(currentStartDate);
-        newDate.setDate(newDate.getDate() - 7);
-        setCurrentStartDate(newDate);
-        break;
-    }
-  };
-  
-  const handleNavigateForward = () => {
-    switch (viewMode) {
-      case "month":
-        setCurrentStartDate(addMonths(currentStartDate, 1));
-        break;
-      case "week":
-        setCurrentStartDate(addWeeks(currentStartDate, 1));
-        break;
-      case "day":
-        const newDate = new Date(currentStartDate);
-        newDate.setDate(newDate.getDate() + 7);
-        setCurrentStartDate(newDate);
-        break;
-    }
-  };
-  
-  const handleTodayView = () => {
-    setCurrentStartDate(new Date());
-  };
-  
-  const getItemPosition = (startDate: Date, endDate: Date) => {
-    const start = new Date(startDate) < viewStartDate ? viewStartDate : new Date(startDate);
-    const end = new Date(endDate) > viewEndDate ? viewEndDate : new Date(endDate);
-    
-    const totalDays = timeSlots.length;
-    const startDayIndex = timeSlots.findIndex(d => d.toDateString() === start.toDateString());
-    let endDayIndex = timeSlots.findIndex(d => d.toDateString() === end.toDateString());
-    
-    if (endDayIndex === -1) endDayIndex = totalDays - 1;
-    if (startDayIndex === -1) return { left: 0, width: 0 };
-    
-    const left = startDayIndex * slotWidth;
-    const width = (endDayIndex - startDayIndex + 1) * slotWidth;
-    
-    return { left, width };
-  };
-  
-  const getColorByEstado = (estado: string) => {
-    switch (estado) {
-      case "Completado": return { bg: "#22c55e", border: "#15803d" };
-      case "En curso": return { bg: "#f59e0b", border: "#d97706" };
-      case "Vencido": return { bg: "#ef4444", border: "#b91c1c" };
-      default: return { bg: "#94a3b8", border: "#64748b" };
-    }
-  };
-  
-  const organizarActividades = useMemo(() => {
-    const resultado: {
-      proyectoId: string;
-      proyectoNombre: string;
-      sistemas: {
-        nombre: string;
-        subsistemas: {
-          nombre: string;
-          actividades: Actividad[];
-          itrbsPorActividad: Record<string, ITRB[]>;
-        }[];
-      }[];
-    }[] = [];
-    
-    actividadesFiltradas.forEach(actividad => {
-      let proyectoEntry = resultado.find(p => p.proyectoId === actividad.proyectoId);
+  }, [actividades, itrbItems, filtros]);
+
+  // Preparar datos para el gráfico de Gantt
+  const ganttData = useMemo(() => {
+    return actividadesFiltradas.map(actividad => {
       const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
+      const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
       
-      if (!proyectoEntry) {
-        proyectoEntry = {
-          proyectoId: actividad.proyectoId,
-          proyectoNombre: proyecto ? proyecto.titulo : `Proyecto ${actividad.proyectoId}`,
-          sistemas: []
-        };
-        resultado.push(proyectoEntry);
-      }
+      // Calcular progreso
+      const totalItrb = itrbsAsociados.length;
+      const completados = itrbsAsociados.filter(itrb => itrb.estado === "Completado").length;
+      const progreso = totalItrb > 0 ? (completados / totalItrb) * 100 : 0;
       
-      let sistemaEntry = proyectoEntry.sistemas.find(s => s.nombre === actividad.sistema);
+      // Verificar si hay ITRBs vencidos
+      const tieneVencidos = itrbsAsociados.some(itrb => itrb.estado === "Vencido");
       
-      if (!sistemaEntry) {
-        sistemaEntry = {
-          nombre: actividad.sistema,
-          subsistemas: []
-        };
-        proyectoEntry.sistemas.push(sistemaEntry);
-      }
+      // Verificar si hay ITRBs CCC
+      const tieneCCC = itrbsAsociados.some(itrb => itrb.ccc);
       
-      let subsistemaEntry = sistemaEntry.subsistemas.find(s => s.nombre === actividad.subsistema);
+      // Calcular fechas para el gráfico
+      const fechaInicio = new Date(actividad.fechaInicio);
+      const fechaFin = new Date(actividad.fechaFin);
       
-      if (!subsistemaEntry) {
-        subsistemaEntry = {
-          nombre: actividad.subsistema,
-          actividades: [],
-          itrbsPorActividad: {}
-        };
-        sistemaEntry.subsistemas.push(subsistemaEntry);
-      }
-      
-      subsistemaEntry.actividades.push(actividad);
-      subsistemaEntry.itrbsPorActividad[actividad.id] = [];
+      return {
+        id: actividad.id,
+        nombre: actividad.nombre,
+        sistema: actividad.sistema,
+        subsistema: actividad.subsistema,
+        fechaInicio,
+        fechaFin,
+        duracion: actividad.duracion,
+        progreso,
+        tieneVencidos,
+        tieneCCC,
+        proyecto: proyecto?.titulo || "Sin proyecto",
+        color: getColorByProgress(progreso, tieneVencidos),
+        itrbsAsociados
+      };
     });
+  }, [actividadesFiltradas, proyectos, itrbItems]);
+
+  // Función para obtener color según progreso
+  const getColorByProgress = (progreso: number, tieneVencidos: boolean): string => {
+    if (tieneVencidos) return "#ef4444"; // Rojo para vencidos
+    if (progreso === 100) return "#22c55e"; // Verde para completados
+    if (progreso > 0) return "#f59e0b"; // Amarillo para en progreso
+    return "#94a3b8"; // Gris para no iniciados
+  };
+
+  // Función para formatear fechas en el eje X
+  const formatXAxis = (date: number) => {
+    const dateObj = new Date(date);
+    switch (viewMode) {
+      case "day":
+        return format(dateObj, "dd MMM", { locale: es });
+      case "week":
+        return format(dateObj, "dd MMM", { locale: es });
+      case "month":
+      default:
+        return format(dateObj, "MMM yyyy", { locale: es });
+    }
+  };
+
+  // Función para generar las fechas del eje X
+  const getAxisDates = () => {
+    const dates: Date[] = [];
+    let currentDate = new Date(currentStartDate);
     
-    itrbFiltrados.forEach(itrb => {
-      const actividadId = itrb.actividadId;
-      const actividad = actividadesFiltradas.find(a => a.id === actividadId);
+    while (currentDate <= currentEndDate) {
+      dates.push(new Date(currentDate));
       
-      if (actividad) {
-        const proyectoEntry = resultado.find(p => p.proyectoId === actividad.proyectoId);
-        if (proyectoEntry) {
-          const sistemaEntry = proyectoEntry.sistemas.find(s => s.nombre === actividad.sistema);
-          if (sistemaEntry) {
-            const subsistemaEntry = sistemaEntry.subsistemas.find(s => s.nombre === actividad.subsistema);
-            if (subsistemaEntry) {
-              if (!subsistemaEntry.itrbsPorActividad[actividadId]) {
-                subsistemaEntry.itrbsPorActividad[actividadId] = [];
-              }
-              subsistemaEntry.itrbsPorActividad[actividadId].push(itrb);
-            }
-          }
+      switch (viewMode) {
+        case "day":
+          currentDate = addDays(currentDate, 1);
+          break;
+        case "week":
+          currentDate = addDays(currentDate, 7);
+          break;
+        case "month":
+        default:
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          break;
+      }
+    }
+    
+    return dates;
+  };
+
+  // Función para navegar en el tiempo
+  const navigateTime = (direction: "prev" | "next") => {
+    let newStartDate, newEndDate;
+    
+    switch (viewMode) {
+      case "day":
+        newStartDate = direction === "prev" 
+          ? addDays(currentStartDate, -7) 
+          : addDays(currentStartDate, 7);
+        newEndDate = direction === "prev" 
+          ? addDays(currentEndDate, -7) 
+          : addDays(currentEndDate, 7);
+        break;
+      case "week":
+        newStartDate = direction === "prev" 
+          ? addDays(currentStartDate, -28) 
+          : addDays(currentStartDate, 28);
+        newEndDate = direction === "prev" 
+          ? addDays(currentEndDate, -28) 
+          : addDays(currentEndDate, 28);
+        break;
+      case "month":
+      default:
+        newStartDate = new Date(currentStartDate);
+        newEndDate = new Date(currentEndDate);
+        if (direction === "prev") {
+          newStartDate.setMonth(newStartDate.getMonth() - 3);
+          newEndDate.setMonth(newEndDate.getMonth() - 3);
+        } else {
+          newStartDate.setMonth(newStartDate.getMonth() + 3);
+          newEndDate.setMonth(newEndDate.getMonth() + 3);
         }
-      }
-    });
+        break;
+    }
     
-    return resultado;
-  }, [actividadesFiltradas, itrbFiltrados, proyectos]);
-  
-  if (actividadesFiltradas.length === 0) {
+    setCurrentStartDate(newStartDate);
+    setCurrentEndDate(newEndDate);
+  };
+
+  // Función para cambiar el nivel de zoom
+  const changeZoom = (direction: "in" | "out") => {
+    if (direction === "in" && zoomLevel < 2) {
+      setZoomLevel(zoomLevel + 0.25);
+    } else if (direction === "out" && zoomLevel > 0.5) {
+      setZoomLevel(zoomLevel - 0.25);
+    }
+  };
+
+  // Personalizar el tooltip del gráfico
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      
+      return (
+        <Card className="p-0 shadow-lg border-0">
+          <CardContent className="p-3">
+            <div className="space-y-2">
+              <div className="font-medium">{data.nombre}</div>
+              <div className="text-sm text-muted-foreground">
+                {data.sistema} {mostrarSubsistemas ? `/ ${data.subsistema}` : ''}
+              </div>
+              <div className="text-xs">
+                <span className="font-medium">Duración:</span> {data.duracion} días
+              </div>
+              <div className="text-xs">
+                <span className="font-medium">Inicio:</span> {format(data.fechaInicio, "dd/MM/yyyy")}
+              </div>
+              <div className="text-xs">
+                <span className="font-medium">Fin:</span> {format(data.fechaFin, "dd/MM/yyyy")}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium">Progreso:</span>
+                <Progress value={data.progreso} className="h-2 w-24" />
+                <span className="text-xs">{Math.round(data.progreso)}%</span>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {data.tieneVencidos && (
+                  <Badge variant="destructive" className="text-xs">Vencido</Badge>
+                )}
+                {data.tieneCCC && (
+                  <Badge className="bg-blue-500 text-xs">CCC</Badge>
+                )}
+                {data.progreso === 100 && (
+                  <Badge className="bg-green-500 text-xs">Completado</Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    return null;
+  };
+
+  // Si está cargando, mostrar esqueleto
+  if (loading) {
     return (
-      <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-muted-foreground bg-muted/20 h-full flex items-center justify-center">
-        <div>
-          <p className="mb-2">No hay actividades disponibles para mostrar</p>
-          <p className="text-sm">Agregue actividades o modifique los filtros aplicados</p>
+      <div className="w-full h-full flex flex-col">
+        <div className="flex justify-between items-center mb-4 px-4">
+          <Skeleton className="h-10 w-40" />
+          <Skeleton className="h-10 w-60" />
+        </div>
+        <div className="flex-1">
+          <Skeleton className="w-full h-full" />
         </div>
       </div>
     );
   }
-  
+
+  // Si no hay datos, mostrar mensaje
+  if (ganttData.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center">
+          <h3 className="text-lg font-medium mb-2">No hay actividades para mostrar</h3>
+          <p className="text-muted-foreground">
+            Ajusta los filtros o agrega nuevas actividades
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center p-3 border-b mb-2">
-        <div className="flex items-center space-x-2">
-          <Button size="sm" variant="outline" onClick={handleNavigateBack}>
-            <ArrowLeft className="h-4 w-4" />
+    <div className="w-full h-full flex flex-col gantt-chart-container">
+      <div className="flex justify-between items-center mb-4 px-4">
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigateTime("prev")}
+          >
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="outline" onClick={handleTodayView}>
-            <Calendar className="h-4 w-4 mr-1" />
-            Hoy
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigateTime("next")}
+          >
+            <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="outline" onClick={handleNavigateForward}>
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-          <div className="text-sm font-medium ml-2">
-            {format(viewStartDate, "MMMM yyyy", {locale: es})}
-          </div>
+          <span className="text-sm font-medium">
+            {format(currentStartDate, "MMM yyyy", { locale: es })} - {format(currentEndDate, "MMM yyyy", { locale: es })}
+          </span>
         </div>
         
-        <div className="flex space-x-2">
-          <Select value={viewMode} onValueChange={(value: "month" | "week" | "day") => handleChangeViewMode(value)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Vista" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="month">Vista por Mes</SelectItem>
-              <SelectItem value="week">Vista por Semana</SelectItem>
-              <SelectItem value="day">Vista Detallada</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-2">
+          <Tabs 
+            value={viewMode} 
+            onValueChange={(value) => setViewMode(value as "month" | "week" | "day")}
+            className="mr-2"
+          >
+            <TabsList className="h-8">
+              <TabsTrigger value="month" className="text-xs px-2 h-6">Mes</TabsTrigger>
+              <TabsTrigger value="week" className="text-xs px-2 h-6">Semana</TabsTrigger>
+              <TabsTrigger value="day" className="text-xs px-2 h-6">Día</TabsTrigger>
+            </TabsList>
+          </Tabs>
           
-          <Button variant="outline" size="icon" onClick={() => handleChangeViewMode(viewMode === "month" ? "week" : viewMode === "week" ? "day" : "month")}>
-            {viewMode === "day" ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
-          </Button>
+          <TooltipProvider>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={() => changeZoom("in")}
+                  disabled={zoomLevel >= 2}
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Aumentar zoom</p>
+              </TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={() => changeZoom("out")}
+                  disabled={zoomLevel <= 0.5}
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Reducir zoom</p>
+              </TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
         </div>
       </div>
       
-      <ScrollArea className="flex-1 overflow-hidden">
-        <div className="relative" style={{ minWidth: timeSlots.length * slotWidth + 300 }}>
-          <div className="sticky top-0 z-10 flex border-b bg-white dark:bg-gray-900" style={{ marginLeft: "300px" }}>
-            {timeSlots.map((slot, index) => {
-              const isWeekend = slot.getDay() === 0 || slot.getDay() === 6;
-              const isFirstOfMonth = slot.getDate() === 1;
-              const displayDate = viewMode === "month" 
-                ? (isFirstOfMonth ? format(slot, "MMM", {locale: es}) : slot.getDate().toString()) 
-                : format(slot, "EEE d", {locale: es});
-              
-              return (
-                <div 
-                  key={index}
-                  className={`text-center text-xs p-1 border-r flex-shrink-0 ${isWeekend ? "bg-gray-100 dark:bg-gray-800" : ""}`}
-                  style={{ width: `${slotWidth}px`, borderBottom: isFirstOfMonth ? "2px solid #cbd5e1" : "" }}
-                >
-                  {displayDate}
-                </div>
-              );
-            })}
-          </div>
-          
-          {timeSlots.some(d => d.toDateString() === new Date().toDateString()) && (
-            <div className="absolute top-7 bottom-0 w-px bg-red-500 z-5" 
-                 style={{ 
-                   left: `${300 + timeSlots.findIndex(d => d.toDateString() === new Date().toDateString()) * slotWidth + slotWidth/2}px` 
-                 }}>
-            </div>
-          )}
-          
-          <div className="mt-1">
-            {organizarActividades.map((proyecto, proyectoIndex) => (
-              <div key={proyecto.proyectoId} className="mb-4">
-                <div className="sticky left-0 z-10 flex items-center h-8 bg-indigo-700 text-white font-bold pl-4 pr-2 mb-1">
-                  <div className="truncate w-[300px]">{proyecto.proyectoNombre}</div>
-                </div>
+      <div className="flex-1 overflow-x-auto">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={ganttData}
+            layout="vertical"
+            barCategoryGap={4 * zoomLevel}
+            margin={{ top: 20, right: 30, left: 150, bottom: 20 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+              dataKey="fechaInicio" 
+              type="number" 
+              domain={[currentStartDate.getTime(), currentEndDate.getTime()]} 
+              tickFormatter={formatXAxis}
+              scale="time"
+              ticks={getAxisDates().map(date => date.getTime())}
+            />
+            <YAxis 
+              dataKey="nombre" 
+              type="category" 
+              width={150}
+              tick={({ x, y, payload }) => {
+                const actividad = ganttData.find(item => item.nombre === payload.value);
+                if (!actividad) return null;
                 
-                {proyecto.sistemas.map((sistema, sistemaIndex) => (
-                  <div key={`${proyecto.proyectoId}-${sistema.nombre}`} className="mb-2">
-                    <div className="sticky left-0 z-10 flex items-center h-7 bg-indigo-500 text-white pl-8 pr-2">
-                      <div className="truncate w-[300px]">{sistema.nombre}</div>
-                    </div>
-                    
-                    {sistema.subsistemas.map((subsistema, subsistemaIndex) => (
-                      <div key={`${proyecto.proyectoId}-${sistema.nombre}-${subsistema.nombre}`} className="mb-1">
-                        <div className="sticky left-0 z-10 flex items-center h-7 bg-indigo-300 dark:bg-indigo-600 text-black dark:text-white pl-12 pr-2">
-                          <div className="truncate w-[300px]">{subsistema.nombre}</div>
-                        </div>
-                        
-                        {subsistema.actividades.map((actividad, actividadIndex) => {
-                          const fechaInicio = new Date(actividad.fechaInicio);
-                          const fechaFin = new Date(actividad.fechaFin);
-                          const { left, width } = getItemPosition(fechaInicio, fechaFin);
-                          
-                          const activityItrbs = subsistema.itrbsPorActividad[actividad.id] || [];
-                          
-                          if (width === 0) return null;
-                          
-                          return (
-                            <div key={actividad.id}>
-                              <div className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-16 pr-2 border-b w-[300px]">
-                                  <div className="truncate text-sm">
-                                    {actividad.nombre}
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      ({activityItrbs.length} ITR)
-                                    </span>
-                                  </div>
-                                </div>
-                                
-                                <div 
-                                  className={`absolute h-5 rounded-sm shadow-md flex items-center justify-center text-xs text-white overflow-hidden
-                                            ${hoveredItem?.id === actividad.id ? "ring-2 ring-offset-2 ring-blue-500 z-20" : ""}`}
-                                  style={{ 
-                                    left: `${300 + left}px`, 
-                                    width: `${width}px`,
-                                    backgroundColor: "#64748b",
-                                    borderColor: "#475569"
-                                  }}
-                                  onMouseEnter={() => setHoveredItem({ id: actividad.id, tipo: "actividad" })}
-                                  onMouseLeave={() => setHoveredItem(null)}
-                                >
-                                  {width > 50 && (
-                                    <span className="px-2 truncate">
-                                      {actividad.nombre}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {activityItrbs.map((itrb, itrbIndex) => {
-                                const fechaInicio = new Date(actividad.fechaInicio);
-                                const fechaLimite = new Date(itrb.fechaLimite);
-                                const { left, width } = getItemPosition(fechaInicio, fechaLimite);
-                                const colors = getColorByEstado(itrb.estado);
-                                
-                                if (width === 0) return null;
-                                
-                                return (
-                                  <div key={itrb.id} className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                    <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-20 pr-2 border-b w-[300px]">
-                                      <div className="truncate text-xs text-gray-600 dark:text-gray-400">
-                                        {itrb.descripcion.substring(0, 25)}{itrb.descripcion.length > 25 ? '...' : ''}
-                                      </div>
-                                    </div>
-                                    
-                                    <div 
-                                      className={`absolute h-4 rounded-full flex items-center justify-center text-xs text-white overflow-hidden
-                                                 ${hoveredItem?.id === itrb.id ? "ring-2 ring-offset-1 ring-blue-500 z-20" : ""}`}
-                                      style={{ 
-                                        left: `${300 + left}px`, 
-                                        width: `${width}px`,
-                                        backgroundColor: colors.bg,
-                                        borderColor: colors.border
-                                      }}
-                                      onMouseEnter={() => setHoveredItem({ id: itrb.id, tipo: "itrb" })}
-                                      onMouseLeave={() => setHoveredItem(null)}
-                                    >
-                                      {width > 50 && (
-                                        <span className="px-2 truncate">
-                                          {itrb.descripcion} ({itrb.cantidadRealizada}/{itrb.cantidadTotal})
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </ScrollArea>
-      
-      {configuracion.mostrarLeyenda && (
-        <div className="flex justify-center mt-4 space-x-4 pb-4">
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#22c55e" }}></div>
-            <span className="text-sm">Completado</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#f59e0b" }}></div>
-            <span className="text-sm">En curso</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#ef4444" }}></div>
-            <span className="text-sm">Vencido</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#64748b" }}></div>
-            <span className="text-sm">Actividad</span>
-          </div>
-        </div>
-      )}
+                return (
+                  <g transform={`translate(${x},${y})`}>
+                    <text x={-3} y={0} dy={4} textAnchor="end" fontSize={12} fill="#666">
+                      {payload.value}
+                    </text>
+                    {mostrarSubsistemas && (
+                      <text x={-3} y={16} textAnchor="end" fontSize={10} fill="#999">
+                        {actividad.sistema} / {actividad.subsistema}
+                      </text>
+                    )}
+                  </g>
+                );
+              }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            {configuracion.mostrarLeyenda && (
+              <Legend 
+                verticalAlign="top" 
+                height={36}
+                payload={[
+                  { value: 'Completado', type: 'rect', color: '#22c55e' },
+                  { value: 'En progreso', type: 'rect', color: '#f59e0b' },
+                  { value: 'Vencido', type: 'rect', color: '#ef4444' },
+                  { value: 'No iniciado', type: 'rect', color: '#94a3b8' }
+                ]}
+              />
+            )}
+            <ReferenceLine x={new Date().getTime()} stroke="#ef4444" strokeWidth={2} label={{ value: 'Hoy', position: 'insideTopRight', fill: '#ef4444' }} />
+            <Bar 
+              dataKey="duracion" 
+              name="Duración" 
+              minPointSize={2}
+              barSize={20 * zoomLevel}
+              shape={({ x, y, width, height, payload }: any) => {
+                const actividad = payload;
+                const fechaInicio = actividad.fechaInicio.getTime();
+                const fechaFin = actividad.fechaFin.getTime();
+                
+                // Calcular posición y ancho basado en fechas
+                const xStart = Math.max(
+                  x, 
+                  (fechaInicio - currentStartDate.getTime()) / 
+                  (currentEndDate.getTime() - currentStartDate.getTime()) * width + x
+                );
+                
+                const xEnd = Math.min(
+                  x + width,
+                  (fechaFin - currentStartDate.getTime()) / 
+                  (currentEndDate.getTime() - currentStartDate.getTime()) * width + x
+                );
+                
+                const barWidth = Math.max(xEnd - xStart, 2);
+                
+                return (
+                  <g>
+                    <rect 
+                      x={xStart} 
+                      y={y} 
+                      width={barWidth} 
+                      height={height} 
+                      fill={actividad.color} 
+                      rx={2} 
+                      ry={2}
+                    />
+                    {actividad.progreso > 0 && actividad.progreso < 100 && (
+                      <rect 
+                        x={xStart} 
+                        y={y} 
+                        width={barWidth * (actividad.progreso / 100)} 
+                        height={height} 
+                        fill={actividad.tieneVencidos ? "#fecaca" : "#86efac"} 
+                        rx={2} 
+                        ry={2}
+                        fillOpacity={0.7}
+                      />
+                    )}
+                  </g>
+                );
+              }}
+            >
+              {ganttData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };

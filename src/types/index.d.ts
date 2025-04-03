@@ -63,6 +63,7 @@ export interface FiltrosDashboard {
 export interface ConfiguracionGrafico {
   tamano: "pequeno" | "mediano" | "grande" | "completo";
   mostrarLeyenda: boolean;
+  mostrarSubsistemas?: boolean; // Nueva propiedad para mostrar/ocultar subsistemas
 }
 
 export interface AppContextType {
@@ -96,6 +97,7 @@ export interface AppContextType {
   setAlertas: (alertas: any[]) => void;
   kpiConfig: any;
   updateKPIConfig: (config: any) => void;
+  getKPIs: (proyectoId?: string) => any;
 }
 
 // Interface for backup options
@@ -143,3 +145,7 @@ export interface ReportConfig {
   tamano: "a4" | "letter" | "legal";
   comentarios: string;
 }
+
+// Nuevo tipo para el estado de ITR (mejorar tipado)
+export type EstadoITRB = "Completado" | "En curso" | "Vencido";
+

@@ -28,7 +28,10 @@ import {
   SunMoon,
   AlertTriangle,
   Image,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  EyeOff,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
@@ -39,6 +42,17 @@ import AlertasWidget from "@/components/AlertasWidget";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const PublicDashboard: React.FC = () => {
   const { 
@@ -61,6 +75,10 @@ const PublicDashboard: React.FC = () => {
   const [tabActual, setTabActual] = useState("gantt");
   const ganttChartRef = useRef<HTMLDivElement | null>(null);
   const [exportingChart, setExportingChart] = useState(false);
+  
+  const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
+  const [codigoITRFilter, setCodigoITRFilter] = useState("");
+  const [modoFiltroAvanzado, setModoFiltroAvanzado] = useState(false);
 
   useEffect(() => {
     setFiltros({ ...filtros, timestamp: Date.now() });
@@ -130,15 +148,23 @@ const PublicDashboard: React.FC = () => {
         return canvas.toDataURL('image/png');
       }
       
-      const clonedContainer = visibleGanttContainer.cloneNode(true) as HTMLElement;
+      const timestamp = document.createElement('div');
+      timestamp.className = 'chart-timestamp';
+      timestamp.style.position = 'absolute';
+      timestamp.style.bottom = '10px';
+      timestamp.style.right = '10px';
+      timestamp.style.fontSize = '10px';
+      timestamp.style.color = '#666';
+      timestamp.style.padding = '4px';
+      timestamp.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+      timestamp.style.borderRadius = '3px';
       
-      clonedContainer.style.position = 'absolute';
-      clonedContainer.style.left = '-9999px';
-      clonedContainer.style.width = `${visibleGanttContainer.scrollWidth}px`;
-      clonedContainer.style.height = `${visibleGanttContainer.scrollHeight}px`;
-      document.body.appendChild(clonedContainer);
+      const userName = localStorage.getItem('userName') || 'Usuario';
+      timestamp.textContent = `Generado por: ${userName} - ${new Date().toLocaleString()}`;
       
-      const canvas = await html2canvas(clonedContainer, {
+      visibleGanttContainer.appendChild(timestamp);
+      
+      const canvas = await html2canvas(visibleGanttContainer, {
         scale: 1.5,
         useCORS: true,
         allowTaint: true,
@@ -148,7 +174,7 @@ const PublicDashboard: React.FC = () => {
         height: visibleGanttContainer.scrollHeight
       });
       
-      document.body.removeChild(clonedContainer);
+      visibleGanttContainer.removeChild(timestamp);
       
       return canvas.toDataURL('image/png');
     } catch (error) {
@@ -190,6 +216,11 @@ const PublicDashboard: React.FC = () => {
     try {
       setExportingChart(true);
       
+      const jsPDFModule = await import('jspdf');
+      const jsPDF = jsPDFModule.default;
+      
+      await import('jspdf-autotable');
+      
       const ganttImageData = await captureGanttChart();
       if (!ganttImageData) {
         toast.error("No se pudo capturar el diagrama de Gantt");
@@ -197,13 +228,20 @@ const PublicDashboard: React.FC = () => {
         return;
       }
       
-      const doc = new window.jsPDF({
+      const doc = new jsPDF({
         orientation: "landscape",
         unit: "mm"
       });
       
+      doc.setFontSize(18);
+      doc.setTextColor(40, 40, 40);
       doc.text("Dashboard - Plan de Precomisionado", 14, 20);
-      doc.text("Fecha: " + new Date().toLocaleDateString('es-ES'), 14, 30);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      const userName = localStorage.getItem('userName') || 'Usuario';
+      doc.text(`Generado por: ${userName}`, 14, 30);
+      doc.text("Fecha: " + new Date().toLocaleDateString('es-ES') + " " + new Date().toLocaleTimeString('es-ES'), 14, 35);
       
       const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
       
@@ -241,11 +279,19 @@ const PublicDashboard: React.FC = () => {
         headStyles: { fillColor: [59, 130, 246] }
       });
       
+      const pageCount = doc.getNumberOfPages();
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.text(`Página ${i} de ${pageCount} - Plan de Precomisionado - Generado: ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      }
+      
       doc.save("gantt-chart-precomisionado.pdf");
       toast.success("PDF del diagrama de Gantt generado exitosamente");
     } catch (error) {
       console.error("Error al generar PDF:", error);
-      toast.error("Error al generar el PDF");
+      toast.error("Error al generar el PDF: " + (error instanceof Error ? error.message : "Error desconocido"));
     } finally {
       setExportingChart(false);
     }
@@ -362,74 +408,143 @@ const PublicDashboard: React.FC = () => {
           </div>
           
           <div className="flex flex-wrap gap-2 justify-end w-full md:w-auto">
-            <Select
-              value={filtros.sistema || ""}
-              onValueChange={(value) => handleFiltroChange("sistema", value || undefined)}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Sistema" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los sistemas</SelectItem>
-                {sistemasDisponibles.map((sistema) => (
-                  <SelectItem key={sistema} value={sistema}>
-                    {sistema}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-1">
+                  <Filter className="h-4 w-4 mr-1" />
+                  Filtros
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuLabel>Filtros de Sistema</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="p-2">
+                  <Select
+                    value={filtros.sistema || ""}
+                    onValueChange={(value) => handleFiltroChange("sistema", value || undefined)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sistema" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos los sistemas</SelectItem>
+                      {sistemasDisponibles.map((sistema) => (
+                        <SelectItem key={sistema} value={sistema}>
+                          {sistema}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="p-2">
+                  <Select
+                    value={filtros.subsistema || ""}
+                    onValueChange={(value) => handleFiltroChange("subsistema", value || undefined)}
+                    disabled={!filtros.sistema}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Subsistema" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos los subsistemas</SelectItem>
+                      {subsistemasFiltrados.map((subsistema) => (
+                        <SelectItem key={subsistema} value={subsistema}>
+                          {subsistema}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Estado ITR</DropdownMenuLabel>
+                <div className="p-2">
+                  <Select
+                    value={filtros.estadoITRB || ""}
+                    onValueChange={(value: any) => handleFiltroChange("estadoITRB", value || undefined)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos los estados</SelectItem>
+                      <SelectItem value="Completado">Completado</SelectItem>
+                      <SelectItem value="En curso">En curso</SelectItem>
+                      <SelectItem value="Vencido">Vencido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <DropdownMenuSeparator />
+                <div className="p-2 flex items-center space-x-2">
+                  <Checkbox 
+                    id="filter-vencidas"
+                    checked={!!filtros.tareaVencida}
+                    onCheckedChange={(checked) => handleFiltroChange("tareaVencida", checked)}
+                  />
+                  <Label htmlFor="filter-vencidas">Mostrar sólo vencidas</Label>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
-            <Select
-              value={filtros.subsistema || ""}
-              onValueChange={(value) => handleFiltroChange("subsistema", value || undefined)}
-              disabled={!filtros.sistema}
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Subsistema" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los subsistemas</SelectItem>
-                {subsistemasFiltrados.map((subsistema) => (
-                  <SelectItem key={subsistema} value={subsistema}>
-                    {subsistema}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select
-              value={filtros.estadoITRB || ""}
-              onValueChange={(value: any) => handleFiltroChange("estadoITRB", value || undefined)}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="Completado">Completado</SelectItem>
-                <SelectItem value="En curso">En curso</SelectItem>
-                <SelectItem value="Vencido">Vencido</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button
-              variant="outline"
-              onClick={() => handleFiltroChange("tareaVencida", !filtros.tareaVencida)}
-              className={filtros.tareaVencida ? "bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700" : ""}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Vencidas
-            </Button>
-            
-            <div className="relative w-full md:w-auto">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar actividad..."
-                className="pl-8 w-full md:w-[200px]"
-                value={filtros.busquedaActividad || ""}
-                onChange={(e) => handleFiltroChange("busquedaActividad", e.target.value)}
-              />
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant={modoFiltroAvanzado ? "default" : "outline"} 
+                  className={modoFiltroAvanzado ? "bg-blue-500 hover:bg-blue-600" : ""}
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Filtro avanzado
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-4">
+                  <h4 className="font-medium">Filtros avanzados</h4>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="codigo-itr">Código ITR</Label>
+                    <Input
+                      id="codigo-itr"
+                      placeholder="Ej: I01A"
+                      value={codigoITRFilter}
+                      onChange={(e) => {
+                        setCodigoITRFilter(e.target.value);
+                        setModoFiltroAvanzado(!!e.target.value);
+                        handleFiltroChange("busquedaActividad", e.target.value);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Buscar por código o parte del nombre del ITR
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="mostrar-subsistemas"
+                      checked={mostrarSubsistemas}
+                      onCheckedChange={setMostrarSubsistemas}
+                    />
+                    <Label htmlFor="mostrar-subsistemas">Mostrar subsistemas en Gantt</Label>
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setCodigoITRFilter("");
+                        setModoFiltroAvanzado(false);
+                        handleFiltroChange("busquedaActividad", "");
+                      }}
+                    >
+                      Limpiar filtros
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
             
             <Button 
               variant="outline" 
@@ -439,25 +554,28 @@ const PublicDashboard: React.FC = () => {
               <SunMoon className="h-4 w-4" />
             </Button>
             
-            <Button 
-              variant="outline" 
-              onClick={generarPDF}
-              disabled={exportingChart}
-              className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600"
-            >
-              <Image className="h-4 w-4 mr-2" />
-              Gantt PDF
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              onClick={generarExcel}
-              disabled={exportingChart}
-              className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Gantt Excel
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="default"
+                  disabled={exportingChart}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={generarPDF} disabled={exportingChart}>
+                  <Image className="h-4 w-4 mr-2" />
+                  Generar PDF con Gantt
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={generarExcel} disabled={exportingChart}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
@@ -487,6 +605,16 @@ const PublicDashboard: React.FC = () => {
 
             {tabActual === "gantt" && (
               <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setMostrarSubsistemas(!mostrarSubsistemas)}
+                  className="flex items-center gap-1"
+                >
+                  {mostrarSubsistemas ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {mostrarSubsistemas ? "Ocultar subsistemas" : "Mostrar subsistemas"}
+                </Button>
+                
                 <Select
                   value={configuracionGrafico.tamano}
                   onValueChange={(value: "pequeno" | "mediano" | "grande" | "completo") => 
@@ -512,8 +640,14 @@ const PublicDashboard: React.FC = () => {
               <CardContent className={`p-0 overflow-hidden ${getGanttHeight()}`}>
                 <div ref={ganttChartRef} className="w-full h-full">
                   <EnhancedGanttChart
-                    filtros={filtros}
-                    configuracion={configuracionGrafico}
+                    filtros={{
+                      ...filtros,
+                      busquedaActividad: codigoITRFilter || filtros.busquedaActividad
+                    }}
+                    configuracion={{
+                      ...configuracionGrafico,
+                      mostrarSubsistemas: mostrarSubsistemas
+                    }}
                   />
                 </div>
               </CardContent>
