@@ -52,87 +52,85 @@ const Login: React.FC<LoginProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
-      <Card className="w-[400px] shadow-lg">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center text-indigo-600 dark:text-indigo-400">
-            Plan de Precomisionado
-          </CardTitle>
-          <CardDescription className="text-center">
-            Ingrese sus credenciales para continuar
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
+    <Card className="w-[400px] shadow-lg">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold text-center text-indigo-600 dark:text-indigo-400">
+          Plan de Precomisionado
+        </CardTitle>
+        <CardDescription className="text-center">
+          Ingrese sus credenciales para continuar
+        </CardDescription>
+      </CardHeader>
+      <form onSubmit={handleLogin}>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input
+              id="email"
+              placeholder="correo@ejemplo.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="isAdmin"
+              checked={isAdmin}
+              onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
+            />
+            <Label
+              htmlFor="isAdmin"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Soy administrador (requiere contraseña)
+            </Label>
+          </div>
+          
+          {isAdmin && (
             <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
-                id="email"
-                placeholder="correo@ejemplo.com"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required={isAdmin}
                 className="w-full"
               />
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isAdmin"
-                checked={isAdmin}
-                onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
-              />
-              <Label
-                htmlFor="isAdmin"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Soy administrador (requiere contraseña)
-              </Label>
-            </div>
-            
-            {isAdmin && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required={isAdmin}
-                  className="w-full"
-                />
-              </div>
-            )}
-            
-            <div className="text-xs text-muted-foreground">
-              <p>Use admin@fossil.com / admin123 para acceder como administrador</p>
-              <p>Use tecnico@ejemplo.com para acceder como técnico</p>
-              <p>Use cualquier otro correo para acceder como visualizador</p>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            {onCancel && (
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={onCancel}
-              >
-                Cancelar
-              </Button>
-            )}
+          )}
+          
+          <div className="text-xs text-muted-foreground">
+            <p>Use admin@fossil.com / admin123 para acceder como administrador</p>
+            <p>Use tecnico@ejemplo.com para acceder como técnico</p>
+            <p>Use cualquier otro correo para acceder como visualizador</p>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          {onCancel && (
             <Button 
-              type="submit" 
-              className={`${onCancel ? '' : 'w-full'} bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600`}
-              disabled={isLoading}
+              type="button" 
+              variant="outline"
+              onClick={onCancel}
             >
-              {isLoading ? "Iniciando sesión..." : "Ingresar"}
+              Cancelar
             </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+          )}
+          <Button 
+            type="submit" 
+            className={`${onCancel ? '' : 'w-full'} bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600`}
+            disabled={isLoading}
+          >
+            {isLoading ? "Iniciando sesión..." : "Ingresar"}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
   );
 };
 

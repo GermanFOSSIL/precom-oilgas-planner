@@ -23,7 +23,7 @@ const LoginPage: React.FC = () => {
   // Creating a proper full-page login experience
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
-      <PublicHeader />
+      <PublicHeader onLoginClick={null} />
       <div className="flex-1 flex items-center justify-center">
         <Login onSuccess={handleLoginSuccess} onCancel={null} />
       </div>

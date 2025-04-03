@@ -1,6 +1,5 @@
 
 import React, { useEffect } from "react";
-import Login from "@/components/Login";
 import Dashboard from "@/components/Dashboard";
 import AdminPanel from "@/components/AdminPanel";
 import PublicDashboard from "@/components/PublicDashboard";
