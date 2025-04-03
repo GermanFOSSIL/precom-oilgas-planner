@@ -18,7 +18,8 @@ const BackupRestoreUploader = () => {
     setProyectos, 
     actividades, 
     setActividades, 
-    setItrbItems, 
+    setItrbItems,
+    itrbItems,
     setAlertas,
     updateKPIConfig,
     addProyecto
@@ -101,7 +102,6 @@ const BackupRestoreUploader = () => {
     }
   };
   
-  // New validation function to ensure backup has required structure
   const isValidBackupData = (data: any): boolean => {
     if (!data || typeof data !== "object") return false;
     
@@ -237,12 +237,12 @@ const BackupRestoreUploader = () => {
       setShowRestoreDialog(false);
       setBackupData(null);
       
-      // Give a second for data to be processed before reloading
+      // Give more time for data to be processed before reloading (3 seconds instead of 2)
       setTimeout(() => {
         // Force update the timestamp in localStorage to ensure fresh state
         localStorage.setItem("timestamp", Date.now().toString());
         window.location.reload();
-      }, 2000);
+      }, 3000);
       
     } catch (error) {
       console.error("Error al restaurar backup:", error);
