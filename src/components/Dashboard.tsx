@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,17 +88,18 @@ const Dashboard: React.FC = () => {
   const ganttChartRef = React.useRef<HTMLDivElement | null>(null);
 
   // Asegurar que el timestamp siempre sea string
-  const ensureStringTimestamp = (timestamp: number | string): string => {
-    return typeof timestamp === 'number' ? timestamp.toString() : timestamp;
+  const ensureStringTimestamp = (timestamp: number | string | undefined): string => {
+    if (timestamp === undefined) return String(Date.now());
+    return typeof timestamp === 'number' ? String(timestamp) : timestamp;
   };
 
   // Actualizar filtros al cargar el componente
   useEffect(() => {
-    setFiltros(prevFiltros => ({
-      ...prevFiltros,
+    setFiltros({
+      ...filtros,
       timestamp: ensureStringTimestamp(Date.now())
-    }));
-  }, [setFiltros]);
+    });
+  }, [setFiltros, filtros]);
 
   // Obtener sistemas disponibles
   const sistemasDisponibles = Array.from(
@@ -607,7 +607,7 @@ const Dashboard: React.FC = () => {
             <Button
               variant="outline"
               onClick={toggleTheme}
-              className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 dark:border-slate-600"
+              className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
             >
               <SunMoon className="h-4 w-4" />
             </Button>
