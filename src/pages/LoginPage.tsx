@@ -9,7 +9,7 @@ const LoginPage: React.FC = () => {
   const { user } = useAppContext();
   const navigate = useNavigate();
   
-  // If user is already logged in, redirect to home
+  // Si el usuario ya está logueado, redirigir a home
   useEffect(() => {
     if (user) {
       navigate("/");
@@ -20,13 +20,17 @@ const LoginPage: React.FC = () => {
     navigate("/");
   };
 
-  // Creating a proper full-page login experience
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800">
       <PublicHeader onLoginClick={null} />
-      <div className="flex-1 flex items-center justify-center">
-        <Login onSuccess={handleLoginSuccess} onCancel={null} />
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Login onSuccess={handleLoginSuccess} onCancel={null} />
+        </div>
       </div>
+      <footer className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+        Plan de Precomisionado | © {new Date().getFullYear()} Fossil Energy
+      </footer>
     </div>
   );
 };

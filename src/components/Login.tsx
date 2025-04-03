@@ -36,6 +36,10 @@ const Login: React.FC<LoginProps> = ({ onSuccess, onCancel }) => {
       
       if (success) {
         toast.success(`Bienvenido al panel de precomisionado`);
+        // Guardar la última sesión
+        localStorage.setItem("lastSession", Date.now().toString());
+        localStorage.setItem("userName", email.split('@')[0]);
+        
         if (onSuccess) {
           onSuccess(email);
         } else {
@@ -45,6 +49,7 @@ const Login: React.FC<LoginProps> = ({ onSuccess, onCancel }) => {
         toast.error("Credenciales incorrectas");
       }
     } catch (error) {
+      console.error("Error al iniciar sesión:", error);
       toast.error("Error al iniciar sesión");
     } finally {
       setIsLoading(false);
@@ -52,7 +57,7 @@ const Login: React.FC<LoginProps> = ({ onSuccess, onCancel }) => {
   };
 
   return (
-    <Card className="w-[400px] shadow-lg">
+    <Card className="w-full shadow-lg">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold text-center text-indigo-600 dark:text-indigo-400">
           Plan de Precomisionado

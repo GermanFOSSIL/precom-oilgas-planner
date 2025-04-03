@@ -9,19 +9,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, SunMoon, AlertTriangle, Eye, EyeOff, FileText, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Login from "@/components/Login";
+import { useNavigate } from "react-router-dom";
 import PublicHeader from "@/components/PublicHeader";
 import { toast } from "sonner";
 import CriticalPathView from "@/components/CriticalPathView";
+import {
+  Dialog,
+  DialogContent,
+  DialogOverlay
+} from "@/components/ui/dialog";
 
 const PublicDashboard: React.FC = () => {
   const { 
     proyectos, 
     theme, 
     toggleTheme, 
-    actividades,
-    login 
+    actividades
   } = useAppContext();
+  
+  const navigate = useNavigate();
   
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ 
     proyecto: "todos", 
@@ -34,7 +40,6 @@ const PublicDashboard: React.FC = () => {
     mostrarSubsistemas: true
   });
   
-  const [showLogin, setShowLogin] = useState(false);
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
   const [tabActual, setTabActual] = useState("gantt");
   
@@ -69,7 +74,6 @@ const PublicDashboard: React.FC = () => {
   const handleSubsistemaToggle = (checked: boolean | "indeterminate") => {
     if (typeof checked === 'boolean') {
       setMostrarSubsistemas(checked);
-
       setConfiguracionGrafico({
         ...configuracionGrafico,
         mostrarSubsistemas: checked
@@ -88,29 +92,7 @@ const PublicDashboard: React.FC = () => {
   };
   
   const handleLoginClick = () => {
-    setShowLogin(true);
-  };
-  
-  const handleLoginSuccess = (email: string) => {
-    login(email)
-      .then(success => {
-        if (success) {
-          toast.success("Inicio de sesión exitoso", {
-            description: "Bienvenido(a) al sistema"
-          });
-          setShowLogin(false);
-        } else {
-          toast.error("Error de autenticación", {
-            description: "No se pudo iniciar sesión"
-          });
-        }
-      })
-      .catch(error => {
-        console.error("Error durante el login:", error);
-        toast.error("Error de inicio de sesión", {
-          description: "Ha ocurrido un error, intente nuevamente"
-        });
-      });
+    navigate("/login");
   };
 
   const handleExportGantt = () => {
@@ -314,13 +296,6 @@ const PublicDashboard: React.FC = () => {
           Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
         </div>
       </main>
-      
-      {showLogin && (
-        <Login 
-          onSuccess={handleLoginSuccess} 
-          onCancel={() => setShowLogin(false)} 
-        />
-      )}
     </div>
   );
 };

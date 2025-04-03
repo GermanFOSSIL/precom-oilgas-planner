@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { v4 as uuidv4 } from 'uuid';
+
+import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
 import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import AlertasWidget from "@/components/AlertasWidget";
+import { v4 as uuidv4 } from 'uuid';
 
 import {
   Select,
@@ -19,28 +20,23 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import {
   Calendar,
   FileText,
-  Table2,
-  Filter,
-  Search,
-  Download,
-  SunMoon,
   AlertTriangle,
-  Image,
-  FileSpreadsheet,
+  SunMoon,
   Eye,
   EyeOff,
   ChevronDown,
-  Plus,
-  Edit,
-  Trash2
+  Filter,
+  Search,
+  FileSpreadsheet,
+  Image,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FiltrosDashboard, ConfiguracionGrafico, GraficoPersonalizado } from "@/types";
+import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
 import { Input } from "@/components/ui/input";
 import PublicHeader from "@/components/PublicHeader";
 import ProyectoSelector from "@/components/ProyectoSelector";
@@ -58,30 +54,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-
-const formSchema = z.object({
-  titulo: z.string().min(2, {
-    message: "El título debe tener al menos 2 caracteres.",
-  }),
-  tipo: z.enum(["barras", "lineas", "area", "pastel"]),
-  datos: z.enum(["actividades", "itrb", "avance", "vencimientos"]),
-  color: z.string().regex(/^#([0-9A-Fa-f]{3}){1,2}$/, {
-    message: "El color debe ser un código hexadecimal válido.",
-  }),
-});
 
 const Dashboard: React.FC = () => {
   const {
@@ -96,53 +68,45 @@ const Dashboard: React.FC = () => {
     getKPIs
   } = useAppContext();
 
+  // Definir configuración por defecto
   const defaultConfiguracionGrafico: ConfiguracionGrafico = {
     tamano: "mediano",
     mostrarLeyenda: true,
     mostrarSubsistemas: true
   };
 
+  // Estado para la configuración del gráfico
   const [configuracionGrafico, setConfiguracionGrafico] = useState<ConfiguracionGrafico>(defaultConfiguracionGrafico);
-
+  
+  // Estados para la interfaz
   const [tabActual, setTabActual] = useState("gantt");
-  const ganttChartRef = React.useRef<HTMLDivElement | null>(null);
   const [exportingChart, setExportingChart] = useState(false);
-
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
   const [codigoITRFilter, setCodigoITRFilter] = useState("");
   const [modoFiltroAvanzado, setModoFiltroAvanzado] = useState(false);
-  const [graficosPersonalizados, setGraficosPersonalizados] = useState<GraficoPersonalizado[]>([
-    {
-      id: uuidv4(),
-      titulo: "Actividades por sistema",
-      tipo: "barras",
-      datos: "actividades",
-      color: "#3b82f6",
-      posicion: 0
-    },
-    {
-      id: uuidv4(),
-      titulo: "Avance general",
-      tipo: "lineas",
-      datos: "avance",
-      color: "#16a34a",
-      posicion: 1
-    }
-  ]);
-  const [editandoGraficoId, setEditandoGraficoId] = useState<string | null>(null);
+  
+  // Referencia para el gráfico Gantt
+  const ganttChartRef = React.useRef<HTMLDivElement | null>(null);
 
+  // Asegurar que el timestamp siempre sea string
   const ensureStringTimestamp = (timestamp: number | string): string => {
     return typeof timestamp === 'number' ? timestamp.toString() : timestamp;
   };
 
+  // Actualizar filtros al cargar el componente
   useEffect(() => {
-    setFiltros({ ...filtros, timestamp: ensureStringTimestamp(Date.now()) });
-  }, []);
+    setFiltros(prevFiltros => ({
+      ...prevFiltros,
+      timestamp: ensureStringTimestamp(Date.now())
+    }));
+  }, [setFiltros]);
 
+  // Obtener sistemas disponibles
   const sistemasDisponibles = Array.from(
     new Set(actividades.map(act => act.sistema))
   );
 
+  // Obtener subsistemas filtrados
   const subsistemasFiltrados = Array.from(
     new Set(
       actividades
@@ -151,6 +115,7 @@ const Dashboard: React.FC = () => {
     )
   );
 
+  // Manejar cambios en filtros
   const handleFiltroChange = (key: keyof FiltrosDashboard, value: any) => {
     if (key === 'timestamp') {
       setFiltros({ ...filtros, [key]: ensureStringTimestamp(value) });
@@ -159,15 +124,18 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Manejar cambio de tamaño del gráfico
   const handleTamanoGrafico = (tamano: ConfiguracionGrafico["tamano"]) => {
     setConfiguracionGrafico({ ...configuracionGrafico, tamano });
   };
 
+  // Manejar cierre de sesión
   const handleResetSession = () => {
     logout();
     window.location.reload();
   };
 
+  // Obtener altura del gráfico según configuración
   const getGanttHeight = () => {
     const tamano = configuracionGrafico?.tamano || "mediano";
     
@@ -180,6 +148,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Capturar el gráfico Gantt
   const captureGanttChart = async (): Promise<string | null> => {
     try {
       const ganttContainers = Array.from(document.querySelectorAll('.gantt-chart-container'));
@@ -190,8 +159,6 @@ const Dashboard: React.FC = () => {
       ) as HTMLElement;
 
       if (!visibleGanttContainer) {
-        console.warn("No se pudo encontrar un diagrama de Gantt visible en el DOM");
-
         const ganttElement = document.querySelector('.recharts-wrapper') as HTMLElement;
         if (!ganttElement) {
           toast.error("No se pudo encontrar el diagrama de Gantt para exportar");
@@ -245,6 +212,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Generar datos del Gantt para Excel
   const generateGanttDataForExcel = () => {
     const ganttData = actividades.filter(act =>
       filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
@@ -273,6 +241,7 @@ const Dashboard: React.FC = () => {
     return ganttData;
   };
 
+  // Generar PDF
   const generarPDF = async () => {
     try {
       setExportingChart(true);
@@ -358,6 +327,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Generar Excel
   const generarExcel = async () => {
     try {
       setExportingChart(true);
@@ -444,10 +414,10 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Manejar toggle de subsistemas
   const handleSubsistemaToggle = (checked: boolean | "indeterminate") => {
     if (typeof checked === 'boolean') {
       setMostrarSubsistemas(checked);
-
       setConfiguracionGrafico({
         ...configuracionGrafico,
         mostrarSubsistemas: checked
@@ -455,80 +425,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) {
-      return;
-    }
-
-    const items = Array.from(graficosPersonalizados);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    const updatedGraficos = items.map((grafico, index) => ({ ...grafico, posicion: index }));
-
-    setGraficosPersonalizados(updatedGraficos);
-  };
-
-  const addNewCustomChart = () => {
-    setGraficosPersonalizados(prev => [
-      ...prev,
-      {
-        id: uuidv4(),
-        titulo: "Nuevo gráfico",
-        tipo: "barras",
-        datos: "actividades",
-        color: "#3b82f6",
-        posicion: prev.length
-      }
-    ]);
-  };
-
-  const deleteCustomChart = (id: string) => {
-    setGraficosPersonalizados(prev => {
-      const updatedGraficos = prev.filter(grafico => grafico.id !== id);
-      return updatedGraficos.map((grafico, index) => ({ ...grafico, posicion: index }));
-    });
-  };
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      titulo: "",
-      tipo: "barras",
-      datos: "actividades",
-      color: "#3b82f6",
-    },
-  });
-
-  const editarGrafico = (id: string) => {
-    const graficoAEditar = graficosPersonalizados.find(grafico => grafico.id === id);
-    if (graficoAEditar) {
-      form.reset(graficoAEditar);
-      setEditandoGraficoId(id);
-    }
-  };
-
-  const cancelarEdicion = () => {
-    setEditandoGraficoId(null);
-    form.reset();
-  };
-
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    setGraficosPersonalizados(prev =>
-      prev.map(grafico =>
-        grafico.id === editandoGraficoId
-          ? { ...grafico, ...values }
-          : grafico
-      )
-    );
-    toast.success("Gráfico actualizado exitosamente");
-    cancelarEdicion();
-  };
-
-  const updateTimestamp = () => {
-    return { ...filtros, timestamp: ensureStringTimestamp(Date.now()) };
-  };
-
+  // Obtener configuración del gráfico
   const getGanttConfiguration = () => {
     return {
       ...defaultConfiguracionGrafico,
@@ -542,6 +439,7 @@ const Dashboard: React.FC = () => {
       <PublicHeader />
 
       <main className="flex-1 container mx-auto px-4 py-6">
+        {/* Header con selector de proyecto y botones */}
         <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
           <div className="flex items-center gap-2 w-full md:w-auto">
             <ProyectoSelector />
@@ -561,7 +459,9 @@ const Dashboard: React.FC = () => {
             </Button>
           </div>
 
+          {/* Filtros y botones de exportación */}
           <div className="flex flex-wrap gap-2 justify-end w-full md:w-auto">
+            {/* Menú desplegable de filtros */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-1">
@@ -643,6 +543,7 @@ const Dashboard: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Filtro avanzado */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -702,6 +603,7 @@ const Dashboard: React.FC = () => {
               </PopoverContent>
             </Popover>
 
+            {/* Botón de tema */}
             <Button
               variant="outline"
               onClick={toggleTheme}
@@ -710,6 +612,7 @@ const Dashboard: React.FC = () => {
               <SunMoon className="h-4 w-4" />
             </Button>
 
+            {/* Menú de exportación */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -735,8 +638,10 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* KPI Cards */}
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
 
+        {/* Tabs de Gantt, Ruta Crítica, Alertas */}
         <Tabs
           defaultValue="gantt"
           className="w-full"
@@ -772,7 +677,7 @@ const Dashboard: React.FC = () => {
                 </Button>
                 
                 <Select
-                  value={configuracionGrafico.tamano}
+                  value={configuracionGrafico.tamano || "mediano"}
                   onValueChange={(value: "pequeno" | "mediano" | "grande" | "completo") =>
                     handleTamanoGrafico(value)
                   }
@@ -811,7 +716,7 @@ const Dashboard: React.FC = () => {
           <TabsContent value="critical-path" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
               <CardContent className="p-0 overflow-hidden h-[600px]">
-                {/* <CriticalPathView /> */}
+                {/* Componente de ruta crítica */}
               </CardContent>
             </Card>
           </TabsContent>
@@ -822,190 +727,6 @@ const Dashboard: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
-
-        <Card className="dark:bg-slate-800 dark:border-slate-700 mt-6">
-          <CardHeader>
-            <CardTitle>Gráficos Personalizados</CardTitle>
-            <CardDescription>
-              Arrastra y suelta para reordenar, edita o elimina los gr��ficos.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="graficos">
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef}>
-                    {graficosPersonalizados.map((grafico, index) => (
-                      <Draggable key={grafico.id} draggableId={grafico.id} index={index}>
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className="mb-4 p-4 border rounded-md shadow-sm bg-white dark:bg-slate-700 dark:border-slate-600"
-                          >
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-4 h-4 rounded-full" 
-                                  style={{ backgroundColor: grafico.color }}
-                                />
-                                <span className="font-medium">{grafico.titulo}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  ({grafico.tipo} • {grafico.datos})
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => editarGrafico(grafico.id)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                  <span className="sr-only">Editar</span>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteCustomChart(grafico.id)}
-                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  <span className="sr-only">Eliminar</span>
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-            
-            <Button
-              variant="outline"
-              onClick={addNewCustomChart}
-              className="mt-4"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar nuevo gráfico
-            </Button>
-            
-            {editandoGraficoId && (
-              <div className="mt-6 p-4 border rounded-md bg-gray-50 dark:bg-slate-800 dark:border-slate-700">
-                <h3 className="text-lg font-medium mb-4">Editar gráfico</h3>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="titulo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Título</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Título del gráfico" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="tipo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo de gráfico</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccionar tipo" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="barras">Barras</SelectItem>
-                                <SelectItem value="lineas">Líneas</SelectItem>
-                                <SelectItem value="area">Área</SelectItem>
-                                <SelectItem value="pastel">Pastel</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="datos"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Fuente de datos</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccionar datos" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="actividades">Actividades</SelectItem>
-                                <SelectItem value="itrb">ITRB</SelectItem>
-                                <SelectItem value="avance">Avance</SelectItem>
-                                <SelectItem value="vencimientos">Vencimientos</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <FormField
-                      control={form.control}
-                      name="color"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Color principal</FormLabel>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-8 h-8 rounded-md border"
-                              style={{ backgroundColor: field.value }}
-                            />
-                            <FormControl>
-                              <Input type="text" placeholder="#3b82f6" {...field} />
-                            </FormControl>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={cancelarEdicion}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button type="submit">Guardar cambios</Button>
-                    </div>
-                  </form>
-                </Form>
-              </div>
-            )}
-          </CardContent>
-        </Card>
         
         <div className="py-6 border-t text-center text-xs text-muted-foreground dark:border-slate-700 mt-6">
           Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
