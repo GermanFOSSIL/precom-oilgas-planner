@@ -11,7 +11,7 @@ interface KPICardsProps {
 }
 
 const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
-  const { getKPIs } = useAppContext();
+  const { getKPIs, itrbItems, actividades } = useAppContext();
   
   const kpis = getKPIs(proyectoId);
   
@@ -37,8 +37,32 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
     { name: 'Sin CCC', value: kpis.totalSubsistemas - kpis.subsistemasCCC },
   ];
   
+  // Calcular ITRBs vencidos completados vs faltantes
+  const itrbsVencidos = itrbItems.filter(item => {
+    // Verificar si pertenece al proyecto seleccionado
+    if (proyectoId) {
+      const actividad = actividades.find(a => a.id === item.actividadId);
+      if (!actividad || actividad.proyectoId !== proyectoId) return false;
+    }
+    
+    // Verificar si está vencido
+    const fechaLimite = new Date(item.fechaLimite);
+    const hoy = new Date();
+    return fechaLimite < hoy; // Es vencido si la fecha límite es anterior a hoy
+  });
+  
+  const vencidosCompletados = itrbsVencidos.filter(item => item.estado === "Completado").length;
+  const vencidosFaltantes = itrbsVencidos.filter(item => item.estado !== "Completado").length;
+  
+  // Datos para el gráfico de vencidos
+  const vencidosData = [
+    { name: 'Completados', value: vencidosCompletados, color: "#22c55e" },
+    { name: 'Faltantes', value: vencidosFaltantes, color: "#ef4444" }
+  ];
+  
   // Colores para los gráficos
   const COLORS = ['#4F46E5', '#E5E7EB', '#F43F5E', '#D1D5DB'];
+  const COLORS_VENCIDOS = ['#22c55e', '#ef4444'];
   
   // CustomTooltip para los gráficos
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -186,26 +210,28 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
         </CardContent>
       </Card>
       
-      {/* Vencidos */}
+      {/* Vencidos - Modificado para mostrar completados vs faltantes fuera de fecha */}
       <Card className="relative overflow-hidden bg-gradient-to-br from-red-50 to-white dark:from-red-900/20 dark:to-slate-800/50">
         <CardContent className="pt-6">
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center">
                 <AlertTriangle className="h-4 w-4 mr-1 text-red-500" />
-                <p className="text-sm font-medium text-muted-foreground mb-1">Vencidos</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">ITR B Vencidos</p>
               </div>
-              <div className="flex items-baseline">
-                <h3 className="text-2xl font-bold text-red-500">{kpis.actividadesVencidas}</h3>
+              <div className="flex items-baseline gap-1">
+                <h3 className="text-2xl font-bold text-red-500">{vencidosFaltantes}</h3>
+                <span className="text-xs text-muted-foreground">faltantes</span>
               </div>
-              <div className="text-xs mt-1 text-muted-foreground">
-                {kpis.actividadesVencidas === 0 ? (
-                  <span className="text-green-500">No hay ITR B vencidos</span>
-                ) : (
-                  <span className="text-red-500">
-                    {kpis.actividadesVencidas} {kpis.actividadesVencidas === 1 ? 'ITR B vencido' : 'ITR B vencidos'}
-                  </span>
-                )}
+              <div className="text-xs mt-1 flex flex-col">
+                <span className="text-green-500 flex items-center">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  {vencidosCompletados} completados fuera de fecha
+                </span>
+                <span className="text-red-500 flex items-center mt-1">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  {vencidosFaltantes} pendientes vencidos
+                </span>
               </div>
             </div>
             
@@ -213,10 +239,7 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={[
-                      { name: 'Vencidos', value: kpis.actividadesVencidas },
-                      { name: 'Al día', value: kpis.totalITRB - kpis.actividadesVencidas }
-                    ]}
+                    data={vencidosData}
                     cx="50%"
                     cy="50%"
                     innerRadius={18}
@@ -224,8 +247,9 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    <Cell fill="#F43F5E" />
-                    <Cell fill="#D1D5DB" />
+                    {vencidosData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
                 </PieChart>

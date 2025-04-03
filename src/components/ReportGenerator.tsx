@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { 
   Card, 
@@ -10,17 +10,50 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, LineChart } from "lucide-react";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import html2canvas from 'html2canvas';
 
 const ReportGenerator: React.FC = () => {
-  const { actividades, itrbItems, proyectos, proyectoActual, filtros } = useAppContext();
+  const { actividades, itrbItems, proyectos, proyectoActual, filtros, getKPIs } = useAppContext();
+  const ganttChartRef = useRef<HTMLDivElement | null>(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
   
-  // Función para generar PDF
-  const generatePDF = () => {
+  // Función para capturar el diagrama de Gantt
+  const captureGanttChart = async (): Promise<string | null> => {
+    // Encontrar el elemento del diagrama de Gantt en el DOM
+    const ganttElement = document.querySelector('.gantt-chart-container') as HTMLElement;
+    
+    if (!ganttElement) {
+      console.warn("No se pudo encontrar el diagrama de Gantt en el DOM");
+      return null;
+    }
+    
     try {
+      // Capturar el diagrama como imagen
+      const canvas = await html2canvas(ganttElement, {
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false
+      });
+      
+      // Convertir a imagen base64
+      return canvas.toDataURL('image/png');
+    } catch (error) {
+      console.error("Error al capturar el diagrama de Gantt:", error);
+      return null;
+    }
+  };
+  
+  // Función para generar PDF mejorado con KPIs y Gantt
+  const generatePDF = async () => {
+    try {
+      setGeneratingReport(true);
+      
       const doc = new jsPDF();
       const title = proyectoActual !== "todos" 
         ? `Plan de Precomisionado - ${proyectos.find(p => p.id === proyectoActual)?.titulo || 'Todos los proyectos'}`
@@ -46,9 +79,12 @@ const ReportGenerator: React.FC = () => {
         return !actividad || proyectoActual === "todos" || actividad.proyectoId === proyectoActual;
       });
       
-      // Sección de Estadísticas
+      // Obtener KPIs
+      const kpis = getKPIs(proyectoActual !== "todos" ? proyectoActual : undefined);
+      
+      // Sección de Estadísticas - KPIs Mejorados
       doc.setFontSize(16);
-      doc.text("Resumen Estadístico", 14, 40);
+      doc.text("Indicadores Clave de Desempeño (KPIs)", 14, 40);
       
       const totalActividades = actividadesFiltradas.length;
       const totalITRB = itrbFiltrados.length;
@@ -58,25 +94,78 @@ const ReportGenerator: React.FC = () => {
       
       const porcentajeCompletado = totalITRB > 0 ? (itrbCompletados / totalITRB) * 100 : 0;
       
-      // Tabla de estadísticas
-      const estadisticasData = [
-        ["Total de Actividades", totalActividades.toString()],
-        ["Total de ITR B", totalITRB.toString()],
-        ["ITR B Completados", `${itrbCompletados} (${porcentajeCompletado.toFixed(2)}%)`],
-        ["ITR B En Curso", itrbEnCurso.toString()],
+      // Calcular ITRBs vencidos completados vs faltantes para el reporte
+      const itrbsVencidos = itrbFiltrados.filter(item => {
+        const fechaLimite = new Date(item.fechaLimite);
+        const hoy = new Date();
+        return fechaLimite < hoy;
+      });
+      
+      const vencidosCompletados = itrbsVencidos.filter(item => item.estado === "Completado").length;
+      const vencidosFaltantes = itrbsVencidos.filter(item => item.estado !== "Completado").length;
+      
+      // Tabla de KPIs mejorada
+      const kpisData = [
+        ["Avance Físico", `${porcentajeCompletado.toFixed(1)}%`],
+        ["Total de Actividades", `${totalActividades}`],
+        ["Total de ITR B", `${totalITRB}`],
+        ["ITR B Completados", `${itrbCompletados} (${porcentajeCompletado.toFixed(1)}%)`],
+        ["ITR B En Curso", `${itrbEnCurso}`],
         ["ITR B Pendientes", `${totalITRB - itrbCompletados}/${totalITRB}`],
-        ["ITR B Vencidos", itrbVencidos.toString()]
+        ["ITR B Vencidos", `${itrbVencidos}`],
+        ["-- Vencidos Completados", `${vencidosCompletados}`],
+        ["-- Vencidos Pendientes", `${vencidosFaltantes}`],
+        ["Subsistemas con CCC", `${kpis.subsistemasCCC}/${kpis.totalSubsistemas}`]
       ];
       
       (doc as any).autoTable({
         startY: 45,
-        head: [["Estadística", "Valor"]],
-        body: estadisticasData,
+        head: [["Indicador", "Valor"]],
+        body: kpisData,
         theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] }
+        headStyles: { fillColor: [59, 130, 246] },
+        alternateRowStyles: { fillColor: [240, 245, 255] }
       });
       
       let yPos = (doc as any).lastAutoTable.finalY + 15;
+      
+      // Agregar gráfico de Gantt si está disponible
+      const ganttImageData = await captureGanttChart();
+      
+      if (ganttImageData) {
+        // Si necesitamos agregar una nueva página
+        if (yPos > doc.internal.pageSize.getHeight() - 100) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.setFontSize(16);
+        doc.text("Diagrama de Gantt", 14, yPos);
+        yPos += 10;
+        
+        // Calcular tamaño manteniendo la proporción
+        const imgWidth = doc.internal.pageSize.getWidth() - 28; // Margen de 14 a cada lado
+        const ratio = 0.65; // Alto / Ancho (aproximadamente)
+        const imgHeight = imgWidth * ratio;
+        
+        try {
+          doc.addImage(ganttImageData, 'PNG', 14, yPos, imgWidth, imgHeight);
+          yPos += imgHeight + 15;
+        } catch (err) {
+          console.error("Error al agregar imagen del diagrama de Gantt:", err);
+          doc.setFontSize(12);
+          doc.setTextColor(200, 0, 0);
+          doc.text("No se pudo incluir el diagrama de Gantt", 14, yPos + 10);
+          yPos += 20;
+          doc.setTextColor(0, 0, 0);
+        }
+      }
+      
+      // Verificar si necesitamos agregar una nueva página
+      if (yPos > doc.internal.pageSize.getHeight() - 40) {
+        doc.addPage();
+        yPos = 20;
+      }
       
       // Sección de Actividades
       if (actividadesFiltradas.length > 0) {
@@ -155,12 +244,15 @@ const ReportGenerator: React.FC = () => {
     } catch (error) {
       console.error("Error al generar PDF:", error);
       toast.error("Error al generar el PDF. Por favor intente nuevamente.");
+    } finally {
+      setGeneratingReport(false);
     }
   };
   
   // Función para generar Excel mejorada
   const generateExcel = () => {
     try {
+      setGeneratingReport(true);
       // Filtrar actividades según la selección actual
       const actividadesFiltradas = actividades.filter(act => 
         proyectoActual === "todos" || act.proyectoId === proyectoActual
@@ -180,6 +272,19 @@ const ReportGenerator: React.FC = () => {
       const itrbVencidos = itrbFiltrados.filter(itrb => itrb.estado === "Vencido").length;
       const porcentajeCompletado = totalITRB > 0 ? (itrbCompletados / totalITRB) * 100 : 0;
       
+      // Calcular ITRBs vencidos completados vs faltantes para el reporte
+      const itrbsVencidos = itrbFiltrados.filter(item => {
+        const fechaLimite = new Date(item.fechaLimite);
+        const hoy = new Date();
+        return fechaLimite < hoy;
+      });
+      
+      const vencidosCompletados = itrbsVencidos.filter(item => item.estado === "Completado").length;
+      const vencidosFaltantes = itrbsVencidos.filter(item => item.estado !== "Completado").length;
+      
+      // Obtener KPIs
+      const kpis = getKPIs(proyectoActual !== "todos" ? proyectoActual : undefined);
+      
       // Crear libro Excel
       const wb = XLSX.utils.book_new();
       
@@ -188,12 +293,16 @@ const ReportGenerator: React.FC = () => {
         ["PLAN DE PRECOMISIONADO - RESUMEN ESTADÍSTICO", "", ""],
         ["", "", ""],
         ["Estadística", "Valor", "Porcentaje"],
+        ["Avance Físico", `${porcentajeCompletado.toFixed(1)}%`, ""],
         ["Total de Actividades", totalActividades.toString(), ""],
         ["Total de ITR B", totalITRB.toString(), ""],
         ["ITR B Completados", itrbCompletados.toString(), `${porcentajeCompletado.toFixed(2)}%`],
         ["ITR B Pendientes", (totalITRB - itrbCompletados).toString(), `${(100 - porcentajeCompletado).toFixed(2)}%`],
         ["ITR B En Curso", itrbEnCurso.toString(), (totalITRB > 0 ? (itrbEnCurso / totalITRB * 100).toFixed(2) : "0") + "%"],
-        ["ITR B Vencidos", itrbVencidos.toString(), (totalITRB > 0 ? (itrbVencidos / totalITRB * 100).toFixed(2) : "0") + "%"]
+        ["ITR B Vencidos", itrbVencidos.toString(), (totalITRB > 0 ? (itrbVencidos / totalITRB * 100).toFixed(2) : "0") + "%"],
+        ["-- Vencidos Completados", vencidosCompletados.toString(), (itrbsVencidos.length > 0 ? (vencidosCompletados / itrbsVencidos.length * 100).toFixed(2) : "0") + "%"],
+        ["-- Vencidos Pendientes", vencidosFaltantes.toString(), (itrbsVencidos.length > 0 ? (vencidosFaltantes / itrbsVencidos.length * 100).toFixed(2) : "0") + "%"],
+        ["Subsistemas con CCC", `${kpis.subsistemasCCC}/${kpis.totalSubsistemas}`, (kpis.totalSubsistemas > 0 ? (kpis.subsistemasCCC / kpis.totalSubsistemas * 100).toFixed(2) : "0") + "%"]
       ];
       
       const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
@@ -298,6 +407,8 @@ const ReportGenerator: React.FC = () => {
     } catch (error) {
       console.error("Error al generar Excel:", error);
       toast.error("Error al generar el Excel. Por favor intente nuevamente.");
+    } finally {
+      setGeneratingReport(false);
     }
   };
   
@@ -320,18 +431,27 @@ const ReportGenerator: React.FC = () => {
             </p>
             
             <div className="flex flex-col md:flex-row gap-4">
-              <Button onClick={generateExcel} className="flex items-center gap-2">
+              <Button 
+                onClick={generateExcel} 
+                className="flex items-center gap-2"
+                disabled={generatingReport}
+              >
                 <Download className="h-5 w-5" />
                 Generar Excel
               </Button>
-              <Button onClick={generatePDF} variant="outline" className="flex items-center gap-2">
+              <Button 
+                onClick={generatePDF} 
+                variant="outline" 
+                className="flex items-center gap-2"
+                disabled={generatingReport}
+              >
                 <FileText className="h-5 w-5" />
                 Generar PDF
               </Button>
             </div>
             
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded text-sm">
-              <p>El reporte Excel incluirá datos crudos, KPIs y listados detallados de actividades e ITR-B.</p>
+              <p>El reporte incluye KPIs, diagrama de Gantt, y listados detallados de actividades e ITR-B.</p>
               <p className="mt-1">La exportación en PDF ofrece un informe resumido para impresión.</p>
             </div>
           </div>
@@ -341,10 +461,11 @@ const ReportGenerator: React.FC = () => {
             <div className="p-4 border rounded bg-white dark:bg-slate-800">
               <div className="h-60 flex items-center justify-center">
                 <div className="text-center opacity-70">
-                  <FileText className="h-16 w-16 mx-auto mb-2 opacity-40" />
+                  <LineChart className="h-16 w-16 mx-auto mb-2 opacity-40" />
                   <p>El informe incluirá:</p>
                   <ul className="list-disc list-inside text-left max-w-md mx-auto mt-2">
-                    <li>Resumen con KPIs (ITR completados, pendientes, vencidos)</li>
+                    <li>Resumen con KPIs completos (avance, ITR completados, pendientes, vencidos)</li>
+                    <li>Diagrama de Gantt con todas las actividades</li>
                     <li>Listado de actividades por proyecto/sistema</li>
                     <li>Estado detallado de cada ITR-B</li>
                     <li>Datos crudos para análisis personalizados (solo Excel)</li>
@@ -354,6 +475,9 @@ const ReportGenerator: React.FC = () => {
             </div>
           </div>
         </div>
+        
+        {/* Contenedor oculto para capturar el diagrama de Gantt */}
+        <div ref={ganttChartRef} className="hidden"></div>
       </CardContent>
     </Card>
   );

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,8 @@ import {
   Filter,
   CalendarIcon,
   CheckCircle,
-  Info
+  Info,
+  Download
 } from "lucide-react";
 import {
   LineChart,
@@ -39,9 +40,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 const CriticalPathView: React.FC = () => {
   const { itrbItems, actividades, proyectos, filtros } = useAppContext();
+  
+  // Refs for the charts we want to download
+  const trendsChartRef = useRef<HTMLDivElement>(null);
+  const statusChartRef = useRef<HTMLDivElement>(null);
   
   // Filtrar por proyecto si hay uno seleccionado
   const filtroProyecto = filtros.proyecto !== "todos" ? filtros.proyecto : null;
@@ -167,6 +173,31 @@ const CriticalPathView: React.FC = () => {
       default: return "bg-gray-500";
     }
   }
+  
+  // Función para descargar el gráfico como imagen
+  const downloadChartAsImage = (ref: React.RefObject<HTMLDivElement>, filename: string) => {
+    if (!ref.current) return;
+    
+    try {
+      // Usar html2canvas para capturar el gráfico
+      import('html2canvas').then(({ default: html2canvas }) => {
+        html2canvas(ref.current!).then(canvas => {
+          // Crear un enlace de descarga
+          const link = document.createElement('a');
+          link.download = `${filename}-${new Date().toISOString().split('T')[0]}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          toast.success("Gráfico descargado como imagen");
+        });
+      }).catch(err => {
+        console.error("Error al cargar html2canvas:", err);
+        toast.error("No se pudo descargar el gráfico. Intente nuevamente.");
+      });
+    } catch (error) {
+      console.error("Error al descargar gráfico:", error);
+      toast.error("Error al descargar el gráfico");
+    }
+  };
 
   // No hay elementos vencidos
   if (itemsVencidos.length === 0) {
@@ -187,13 +218,22 @@ const CriticalPathView: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="md:col-span-2 dark:bg-slate-800 dark:border-slate-700">
-          <CardHeader>
+          <CardHeader className="flex-row justify-between items-center">
             <CardTitle className="flex items-center text-lg">
               <AlertTriangle className="mr-2 h-5 w-5 text-red-500" />
               Tendencia de elementos vencidos
             </CardTitle>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => downloadChartAsImage(trendsChartRef, 'tendencia-vencidos')}
+              className="flex items-center gap-1 text-xs"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Descargar
+            </Button>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[300px]" ref={trendsChartRef}>
             <ChartContainer 
               config={{
                 "1-7 días": { color: "#fbbf24" },
@@ -205,13 +245,19 @@ const CriticalPathView: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={datosTendencia}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-700" />
-                  <XAxis dataKey="nombre" className="dark:fill-slate-400" />
+                  <XAxis 
+                    dataKey="nombre" 
+                    className="dark:fill-slate-400"
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
                   <YAxis className="dark:fill-slate-400" />
                   <Tooltip content={<ChartTooltipContent />} />
-                  <Legend />
+                  <Legend verticalAlign="top" height={36} />
                   <Line
                     type="monotone"
                     dataKey="cantidad"
@@ -227,13 +273,13 @@ const CriticalPathView: React.FC = () => {
         </Card>
 
         <Card className="dark:bg-slate-800 dark:border-slate-700">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center text-lg">
-                <Clock className="mr-2 h-5 w-5 text-orange-500" />
-                Estado de ITR B
-              </CardTitle>
-              
+          <CardHeader className="flex-row justify-between items-center">
+            <CardTitle className="flex items-center text-lg">
+              <Clock className="mr-2 h-5 w-5 text-orange-500" />
+              Estado de ITR B
+            </CardTitle>
+            
+            <div className="flex items-center gap-2">
               <TooltipProvider>
                 <UITooltip>
                   <TooltipTrigger asChild>
@@ -246,18 +292,28 @@ const CriticalPathView: React.FC = () => {
                   </TooltipContent>
                 </UITooltip>
               </TooltipProvider>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => downloadChartAsImage(statusChartRef, 'estado-itrb')}
+                className="flex items-center gap-1 text-xs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Descargar
+              </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent ref={statusChartRef}>
             <div className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                   <Pie
                     data={datosEstado}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    outerRadius={80}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
@@ -326,13 +382,13 @@ const CriticalPathView: React.FC = () => {
                       {item.descripcion}
                     </h3>
                     
-                    <div className="flex items-center text-sm text-muted-foreground mb-3">
-                      <span className="font-medium text-indigo-600 dark:text-indigo-400">
+                    <div className="flex flex-wrap items-center text-sm text-muted-foreground mb-3">
+                      <span className="font-medium text-indigo-600 dark:text-indigo-400 mr-2">
                         {item.proyecto?.titulo || "Proyecto sin asignar"}
                       </span>
-                      <ArrowRight className="h-3 w-3 mx-2" />
-                      <span>{item.actividad?.sistema}</span>
-                      <ArrowRight className="h-3 w-3 mx-2" />
+                      <ArrowRight className="h-3 w-3 mx-1" />
+                      <span className="mr-2">{item.actividad?.sistema}</span>
+                      <ArrowRight className="h-3 w-3 mx-1" />
                       <span>{item.actividad?.subsistema}</span>
                     </div>
                     
