@@ -185,4 +185,3 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
 };
 
 export default GanttBarChart;
-

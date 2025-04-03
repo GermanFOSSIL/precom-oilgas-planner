@@ -1,4 +1,3 @@
-
 import React from "react";
 import { getRowBackgroundColor, getStatusColor } from "./utils/colorUtils";
 
@@ -29,7 +28,7 @@ interface GanttActivityBarProps {
   handleMouseOut: () => void;
   isDateInRange: (date: Date) => boolean;
   withSubsystem?: boolean;
-  tamanoGrafico?: "pequeno" | "mediano" | "grande";
+  tamanoGrafico?: "pequeno" | "mediano" | "grande" | "completo";
 }
 
 const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
@@ -59,6 +58,7 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
       case "pequeno": return "h-8";
       case "mediano": return "h-10";
       case "grande": return "h-12";
+      case "completo": return "h-14";
       default: return "h-10";
     }
   };
@@ -69,6 +69,7 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
       case "pequeno": return "h-5 top-1/2 -mt-2.5";
       case "mediano": return "h-6 top-1/2 -mt-3";
       case "grande": return "h-7 top-1/2 -mt-3.5";
+      case "completo": return "h-9 top-1/2 -mt-4";
       default: return "h-6 top-1/2 -mt-3";
     }
   };
