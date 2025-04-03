@@ -1,113 +1,103 @@
 
 import { useMemo } from "react";
-import { Actividad, ITRB, Proyecto, FiltrosDashboard } from "@/types";
+import { FiltrosDashboard } from "@/types";
 import { getColorByProgress } from "../utils/colorUtils";
 
-interface GanttItem {
-  id: string;
-  nombre: string;
-  sistema: string;
-  subsistema: string;
-  fechaInicio: Date;
-  fechaFin: Date;
-  duracion: number;
-  progreso: number;
-  tieneVencidos: boolean;
-  tieneMCC: boolean;
-  proyecto: string;
-  color: string;
-  itrbsAsociados: ITRB[];
+interface UseGanttDataParams {
+  actividades: any[];
+  itrbItems: any[];
+  proyectos: any[];
+  filtros: FiltrosDashboard;
 }
 
-/**
- * Custom hook to process and filter data for Gantt charts
- */
 export const useGanttData = (
-  actividades: Actividad[],
-  itrbItems: ITRB[],
-  proyectos: Proyecto[],
+  actividades: any[],
+  itrbItems: any[],
+  proyectos: any[],
   filtros: FiltrosDashboard
 ) => {
-  // Filter activities based on applied filters
-  const actividadesFiltradas = useMemo(() => {
-    return actividades.filter(actividad => {
-      if (filtros.proyecto !== "todos" && actividad.proyectoId !== filtros.proyecto) {
-        return false;
-      }
-      
-      if (filtros.sistema && filtros.sistema !== "todos" && actividad.sistema !== filtros.sistema) {
-        return false;
-      }
-      
-      if (filtros.subsistema && filtros.subsistema !== "todos" && actividad.subsistema !== filtros.subsistema) {
-        return false;
-      }
-      
-      if (filtros.busquedaActividad) {
-        const busquedaMinuscula = filtros.busquedaActividad.toLowerCase();
-        
-        if (actividad.nombre.toLowerCase().includes(busquedaMinuscula)) {
-          return true;
+  const ganttData = useMemo(() => {
+    // Filtrar actividades según los filtros seleccionados
+    return actividades
+      .filter(actividad => {
+        // Filtrar por proyecto si está definido
+        if (filtros.proyecto && filtros.proyecto !== "todos" && actividad.proyectoId !== filtros.proyecto) {
+          return false;
         }
         
-        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => 
-          itrb.descripcion.toLowerCase().includes(busquedaMinuscula)
+        // Filtrar por sistema si está definido
+        if (filtros.sistema && actividad.sistema !== filtros.sistema) {
+          return false;
+        }
+        
+        // Filtrar por subsistema si está definido
+        if (filtros.subsistema && actividad.subsistema !== filtros.subsistema) {
+          return false;
+        }
+        
+        return true;
+      })
+      .map(actividad => {
+        // Buscar el proyecto relacionado
+        const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
+        
+        // Obtener los ITRBs asociados a esta actividad
+        const itrbsAsociados = itrbItems.filter(i => i.actividadId === actividad.id);
+        
+        // Calcular el progreso basado en los ITRBs completados
+        const itrbsCompletados = itrbsAsociados.filter(i => i.estado === "Completado").length;
+        const totalItrbs = itrbsAsociados.length;
+        const progreso = totalItrbs > 0 ? Math.round((itrbsCompletados / totalItrbs) * 100) : 0;
+        
+        // Verificar si hay ITRBs vencidos
+        const hoy = new Date();
+        const tieneVencidos = itrbsAsociados.some(
+          i => i.estado !== "Completado" && new Date(i.fechaVencimiento) < hoy
         );
-      }
+        
+        // Verificar si tiene MCC (Manufacturing Completion Certificate)
+        const tieneMCC = actividad.tieneMCC || false;
+        
+        // Determinar el color basado en el progreso y si tiene vencidos
+        const color = getColorByProgress(progreso, tieneVencidos);
+        
+        // Formatear fechas como objetos Date
+        const fechaInicio = new Date(actividad.fechaInicio);
+        const fechaFin = new Date(actividad.fechaFin);
+        
+        // Calcular la duración en días (si no está definida)
+        const duracion = actividad.duracion || 
+          Math.ceil((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+          id: actividad.id,
+          nombre: actividad.nombre,
+          sistema: actividad.sistema,
+          subsistema: actividad.subsistema,
+          fechaInicio,
+          fechaFin,
+          duracion,
+          progreso,
+          tieneVencidos,
+          tieneMCC,
+          proyecto: proyecto?.titulo || "Sin proyecto",
+          color,
+          itrbsAsociados
+        };
+      })
+      // Ordenar por sistema, subsistema y nombre
+      .sort((a, b) => {
+        const sistemasCompare = a.sistema.localeCompare(b.sistema);
+        if (sistemasCompare !== 0) return sistemasCompare;
+        
+        const subsistemCompare = a.subsistema.localeCompare(b.subsistema);
+        if (subsistemCompare !== 0) return subsistemCompare;
+        
+        return a.nombre.localeCompare(b.nombre);
+      });
       
-      if (filtros.estadoITRB && filtros.estadoITRB !== "todos") {
-        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => itrb.estado === filtros.estadoITRB);
-      }
-      
-      if (filtros.tareaVencida) {
-        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => itrb.estado === "Vencido");
-      }
-      
-      if (filtros.mcc) {
-        const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => itrb.mcc);
-      }
-      
-      return true;
-    });
-  }, [actividades, itrbItems, filtros]);
-
-  // Transform filtered activities into Gantt chart data format
-  const ganttData = useMemo(() => {
-    return actividadesFiltradas.map(actividad => {
-      const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
-      const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-      
-      const totalItrb = itrbsAsociados.length;
-      const completados = itrbsAsociados.filter(itrb => itrb.estado === "Completado").length;
-      const progreso = totalItrb > 0 ? (completados / totalItrb) * 100 : 0;
-      
-      const tieneVencidos = itrbsAsociados.some(itrb => itrb.estado === "Vencido");
-      const tieneMCC = itrbsAsociados.some(itrb => itrb.mcc);
-      
-      const fechaInicio = new Date(actividad.fechaInicio);
-      const fechaFin = new Date(actividad.fechaFin);
-      
-      return {
-        id: actividad.id,
-        nombre: actividad.nombre,
-        sistema: actividad.sistema,
-        subsistema: actividad.subsistema,
-        fechaInicio,
-        fechaFin,
-        duracion: actividad.duracion,
-        progreso,
-        tieneVencidos,
-        tieneMCC,
-        proyecto: proyecto?.titulo || "Sin proyecto",
-        color: getColorByProgress(progreso, tieneVencidos),
-        itrbsAsociados
-      };
-    });
-  }, [actividadesFiltradas, proyectos, itrbItems]);
+    return ganttData;
+  }, [actividades, itrbItems, proyectos, filtros]);
 
   return { ganttData };
 };

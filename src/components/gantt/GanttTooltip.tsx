@@ -1,21 +1,7 @@
 
 import React from "react";
 import { format } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-
-interface TooltipData {
-  nombre: string;
-  sistema: string;
-  subsistema: string;
-  fechaInicio: Date;
-  fechaFin: Date;
-  duracion: number;
-  progreso: number;
-  tieneVencidos: boolean;
-  tieneMCC: boolean;
-}
+import { es } from "date-fns/locale";
 
 interface GanttTooltipProps {
   active?: boolean;
@@ -24,55 +10,82 @@ interface GanttTooltipProps {
   mostrarSubsistemas: boolean;
 }
 
-const GanttTooltip: React.FC<GanttTooltipProps> = ({ 
-  active, 
-  payload, 
-  label, 
-  mostrarSubsistemas 
+const GanttTooltip: React.FC<GanttTooltipProps> = ({
+  active,
+  payload,
+  label,
+  mostrarSubsistemas,
 }) => {
-  if (active && payload && payload.length) {
-    const data: TooltipData = payload[0].payload;
-    
-    return (
-      <Card className="p-0 shadow-lg border-0">
-        <CardContent className="p-3">
-          <div className="space-y-2">
-            <div className="font-medium">{data.nombre}</div>
-            <div className="text-sm text-muted-foreground">
-              {data.sistema} {mostrarSubsistemas ? `/ ${data.subsistema}` : ''}
-            </div>
-            <div className="text-xs">
-              <span className="font-medium">Duración:</span> {data.duracion} días
-            </div>
-            <div className="text-xs">
-              <span className="font-medium">Inicio:</span> {format(data.fechaInicio, "dd/MM/yyyy")}
-            </div>
-            <div className="text-xs">
-              <span className="font-medium">Fin:</span> {format(data.fechaFin, "dd/MM/yyyy")}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium">Progreso:</span>
-              <Progress value={data.progreso} className="h-2 w-24" />
-              <span className="text-xs">{Math.round(data.progreso)}%</span>
-            </div>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {data.tieneVencidos && (
-                <Badge variant="destructive" className="text-xs">Vencido</Badge>
-              )}
-              {data.tieneMCC && (
-                <Badge className="bg-blue-500 text-xs">MCC</Badge>
-              )}
-              {data.progreso === 100 && (
-                <Badge className="bg-green-500 text-xs">Completado</Badge>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!active || !payload || !payload.length) return null;
+
+  const data = payload[0].payload;
+  const fechaInicio = format(data.fechaInicio, "dd MMM yyyy", { locale: es });
+  const fechaFin = format(data.fechaFin, "dd MMM yyyy", { locale: es });
+  const duracion = `${data.duracion} días`;
+  const progreso = `${data.progreso}%`;
+  const estado = data.progreso === 100 
+    ? "Completado" 
+    : data.tieneVencidos 
+      ? "Vencido" 
+      : data.progreso > 0 
+        ? "En curso" 
+        : "No iniciado";
   
-  return null;
+  const getBadgeColor = () => {
+    if (data.tieneVencidos) return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+    if (data.progreso === 100) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+    if (data.progreso > 0) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+    return "bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200";
+  };
+
+  return (
+    <div className="bg-white dark:bg-slate-800 p-3 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 max-w-xs">
+      <div className="font-medium text-slate-900 dark:text-white mb-1">{data.nombre}</div>
+      
+      {mostrarSubsistemas && (
+        <div className="text-xs text-slate-600 dark:text-slate-300 mb-2">
+          <span className="font-medium">Sistema:</span> {data.sistema} / {data.subsistema}
+        </div>
+      )}
+      
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
+        <div className="text-xs">
+          <span className="font-medium text-slate-500 dark:text-slate-400">Inicio:</span>
+          <span className="ml-1 text-slate-700 dark:text-slate-300">{fechaInicio}</span>
+        </div>
+        <div className="text-xs">
+          <span className="font-medium text-slate-500 dark:text-slate-400">Fin:</span>
+          <span className="ml-1 text-slate-700 dark:text-slate-300">{fechaFin}</span>
+        </div>
+        <div className="text-xs">
+          <span className="font-medium text-slate-500 dark:text-slate-400">Duración:</span>
+          <span className="ml-1 text-slate-700 dark:text-slate-300">{duracion}</span>
+        </div>
+        <div className="text-xs">
+          <span className="font-medium text-slate-500 dark:text-slate-400">Avance:</span>
+          <span className="ml-1 text-slate-700 dark:text-slate-300">{progreso}</span>
+        </div>
+      </div>
+      
+      <div className="mt-2 pt-2 border-t border-gray-100 dark:border-slate-700">
+        <span className={`text-xs px-2 py-1 rounded-full ${getBadgeColor()}`}>
+          {estado}
+        </span>
+        
+        {data.tieneMCC && (
+          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 ml-1">
+            MCC
+          </span>
+        )}
+        
+        {data.itrbsAsociados && data.itrbsAsociados.length > 0 && (
+          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            {data.itrbsAsociados.length} ITRBs asociados
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default GanttTooltip;

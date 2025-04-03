@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
 import { addDays } from "date-fns";
@@ -43,6 +43,29 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
+  // Setup event listeners for export
+  useEffect(() => {
+    const exportPDFHandler = () => {
+      // Handle export when event is triggered from elsewhere in the app
+      console.log("Export PDF event captured in EnhancedGanttChart");
+      // Implementación futura si es necesario
+    };
+    
+    const exportExcelHandler = () => {
+      // Handle export when event is triggered from elsewhere in the app
+      console.log("Export Excel event captured in EnhancedGanttChart");
+      // Implementación futura si es necesario
+    };
+    
+    window.addEventListener('export-gantt-pdf', exportPDFHandler);
+    window.addEventListener('export-gantt-excel', exportExcelHandler);
+    
+    return () => {
+      window.removeEventListener('export-gantt-pdf', exportPDFHandler);
+      window.removeEventListener('export-gantt-excel', exportExcelHandler);
+    };
+  }, []);
+
   // Handle zoom level changes
   const changeZoom = (direction: "in" | "out") => {
     if (direction === "in" && zoomLevel < 2) {
@@ -53,7 +76,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
   };
 
   // Handle time navigation
-  const navigateTime = (direction: "prev" | "next") => {
+  const navigateTime = (direction: "prev" | "next" | "today") => {
     const { newStartDate, newEndDate } = calculateNewDateRange(
       currentStartDate,
       currentEndDate,
@@ -68,6 +91,26 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
   // Handle view mode changes
   const handleViewModeChange = (newMode: "month" | "week" | "day") => {
     setViewMode(newMode);
+    
+    // Adjust date range based on new view mode
+    let newStartDate = new Date(currentStartDate);
+    let duration;
+    
+    switch (newMode) {
+      case "day":
+        duration = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+        break;
+      case "week":
+        duration = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+        break;
+      case "month":
+      default:
+        duration = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+        break;
+    }
+    
+    const newEndDate = new Date(newStartDate.getTime() + duration);
+    setCurrentEndDate(newEndDate);
   };
 
   if (loading) {

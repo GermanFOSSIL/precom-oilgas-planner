@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,13 +37,11 @@ const Dashboard: React.FC = () => {
   const [exportingChart, setExportingChart] = useState(false);
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
 
-  // This function ensures timestamps are always handled as strings
   const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
     return typeof timestamp === 'number' ? String(timestamp) : timestamp;
   }, []);
 
-  // Safe update of filters
   const safeUpdateFilters = useCallback(() => {
     const currentTimestamp = ensureStringTimestamp(Date.now());
     setFiltros({
@@ -53,11 +50,9 @@ const Dashboard: React.FC = () => {
     });
   }, [ensureStringTimestamp, setFiltros, filtros]);
 
-  // Update timestamp when component mounts or when dependency changes
   useEffect(() => {
     safeUpdateFilters();
-    // Set up an interval to update the timestamp periodically to force refreshes
-    const interval = setInterval(safeUpdateFilters, 60000); // Every minute
+    const interval = setInterval(safeUpdateFilters, 60000);
     return () => clearInterval(interval);
   }, [safeUpdateFilters]);
 
@@ -121,7 +116,6 @@ const Dashboard: React.FC = () => {
     setExportingChart(false);
   }, [filtros, generarExcel]);
 
-  // Memoized filter timestamp
   const currentFilterTimestamp = ensureStringTimestamp(Date.now());
 
   return (
@@ -172,6 +166,8 @@ const Dashboard: React.FC = () => {
                 mostrarSubsistemas={mostrarSubsistemas}
                 onTamanoGraficoChange={handleTamanoGrafico}
                 onSubsistemasToggle={handleSubsistemaToggle}
+                onExportPDF={handleExportPDF}
+                onExportExcel={handleExportExcel}
               />
             )}
           </div>

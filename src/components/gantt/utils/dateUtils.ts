@@ -1,99 +1,102 @@
 
-import { format, addDays } from "date-fns";
+import { addDays, addWeeks, addMonths, startOfDay, startOfWeek, startOfMonth, endOfMonth, format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 
-/**
- * Utility functions for date handling in Gantt charts
- */
-
-/**
- * Formats a date for the X axis based on the current view mode
- */
-export const formatXAxis = (date: number, viewMode: "month" | "week" | "day"): string => {
-  const dateObj = new Date(date);
+// Formatear el eje X según el modo de visualización
+export const formatXAxis = (timestamp: number, viewMode: string): string => {
+  const date = new Date(timestamp);
+  
   switch (viewMode) {
     case "day":
-      return format(dateObj, "dd MMM", { locale: es });
+      return format(date, "HH:mm");
     case "week":
-      return format(dateObj, "dd MMM", { locale: es });
+      return format(date, "EEE d", { locale: es });
     case "month":
     default:
-      return format(dateObj, "MMM yyyy", { locale: es });
+      return format(date, "d");
   }
 };
 
-/**
- * Generates an array of dates based on the current start/end dates and view mode
- */
-export const getAxisDates = (
-  currentStartDate: Date, 
-  currentEndDate: Date, 
+// Obtener fechas para el eje X según el modo de visualización
+export const getAxisDates = (startDate: Date, endDate: Date, viewMode: string): Date[] => {
+  switch (viewMode) {
+    case "day":
+      // Para vista diaria, mostrar intervalos de hora
+      const dayInterval = { start: startDate, end: endDate };
+      return eachDayOfInterval(dayInterval);
+      
+    case "week":
+      // Para vista semanal, mostrar cada día
+      const weekInterval = { start: startDate, end: endDate };
+      return eachDayOfInterval(weekInterval);
+      
+    case "month":
+    default:
+      // Para vista mensual, mostrar cada semana
+      const monthInterval = { start: startDate, end: endDate };
+      const allDays = eachDayOfInterval(monthInterval);
+      
+      // Filtrar para mostrar solo algunos días para evitar sobrecargar el eje
+      if (allDays.length > 60) {
+        return allDays.filter((_, index) => index % 3 === 0);
+      }
+      return allDays;
+  }
+};
+
+// Calcular el nuevo rango de fechas al navegar en el tiempo
+export const calculateNewDateRange = (
+  currentStartDate: Date,
+  currentEndDate: Date,
+  direction: "prev" | "next" | "today",
   viewMode: "month" | "week" | "day"
-): Date[] => {
-  const dates: Date[] = [];
-  let currentDate = new Date(currentStartDate);
-  
-  while (currentDate <= currentEndDate) {
-    dates.push(new Date(currentDate));
+) => {
+  const duration = currentEndDate.getTime() - currentStartDate.getTime();
+  let newStartDate: Date;
+  let newEndDate: Date;
+
+  if (direction === "today") {
+    // Centrar en la fecha actual
+    const today = new Date();
     
     switch (viewMode) {
       case "day":
-        currentDate = addDays(currentDate, 1);
+        newStartDate = startOfDay(today);
         break;
       case "week":
-        currentDate = addDays(currentDate, 7);
+        newStartDate = startOfWeek(today, { locale: es });
         break;
       case "month":
       default:
-        currentDate.setMonth(currentDate.getMonth() + 1);
+        newStartDate = startOfMonth(today);
         break;
     }
+    
+    newEndDate = new Date(newStartDate.getTime() + duration);
+    return { newStartDate, newEndDate };
   }
-  
-  return dates;
-};
 
-/**
- * Calculates new date ranges when navigating through time
- */
-export const calculateNewDateRange = (
-  currentStartDate: Date, 
-  currentEndDate: Date, 
-  direction: "prev" | "next", 
-  viewMode: "month" | "week" | "day"
-): { newStartDate: Date, newEndDate: Date } => {
-  let newStartDate, newEndDate;
-  
+  // Para navegación prev/next
   switch (viewMode) {
     case "day":
       newStartDate = direction === "prev" 
-        ? addDays(currentStartDate, -7) 
-        : addDays(currentStartDate, 7);
-      newEndDate = direction === "prev" 
-        ? addDays(currentEndDate, -7) 
-        : addDays(currentEndDate, 7);
+        ? addDays(currentStartDate, -1)
+        : addDays(currentStartDate, 1);
       break;
     case "week":
       newStartDate = direction === "prev" 
-        ? addDays(currentStartDate, -28) 
-        : addDays(currentStartDate, 28);
-      newEndDate = direction === "prev" 
-        ? addDays(currentEndDate, -28) 
-        : addDays(currentEndDate, 28);
+        ? addWeeks(currentStartDate, -1)
+        : addWeeks(currentStartDate, 1);
       break;
     case "month":
     default:
-      newStartDate = new Date(currentStartDate);
-      newEndDate = new Date(currentEndDate);
-      if (direction === "prev") {
-        newStartDate.setMonth(newStartDate.getMonth() - 3);
-        newEndDate.setMonth(newEndDate.getMonth() - 3);
-      } else {
-        newStartDate.setMonth(newStartDate.getMonth() + 3);
-        newEndDate.setMonth(newEndDate.getMonth() + 3);
-      }
+      newStartDate = direction === "prev" 
+        ? addMonths(currentStartDate, -1)
+        : addMonths(currentStartDate, 1);
       break;
   }
+  
+  newEndDate = new Date(newStartDate.getTime() + duration);
   
   return { newStartDate, newEndDate };
 };
