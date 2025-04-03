@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -12,13 +11,40 @@ import { Archive, ArchiveRestore, Upload } from "lucide-react";
 import { BackupOptions } from "@/types";
 
 const BackupRestoreUploader = () => {
-  const { 
-    setProyectos,
-    setActividades,
-    setItrbItems,
-    setAlertas,
-    updateKPIConfig
-  } = useAppContext();
+  const context = useAppContext();
+  
+  const {
+    proyectos,
+    actividades,
+    itrbItems,
+    alertas,
+    kpiConfig
+  } = context;
+  
+  const setProyectos = context.setProyectos || function() { 
+    console.error("setProyectos is not available");
+    toast.error("Error: No se puede restaurar proyectos");
+  };
+  
+  const setActividades = context.setActividades || function() {
+    console.error("setActividades is not available");
+    toast.error("Error: No se puede restaurar actividades");
+  };
+  
+  const setItrbItems = context.setItrbItems || function() {
+    console.error("setItrbItems is not available");
+    toast.error("Error: No se puede restaurar ITRBs");
+  };
+  
+  const setAlertas = context.setAlertas || function() {
+    console.error("setAlertas is not available");
+    toast.error("Error: No se puede restaurar alertas");
+  };
+  
+  const updateKPIConfig = context.updateKPIConfig || function() {
+    console.error("updateKPIConfig is not available");
+    toast.error("Error: No se puede restaurar configuración de KPIs");
+  };
   
   const [restoreOptions, setRestoreOptions] = useState<BackupOptions>({
     proyectos: true,
@@ -50,7 +76,6 @@ const BackupRestoreUploader = () => {
       if (file.name.toLowerCase().endsWith('.json')) {
         setBackupFile(file);
         
-        // Preview del archivo para mostrar metadatos
         const reader = new FileReader();
         reader.onload = (e) => {
           try {
@@ -127,25 +152,56 @@ const BackupRestoreUploader = () => {
               throw new Error("El archivo seleccionado no es un backup válido. No se encontraron metadatos.");
             }
             
-            // Utilizar funciones de setter en lugar de valores directos
-            if (restoreOptions.proyectos && data.proyectos) {
-              setProyectos(data.proyectos);
+            console.log("Datos de backup leídos correctamente:", Object.keys(data));
+            
+            if (restoreOptions.proyectos && data.proyectos && typeof setProyectos === 'function') {
+              try {
+                console.log("Restaurando proyectos:", data.proyectos.length);
+                setProyectos(data.proyectos);
+              } catch (error) {
+                console.error("Error al restaurar proyectos:", error);
+                toast.error("Error al restaurar proyectos");
+              }
             }
             
-            if (restoreOptions.actividades && data.actividades) {
-              setActividades(data.actividades);
+            if (restoreOptions.actividades && data.actividades && typeof setActividades === 'function') {
+              try {
+                console.log("Restaurando actividades:", data.actividades.length);
+                setActividades(data.actividades);
+              } catch (error) {
+                console.error("Error al restaurar actividades:", error);
+                toast.error("Error al restaurar actividades");
+              }
             }
             
-            if (restoreOptions.itrbItems && data.itrbItems) {
-              setItrbItems(data.itrbItems);
+            if (restoreOptions.itrbItems && data.itrbItems && typeof setItrbItems === 'function') {
+              try {
+                console.log("Restaurando ITRBs:", data.itrbItems.length);
+                setItrbItems(data.itrbItems);
+              } catch (error) {
+                console.error("Error al restaurar ITRBs:", error);
+                toast.error("Error al restaurar ITRBs");
+              }
             }
             
-            if (restoreOptions.alertas && data.alertas) {
-              setAlertas(data.alertas);
+            if (restoreOptions.alertas && data.alertas && typeof setAlertas === 'function') {
+              try {
+                console.log("Restaurando alertas:", data.alertas.length);
+                setAlertas(data.alertas);
+              } catch (error) {
+                console.error("Error al restaurar alertas:", error);
+                toast.error("Error al restaurar alertas");
+              }
             }
             
-            if (restoreOptions.kpiConfig && data.kpiConfig) {
-              updateKPIConfig(data.kpiConfig);
+            if (restoreOptions.kpiConfig && data.kpiConfig && typeof updateKPIConfig === 'function') {
+              try {
+                console.log("Restaurando configuración de KPIs");
+                updateKPIConfig(data.kpiConfig);
+              } catch (error) {
+                console.error("Error al restaurar configuración de KPIs:", error);
+                toast.error("Error al restaurar configuración de KPIs");
+              }
             }
             
             setTimeout(() => {

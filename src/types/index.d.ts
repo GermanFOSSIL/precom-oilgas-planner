@@ -79,16 +79,23 @@ export interface AppContextType {
   addProyecto: (proyecto: Proyecto) => void;
   updateProyecto: (id: string, proyecto: Proyecto) => void;
   deleteProyecto: (id: string) => void;
+  setProyectos: (proyectos: Proyecto[]) => void;
   actividades: Actividad[];
   addActividad: (actividad: Actividad) => void;
   updateActividad: (id: string, actividad: Actividad) => void;
   deleteActividad: (id: string) => void;
+  setActividades: (actividades: Actividad[]) => void;
   itrbItems: ITRB[];
   addITRB: (itrb: ITRB) => void;
   updateITRB: (id: string, itrb: ITRB) => void;
   deleteITRB: (id: string) => void;
+  setItrbItems: (itrbItems: ITRB[]) => void;
   proyectoActual: string;
   setProyectoActual: (id: string) => void;
+  alertas: any[];
+  setAlertas: (alertas: any[]) => void;
+  kpiConfig: any;
+  updateKPIConfig: (config: any) => void;
 }
 
 // Interface for backup options
