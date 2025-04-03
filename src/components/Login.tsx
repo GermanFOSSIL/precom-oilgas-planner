@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { LoginProps } from "@/types";
 
-const Login: React.FC = () => {
+const Login: React.FC<LoginProps> = ({ onSuccess, onCancel }) => {
   const { login } = useAppContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +34,9 @@ const Login: React.FC = () => {
       
       if (success) {
         toast.success(`Bienvenido al panel de precomisionado`);
+        if (onSuccess) {
+          onSuccess(email);
+        }
       } else {
         toast.error("Credenciales incorrectas");
       }
@@ -104,10 +108,19 @@ const Login: React.FC = () => {
               <p>Use cualquier otro correo para acceder como visualizador</p>
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex justify-between">
+            {onCancel && (
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={onCancel}
+              >
+                Cancelar
+              </Button>
+            )}
             <Button 
               type="submit" 
-              className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600"
+              className={`${onCancel ? '' : 'w-full'} bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600`}
               disabled={isLoading}
             >
               {isLoading ? "Iniciando sesión..." : "Ingresar"}
