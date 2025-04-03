@@ -554,8 +554,8 @@ const Dashboard: React.FC = () => {
                 <DropdownMenuSeparator />
                 <div className="p-2">
                   <Select
-                    value={filtros.sistema || ""}
-                    onValueChange={(value) => handleFiltroChange("sistema", value || undefined)}
+                    value={filtros.sistema || "todos"}
+                    onValueChange={(value) => handleFiltroChange("sistema", value !== "todos" ? value : undefined)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Sistema" />
@@ -573,8 +573,8 @@ const Dashboard: React.FC = () => {
 
                 <div className="p-2">
                   <Select
-                    value={filtros.subsistema || ""}
-                    onValueChange={(value) => handleFiltroChange("subsistema", value || undefined)}
+                    value={filtros.subsistema || "todos"}
+                    onValueChange={(value) => handleFiltroChange("subsistema", value !== "todos" ? value : undefined)}
                     disabled={!filtros.sistema}
                   >
                     <SelectTrigger className="w-full">
@@ -595,8 +595,8 @@ const Dashboard: React.FC = () => {
                 <DropdownMenuLabel>Estado ITR</DropdownMenuLabel>
                 <div className="p-2">
                   <Select
-                    value={filtros.estadoITRB || ""}
-                    onValueChange={(value: any) => handleFiltroChange("estadoITRB", value || undefined)}
+                    value={filtros.estadoITRB || "todos"}
+                    onValueChange={(value: string) => handleFiltroChange("estadoITRB", value !== "todos" ? value : undefined)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Estado" />
@@ -737,7 +737,7 @@ const Dashboard: React.FC = () => {
                 <span className="hidden sm:inline">Alertas</span>
               </TabsTrigger>
             </TabsList>
-
+            
             {tabActual === "gantt" && (
               <div className="flex gap-2">
                 <Button
@@ -749,7 +749,7 @@ const Dashboard: React.FC = () => {
                   {mostrarSubsistemas ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   {mostrarSubsistemas ? "Ocultar subsistemas" : "Mostrar subsistemas"}
                 </Button>
-
+                
                 <Select
                   value={configuracionGrafico.tamano}
                   onValueChange={(value: "pequeno" | "mediano" | "grande" | "completo") =>
@@ -769,7 +769,7 @@ const Dashboard: React.FC = () => {
               </div>
             )}
           </div>
-
+          
           <TabsContent value="gantt" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
               <CardContent className={`p-0 overflow-hidden ${getGanttHeight()}`}>
@@ -777,18 +777,19 @@ const Dashboard: React.FC = () => {
                   <EnhancedGanttChart
                     filtros={{
                       ...filtros,
-                      busquedaActividad: codigoITRFilter || filtros.busquedaActividad
+                      busquedaActividad: codigoITRFilter || filtros.busquedaActividad,
+                      timestamp: String(Date.now())
                     }}
                     configuracion={{
                       ...configuracionGrafico,
-                      mostrarSubsistemas: mostrarSubsistemas
+                      mostrarSubsistemas
                     }}
                   />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-
+          
           <TabsContent value="critical-path" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
               <CardContent className="p-0 overflow-hidden h-[600px]">
@@ -796,7 +797,7 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
+          
           <TabsContent value="alertas" className="mt-0">
             <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
               <AlertasWidget />

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -138,14 +139,14 @@ const PublicDashboard: React.FC = () => {
           
           <div className="flex flex-wrap gap-2 justify-end w-full md:w-auto">
             <Select
-              value={filtros.sistema || ""}
-              onValueChange={(value) => handleFiltroChange("sistema", value || undefined)}
+              value={filtros.sistema || "todos"}
+              onValueChange={(value) => handleFiltroChange("sistema", value !== "todos" ? value : undefined)}
             >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Sistema" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los sistemas</SelectItem>
+                <SelectItem value="todos">Todos los sistemas</SelectItem>
                 {sistemasDisponibles.map((sistema) => (
                   <SelectItem key={sistema} value={sistema}>
                     {sistema}
@@ -155,15 +156,15 @@ const PublicDashboard: React.FC = () => {
             </Select>
             
             <Select
-              value={filtros.subsistema || ""}
-              onValueChange={(value) => handleFiltroChange("subsistema", value || undefined)}
+              value={filtros.subsistema || "todos"}
+              onValueChange={(value) => handleFiltroChange("subsistema", value !== "todos" ? value : undefined)}
               disabled={!filtros.sistema}
             >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Subsistema" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los subsistemas</SelectItem>
+                <SelectItem value="todos">Todos los subsistemas</SelectItem>
                 {subsistemasFiltrados.map((subsistema) => (
                   <SelectItem key={subsistema} value={subsistema}>
                     {subsistema}
