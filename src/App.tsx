@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ITRManagement from "./pages/ITRManagement";
 import LoginPage from "./pages/LoginPage";
+import AIAssistant from "./pages/AIAssistant";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/itr-management" element={<ITRManagement />} />
+              <Route path="/ai-assistant" element={<AIAssistant />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

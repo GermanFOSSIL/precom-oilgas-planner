@@ -2,7 +2,8 @@
 import React from "react";
 import { ConfiguracionGrafico } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Link, Bot } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -25,7 +26,7 @@ const GanttControls: React.FC<GanttControlsProps> = ({
   onSubsistemasToggle,
 }) => {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 items-center">
       <Button
         variant="outline"
         size="sm"
@@ -52,6 +53,13 @@ const GanttControls: React.FC<GanttControlsProps> = ({
           <SelectItem value="completo">Completo</SelectItem>
         </SelectContent>
       </Select>
+      
+      <Button variant="outline" size="sm" asChild className="ml-auto">
+        <RouterLink to="/ai-assistant" className="flex items-center gap-1">
+          <Bot className="h-4 w-4" />
+          Asistente IA
+        </RouterLink>
+      </Button>
     </div>
   );
 };

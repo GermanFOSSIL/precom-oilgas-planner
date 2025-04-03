@@ -1,63 +1,94 @@
-
-// Add this to your types file
-export interface BackupOptions {
-  includeProyectos: boolean;
-  includeActividades: boolean;
-  includeITRB: boolean;
-  includeAlertas: boolean;
-  proyectoSeleccionado?: string;
-  kpiConfig?: boolean;
+export interface Proyecto {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  fechaCreacion: string;
+  fechaActualizacion: string;
 }
 
-// Make sure your ConfiguracionGrafico type includes mostrarSubsistemas
-export interface ConfiguracionGrafico {
-  tamano: "pequeno" | "mediano" | "grande" | "completo";
-  mostrarLeyenda: boolean;
-  mostrarSubsistemas?: boolean;
+export interface Actividad {
+  id: string;
+  proyectoId: string;
+  nombre: string;
+  sistema: string;
+  subsistema: string;
+  fechaInicio: string;
+  fechaFin: string;
+  duracion: number;
 }
 
-// Update ITRB to include mcc field instead of ccc
 export interface ITRB {
   id: string;
   actividadId: string;
-  codigoITR?: string;
   descripcion: string;
-  fechaLimite: string;
   cantidadTotal: number;
   cantidadRealizada: number;
-  estado: EstadoITRB;
-  mcc: boolean; // This should be mcc instead of ccc
+  estado: "En curso" | "Completado" | "Pendiente" | "Vencido";
+  fechaLimite: string;
+  mcc: boolean;
+  observaciones?: string;
 }
 
-// Update FiltrosDashboard to include mcc field
 export interface FiltrosDashboard {
-  proyecto: string | "todos";
+  proyecto: string;
   sistema?: string;
   subsistema?: string;
-  estadoITRB?: EstadoITRB | "todos";
-  tareaVencida?: boolean;
-  busquedaActividad?: string;
-  timestamp?: number;
-  mcc?: boolean; // This should be mcc instead of ccc
 }
 
-// Add GraficoPersonalizado interface to ensure color is required
-export interface GraficoPersonalizado {
-  id: string;
-  titulo: string;
-  tipo: "barras" | "lineas" | "area" | "pastel";
-  datos: "actividades" | "itrb" | "avance" | "vencimientos";
-  filtro?: Partial<FiltrosDashboard>;
-  color: string;
-  posicion: number;
+export interface ConfiguracionGrafico {
+  tamano?: "pequeno" | "mediano" | "grande" | "completo";
+  mostrarLeyenda?: boolean;
+  mostrarSubsistemas?: boolean;
 }
 
-// Add OpcionesReporte interface for ReportGenerator
-export interface OpcionesReporte {
-  incluirGantt: boolean;
-  formatoGantt: string;
-  orientacion: string;
-  incluirKPIs: boolean;
-  incluirActividades: boolean;
-  incluirITRB: boolean;
+export interface KPIConfig {
+  nombreKPI1?: string;
+  nombreKPI2?: string;
+  nombreKPI3?: string;
+  nombreKPI4?: string;
+  kpiPersonalizado1?: string;
+  kpiPersonalizado2?: string;
+  kpiPersonalizado3?: string;
+  kpiPersonalizado4?: string;
+  itrVencidosMostrar?: "total" | "diferencia" | "pendientes" | "completados";
+}
+
+export interface AppContextType {
+  user: any;
+  setUser: (user: any) => void;
+  logout: () => void;
+  isAdmin: boolean;
+  isTecnico: boolean;
+  theme: {
+    mode: "light" | "dark";
+  };
+  toggleTheme: () => void;
+  proyectos: Proyecto[];
+  actividades: Actividad[];
+  itrbItems: ITRB[];
+  filtros: FiltrosDashboard;
+  setFiltros: (filtros: FiltrosDashboard) => void;
+  configuracionGrafico: ConfiguracionGrafico;
+  setConfigurationGrafico: (configuracion: ConfiguracionGrafico) => void;
+  proyectoActual: string;
+  setProyectoActual: (proyectoId: string) => void;
+  addProyecto: (proyecto: Proyecto) => void;
+  updateProyecto: (id: string, updates: Partial<Proyecto>) => void;
+  deleteProyecto: (id: string) => void;
+  addActividad: (actividad: Actividad) => void;
+  updateActividad: (id: string, updates: Partial<Actividad>) => void;
+  deleteActividad: (id: string) => void;
+  addITRB: (itrb: ITRB) => void;
+  updateITRB: (id: string, updates: Partial<ITRB>) => void;
+  deleteITRB: (id: string) => void;
+  kpiConfig: KPIConfig;
+  updateKPIConfig: (config: Partial<KPIConfig>) => void;
+  apiKeys: APIKeys;
+  updateAPIKeys: (keys: Partial<APIKeys>) => void;
+}
+
+// Agregamos la interfaz para las API keys
+export interface APIKeys {
+  openAI?: string;
+  aiModel?: string;
 }

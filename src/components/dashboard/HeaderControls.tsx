@@ -2,7 +2,7 @@
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { SunMoon, Download, Image, FileSpreadsheet } from "lucide-react";
+import { SunMoon, Download, Image, FileSpreadsheet, Bot } from "lucide-react";
 import ProyectoSelector from "@/components/ProyectoSelector";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Link } from "react-router-dom";
 
 interface HeaderControlsProps {
   onResetSession: () => void;
@@ -53,6 +54,17 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
           className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
         >
           <SunMoon className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="outline"
+          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          asChild
+        >
+          <Link to="/ai-assistant">
+            <Bot className="h-4 w-4 mr-2" />
+            Asistente IA
+          </Link>
         </Button>
 
         <DropdownMenu>

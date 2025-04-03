@@ -66,6 +66,7 @@ import ReportGenerator from "@/components/ReportGenerator";
 import { FiltrosDashboard, ConfiguracionGrafico, Proyecto, Actividad, ITRB, KPIConfig } from "@/types";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import BackupRestore from "@/components/BackupRestore";
+import AIConfigManager from "@/components/AIConfigManager";
 
 const AdminPanel: React.FC = () => {
   const { 
@@ -752,10 +753,11 @@ const AdminPanel: React.FC = () => {
             </CardHeader>
             <CardContent>
               <Tabs value={configTab} onValueChange={setConfigTab}>
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="users">Usuarios</TabsTrigger>
                   <TabsTrigger value="projects">Proyectos</TabsTrigger>
                   <TabsTrigger value="reports">Reportes</TabsTrigger>
+                  <TabsTrigger value="ai">IA</TabsTrigger>
                   <TabsTrigger value="backup">Backup y Restauración</TabsTrigger>
                 </TabsList>
                 
@@ -769,6 +771,10 @@ const AdminPanel: React.FC = () => {
                 
                 <TabsContent value="reports" className="space-y-4">
                   <ReportGenerator />
+                </TabsContent>
+                
+                <TabsContent value="ai" className="space-y-4">
+                  <AIConfigManager />
                 </TabsContent>
                 
                 <TabsContent value="backup" className="space-y-4">
