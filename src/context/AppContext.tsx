@@ -33,6 +33,7 @@ interface AppContextType {
   deleteProyecto: (id: string) => void;
   proyectoActual: string | "todos";
   setProyectoActual: (id: string | "todos") => void;
+  setProyectos: (proyectos: Proyecto[]) => void; // Añadido para backups
   
   // Actividades
   actividades: Actividad[];
@@ -54,6 +55,7 @@ interface AppContextType {
   addAlerta: (alerta: Alerta) => void;
   markAlertaAsRead: (id: string) => void;
   deleteAlerta: (id: string) => void;
+  setAlertas: (alertas: Alerta[]) => void; // Añadido para backups
   
   // Filtros
   filtros: FiltrosDashboard;
