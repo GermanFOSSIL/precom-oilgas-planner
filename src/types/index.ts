@@ -1,3 +1,4 @@
+
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -37,6 +38,7 @@ export interface ITRB {
   estado: EstadoITRB;
   mcc: boolean; // This was previously modified from ccc to mcc
   observaciones?: string;
+  codigoITR?: string;
 }
 
 export interface Alerta {
@@ -53,7 +55,7 @@ export interface KPIs {
   avanceFisico: number;
   totalITRB: number;
   realizadosITRB: number;
-  subsistemasMCC: number; // Cambiado de subsistemasCCC a subsistemasMCC
+  subsistemasMCC: number;
   totalSubsistemas: number;
   actividadesVencidas: number;
   proyectoId?: string;
@@ -67,7 +69,7 @@ export interface FiltrosDashboard {
   fechaFin?: string;
   busquedaActividad?: string;
   estadoITRB?: "Completado" | "En curso" | "Vencido" | "todos";
-  mcc?: boolean; // Mantenemos como mcc
+  mcc?: boolean;
   tareaVencida?: boolean;
   timestamp?: number; // Para refrescar cache
 }
@@ -75,6 +77,7 @@ export interface FiltrosDashboard {
 export interface ConfiguracionGrafico {
   tamano: "pequeno" | "mediano" | "grande" | "completo";
   mostrarLeyenda: boolean;
+  mostrarSubsistemas?: boolean; // Add this property
 }
 
 export interface AppTheme {
@@ -124,11 +127,11 @@ export interface GraficoPersonalizado {
   tipo: "barras" | "lineas" | "pastel" | "area";
   datos: "avance" | "itrb" | "actividades" | "vencimientos";
   filtro?: Partial<FiltrosDashboard>;
-  color: string;
+  color: string; // This is required
   posicion: number;
 }
 
-// New interface for exported report options
+// Interface for exported report options
 export interface OpcionesReporte {
   incluirGantt: boolean;
   formatoGantt: "imagen" | "tabla";
@@ -136,4 +139,14 @@ export interface OpcionesReporte {
   incluirKPIs: boolean;
   incluirActividades: boolean;
   incluirITRB: boolean;
+}
+
+// Add BackupOptions interface
+export interface BackupOptions {
+  includeProyectos: boolean;
+  includeActividades: boolean;
+  includeITRB: boolean;
+  includeAlertas: boolean;
+  proyectoSeleccionado?: string;
+  kpiConfig?: boolean;
 }

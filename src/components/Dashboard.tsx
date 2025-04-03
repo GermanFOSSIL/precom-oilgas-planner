@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { v4 as uuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
@@ -57,21 +57,23 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+
+type DropResult = {
+  draggableId: string;
+  type: string;
+  source: {
+    index: number;
+    droppableId: string;
+  };
+  destination?: {
+    droppableId: string;
+    index: number;
+  };
+  reason: 'DROP';
+};
 
 const formSchema = z.object({
   titulo: z.string().min(2, {
@@ -112,7 +114,7 @@ const Dashboard: React.FC = () => {
   const [modoFiltroAvanzado, setModoFiltroAvanzado] = useState(false);
   const [graficosPersonalizados, setGraficosPersonalizados] = useState<GraficoPersonalizado[]>([
     {
-      id: uuid(),
+      id: uuidv4(),
       titulo: "Actividades por sistema",
       tipo: "barras",
       datos: "actividades",
@@ -120,7 +122,7 @@ const Dashboard: React.FC = () => {
       posicion: 0
     },
     {
-      id: uuid(),
+      id: uuidv4(),
       titulo: "Avance general",
       tipo: "lineas",
       datos: "avance",
@@ -441,10 +443,10 @@ const Dashboard: React.FC = () => {
     if (typeof checked === 'boolean') {
       setMostrarSubsistemas(checked);
 
-      setConfiguracionGrafico({
-        ...configuracionGrafico,
+      setConfiguracionGrafico(prev => ({
+        ...prev,
         mostrarSubsistemas: checked
-      });
+      }));
     }
   };
 
@@ -457,7 +459,6 @@ const Dashboard: React.FC = () => {
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    // Actualizar la posición de los gráficos
     const updatedGraficos = items.map((grafico, index) => ({ ...grafico, posicion: index }));
 
     setGraficosPersonalizados(updatedGraficos);
@@ -467,11 +468,11 @@ const Dashboard: React.FC = () => {
     setGraficosPersonalizados(prev => [
       ...prev,
       {
-        id: uuid(),
+        id: uuidv4(),
         titulo: "Nuevo gráfico",
         tipo: "barras",
         datos: "actividades",
-        color: "#3b82f6", // Ensure color property is always present
+        color: "#3b82f6",
         posicion: prev.length
       }
     ]);

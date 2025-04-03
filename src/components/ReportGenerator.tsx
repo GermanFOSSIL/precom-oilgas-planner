@@ -48,11 +48,7 @@ const ReportGenerator: React.FC = () => {
 
       const checkPageBreak = (contentHeight: number) => {
         if (currentY + contentHeight + margin > pageHeight) {
-          doc.addPage({
-            orientation: opciones.orientacion === "horizontal" ? "landscape" : "portrait",
-            unit: "mm",
-            format: 'a4'
-          });
+          doc.addPage();
           currentY = 20;
         }
       };
@@ -95,10 +91,7 @@ const ReportGenerator: React.FC = () => {
       }
 
       if (opciones.incluirGantt) {
-        const ganttChartModule = await import('@/components/EnhancedGanttChart');
-        const ganttChart = ganttChartModule.default;
-
-        const ganttChartContainer = document.querySelector('.gantt-chart-container');
+        const ganttChartContainer = document.querySelector('.gantt-chart-container') as HTMLElement;
 
         if (ganttChartContainer) {
           const timestamp = document.createElement('div');
@@ -215,8 +208,8 @@ const ReportGenerator: React.FC = () => {
       doc.save("reporte-precomisionado.pdf");
       toast.success("Reporte generado exitosamente");
     } catch (error) {
-      console.error("Error al generar el reporte:", error);
-      toast.error("Error al generar el reporte: " + (error instanceof Error ? error.message : "Error desconocido"));
+      console.error("Error generando reporte:", error);
+      toast.error("Error al generar el reporte");
     } finally {
       setIsGenerating(false);
     }
