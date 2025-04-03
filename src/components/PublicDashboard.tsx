@@ -35,8 +35,6 @@ import PublicHeader from "@/components/PublicHeader";
 import ProyectoSelector from "@/components/ProyectoSelector";
 import AlertasWidget from "@/components/AlertasWidget";
 import { toast } from "sonner";
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 const PublicDashboard: React.FC = () => {
@@ -104,7 +102,7 @@ const PublicDashboard: React.FC = () => {
 
   const generarPDF = () => {
     try {
-      const doc = new jsPDF();
+      const doc = new window.jsPDF();
       
       doc.text("Dashboard - Plan de Precomisionado", 14, 20);
       doc.text("Fecha: " + new Date().toLocaleDateString('es-ES'), 14, 30);

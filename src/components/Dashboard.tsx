@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
@@ -31,8 +30,6 @@ import {
 import { ConfiguracionGrafico, GraficoPersonalizado } from "@/types";
 import { useAppContext } from "@/context/AppContext";
 import { toast } from "sonner";
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { 
   Card,
@@ -105,7 +102,8 @@ const Dashboard: React.FC = () => {
   
   const generarPDF = () => {
     try {
-      const doc = new jsPDF();
+      // Use the jsPDF constructor from the window global object
+      const doc = new window.jsPDF();
       
       // Título
       doc.text("Dashboard - Plan de Precomisionado", 14, 20);
