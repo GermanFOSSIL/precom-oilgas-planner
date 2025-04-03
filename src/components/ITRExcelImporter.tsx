@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -151,7 +150,6 @@ const ITRExcelImporter: React.FC = () => {
           cantidadRealizada: 0,
           estado: "En curso",
           fechaLimite: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 días en el futuro
-          ccc: false,
           mcc: false
         };
 

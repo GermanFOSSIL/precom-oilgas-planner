@@ -60,7 +60,6 @@ const Dashboard: React.FC = () => {
 
   const [tabActual, setTabActual] = useState("gantt");
   
-  // Custom widgets
   const [widgets, setWidgets] = useState<GraficoPersonalizado[]>([
     {
       id: "widget-1",
@@ -84,7 +83,6 @@ const Dashboard: React.FC = () => {
   const [editingWidget, setEditingWidget] = useState<GraficoPersonalizado | null>(null);
   const [maximizedWidget, setMaximizedWidget] = useState<string | null>(null);
 
-  // Ensure filters are updated when the component mounts
   useEffect(() => {
     setFiltros({ ...filtros, timestamp: Date.now() });
   }, []);
@@ -102,28 +100,23 @@ const Dashboard: React.FC = () => {
   
   const generarPDF = () => {
     try {
-      // Use the jsPDF constructor from the window global object
       const doc = new window.jsPDF();
       
-      // Título
       doc.text("Dashboard - Plan de Precomisionado", 14, 20);
       doc.text("Fecha: " + new Date().toLocaleDateString('es-ES'), 14, 30);
       
-      // Obtener KPIs para el proyecto seleccionado
       const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
       
-      // Proyecto actual
       const proyectoNombre = filtros.proyecto !== "todos" ? 
         proyectos.find(p => p.id === filtros.proyecto)?.titulo || "Todos los proyectos" : 
         "Todos los proyectos";
       
       doc.text(`Proyecto: ${proyectoNombre}`, 14, 40);
       
-      // Tabla de KPIs
       const kpisData = [
         ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
         ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
-        ["Subsistemas con CCC", `${kpis.subsistemasCCC}/${kpis.totalSubsistemas}`],
+        ["Subsistemas con MCC", `${kpis.subsistemasMCC}/${kpis.totalSubsistemas}`],
         ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
       ];
       
@@ -135,7 +128,6 @@ const Dashboard: React.FC = () => {
         headStyles: { fillColor: [59, 130, 246] }
       });
       
-      // Tabla de actividades filtradas por proyecto
       const actividadesFiltradas = actividades.filter(act => 
         filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
       );
@@ -161,7 +153,6 @@ const Dashboard: React.FC = () => {
         });
       }
       
-      // Tabla de ITR B filtrados por proyecto
       const itrbsFiltrados = itrbItems.filter(itrb => {
         const actividad = actividades.find(act => act.id === itrb.actividadId);
         return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
@@ -178,13 +169,13 @@ const Dashboard: React.FC = () => {
             actividad?.subsistema || "",
             `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
             itrb.estado,
-            itrb.ccc ? "Sí" : "No"
+            itrb.mcc ? "Sí" : "No"
           ];
         });
         
         (doc as any).autoTable({
           startY: (doc as any).lastAutoTable.finalY + 20,
-          head: [['Descripción', 'Sistema', 'Subsistema', 'Realizado/Total', 'Estado', 'CCC']],
+          head: [['Descripción', 'Sistema', 'Subsistema', 'Realizado/Total', 'Estado', 'MCC']],
           body: itrbData,
           theme: 'striped',
           headStyles: { fillColor: [59, 130, 246] }
@@ -201,21 +192,17 @@ const Dashboard: React.FC = () => {
 
   const generarExcel = () => {
     try {
-      // Crear libro Excel
       const wb = XLSX.utils.book_new();
       
-      // Filtrar actividades según proyecto
       const actividadesFiltradas = actividades.filter(act => 
         filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
       );
       
-      // Filtrar ITRBs según proyecto
       const itrbsFiltrados = itrbItems.filter(itrb => {
         const actividad = actividades.find(act => act.id === itrb.actividadId);
         return !actividad || filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto;
       });
       
-      // Hoja de actividades
       if (actividadesFiltradas.length > 0) {
         const wsData = actividadesFiltradas.map(act => ({
           Nombre: act.nombre,
@@ -230,7 +217,6 @@ const Dashboard: React.FC = () => {
         XLSX.utils.book_append_sheet(wb, ws, "Actividades");
       }
       
-      // Hoja de ITR B
       if (itrbsFiltrados.length > 0) {
         const wsData = itrbsFiltrados.map(itrb => {
           const actividad = actividades.find(act => act.id === itrb.actividadId);
@@ -242,7 +228,7 @@ const Dashboard: React.FC = () => {
             "Realizado/Total": `${itrb.cantidadRealizada}/${itrb.cantidadTotal}`,
             "Progreso (%)": itrb.cantidadTotal > 0 ? ((itrb.cantidadRealizada / itrb.cantidadTotal) * 100).toFixed(1) + "%" : "0%",
             Estado: itrb.estado,
-            CCC: itrb.ccc ? "Sí" : "No",
+            MCC: itrb.mcc ? "Sí" : "No",
             "Fecha Límite": new Date(itrb.fechaLimite).toLocaleDateString('es-ES')
           };
         });
@@ -251,7 +237,6 @@ const Dashboard: React.FC = () => {
         XLSX.utils.book_append_sheet(wb, ws, "ITR B");
       }
       
-      // Guardar Excel
       XLSX.writeFile(wb, "dashboard-precomisionado.xlsx");
       toast.success("Excel generado exitosamente");
     } catch (error) {
@@ -260,7 +245,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Functions to handle custom widgets
   const handleCreateWidget = () => {
     const newWidget: GraficoPersonalizado = {
       id: `widget-${Date.now()}`,
@@ -272,10 +256,8 @@ const Dashboard: React.FC = () => {
     };
     
     if (editingWidget?.id) {
-      // Editing existing widget
       setWidgets(widgets.map(w => w.id === editingWidget.id ? { ...newWidget, id: editingWidget.id } : w));
     } else {
-      // Creating new widget
       setWidgets([...widgets, newWidget]);
     }
     
@@ -463,7 +445,6 @@ const Dashboard: React.FC = () => {
         </div>
       </main>
       
-      {/* Widget Creation/Editing Dialog */}
       <Dialog open={showWidgetDialog} onOpenChange={setShowWidgetDialog}>
         <DialogContent>
           <DialogHeader>
@@ -529,7 +510,7 @@ const Dashboard: React.FC = () => {
                     id: '', 
                     titulo: '', 
                     tipo: 'barras', 
-                    color: '#3b82f6', 
+                    datos: 'avance', 
                     posicion: 0 
                   }),
                   datos: value

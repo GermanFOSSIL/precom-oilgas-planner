@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Actividad, ITRB } from "@/types";
@@ -53,7 +52,7 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     cantidadTotal: editingITRB?.cantidadTotal || 1,
     cantidadRealizada: editingITRB?.cantidadRealizada || 0,
     fechaLimite: editingITRB?.fechaLimite || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    ccc: editingITRB?.ccc || false,
+    mcc: editingITRB?.mcc || false,
     observaciones: editingITRB?.observaciones || ""
   };
 
@@ -66,7 +65,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
   const [busquedaActividad, setBusquedaActividad] = useState<string>("");
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // Filtrar proyectos disponibles
   const proyectosDisponibles = useMemo(() => {
     return proyectos.map(p => ({
       id: p.id,
@@ -74,7 +72,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     }));
   }, [proyectos]);
 
-  // Obtener sistemas disponibles según el proyecto seleccionado
   const sistemasDisponibles = useMemo(() => {
     const sistemasSet = new Set<string>();
     
@@ -87,7 +84,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     return Array.from(sistemasSet).sort();
   }, [actividades, selectedProyecto]);
 
-  // Obtener subsistemas disponibles según el sistema seleccionado
   const subsistemasDisponibles = useMemo(() => {
     const subsisSet = new Set<string>();
     
@@ -103,7 +99,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     return Array.from(subsisSet).sort();
   }, [actividades, selectedProyecto, selectedSistema]);
 
-  // Filtrar actividades disponibles
   const actividadesFiltradas = useMemo(() => {
     return actividades.filter(act => 
       (!selectedProyecto || act.proyectoId === selectedProyecto) &&
@@ -122,7 +117,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     });
   }, [actividades, proyectos, selectedProyecto, selectedSistema, selectedSubsistema, busquedaActividad]);
 
-  // Actividad seleccionada
   const actividadSeleccionada = useMemo(() => {
     if (!formData.actividadId) return null;
     return actividades.find(act => act.id === formData.actividadId);
@@ -140,13 +134,12 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
   };
 
   const handleCheckboxChange = (checked: boolean) => {
-    setFormData(prev => ({ ...prev, ccc: checked }));
+    setFormData(prev => ({ ...prev, mcc: checked }));
   };
 
   const handleSelectActividad = (actividadId: string) => {
     setFormData(prev => ({ ...prev, actividadId }));
     
-    // Actualizar filtros basados en la actividad seleccionada
     const actividad = actividades.find(act => act.id === actividadId);
     if (actividad) {
       setSelectedProyecto(actividad.proyectoId);
@@ -166,7 +159,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
   };
 
   const handleSubmit = async () => {
-    // Validación
     if (!formData.actividadId) {
       toast.error("Debe seleccionar una actividad");
       return;
@@ -187,7 +179,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
       return;
     }
 
-    // Creación o actualización del ITR B
     try {
       if (editingITRB) {
         const itrb: ITRB = {
@@ -207,7 +198,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
         toast.success("ITR B creado correctamente");
       }
       
-      // Cerrar el formulario
       onClose();
     } catch (error) {
       console.error("Error al procesar ITR B:", error);
@@ -414,12 +404,12 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
         
         <div className="flex items-center space-x-2 mt-4">
           <Checkbox
-            id="ccc"
-            checked={formData.ccc}
+            id="mcc"
+            checked={formData.mcc}
             onCheckedChange={handleCheckboxChange}
           />
-          <Label htmlFor="ccc" className="cursor-pointer">
-            Certificado de Conformidad de Construcción (CCC)
+          <Label htmlFor="mcc" className="cursor-pointer">
+            Certificado de Conformidad de Construcción (MCC)
           </Label>
         </div>
         

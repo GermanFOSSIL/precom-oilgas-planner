@@ -1,390 +1,239 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription,
-  CardFooter
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { GraficoPersonalizado } from "@/types";
-import { 
-  BarChart, 
-  Bar, 
-  LineChart, 
-  Line,
-  PieChart as RechartsPieChart, 
-  Pie, 
-  Cell,
-  ResponsiveContainer,
+import {
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
 } from "recharts";
-import { Settings, Maximize2, Minimize2, X, Move, BarChart4, PieChart, LineChart as LineChartIcon } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { MoreVertical, Edit, Trash, Maximize, Minimize } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useDrag } from "@use-gesture/react";
+import { GraficoPersonalizado, FiltrosDashboard } from "@/types";
+import { toast } from "sonner";
 
 interface DashboardCustomWidgetProps {
   widget: GraficoPersonalizado;
-  onEdit?: () => void;
-  onRemove?: () => void;
-  onMaximize?: () => void;
-  isMaximized?: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
+  onMaximize: () => void;
+  isMaximized: boolean;
 }
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
-
-const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({ 
-  widget, 
-  onEdit, 
+const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
+  widget,
+  onEdit,
   onRemove,
   onMaximize,
-  isMaximized = false
+  isMaximized,
 }) => {
-  const { actividades, itrbItems, proyectos } = useAppContext();
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  
-  // Correct implementation of useDrag
-  const bindDrag = useDrag((state) => {
-    setPosition({ 
-      x: state.offset[0], 
-      y: state.offset[1] 
-    });
-  });
-  
-  const getData = () => {
+  const { actividades, itrbItems, proyectos, getKPIs } = useAppContext();
+
+  const chartData = useMemo(() => {
     switch (widget.datos) {
       case "avance":
-        return proyectos.map(proyecto => {
-          const actividadesProyecto = actividades.filter(a => a.proyectoId === proyecto.id);
-          const itrbsProyecto = itrbItems.filter(i => {
-            const actividad = actividades.find(a => a.id === i.actividadId);
-            return actividad && actividad.proyectoId === proyecto.id;
-          });
-          
-          const totalItrbs = itrbsProyecto.length;
-          const completados = itrbsProyecto.filter(i => i.estado === "Completado").length;
-          const porcentaje = totalItrbs > 0 ? (completados / totalItrbs) * 100 : 0;
-          
+        // Agrupar por proyecto y calcular el avance
+        const proyectosAgrupados = proyectos.map(proyecto => {
+          const actividadesProyecto = actividades.filter(actividad => actividad.proyectoId === proyecto.id);
+          const totalITRB = actividadesProyecto.reduce((total, actividad) => {
+            return total + itrbItems.filter(itrb => itrb.actividadId === actividad.id).length;
+          }, 0);
+          const completadosITRB = actividadesProyecto.reduce((total, actividad) => {
+            return total + itrbItems.filter(itrb => itrb.actividadId === actividad.id && itrb.estado === "Completado").length;
+          }, 0);
+
+          const avance = totalITRB > 0 ? (completadosITRB / totalITRB) * 100 : 0;
           return {
             name: proyecto.titulo,
-            value: Math.round(porcentaje),
-            actividades: actividadesProyecto.length,
-            itrbs: totalItrbs,
-            completados
+            avance: avance,
+            totalITRB,
+            completadosITRB
           };
         });
-        
+        return proyectosAgrupados;
+
       case "itrb":
-        const estadosCount = { Completado: 0, "En curso": 0, Vencido: 0 };
-        itrbItems.forEach(itrb => {
-          estadosCount[itrb.estado as keyof typeof estadosCount]++;
-        });
-        
-        return [
-          { name: "Completados", value: estadosCount.Completado, color: "#22c55e" },
-          { name: "En curso", value: estadosCount["En curso"], color: "#f59e0b" },
-          { name: "Vencidos", value: estadosCount.Vencido, color: "#ef4444" }
-        ];
-        
+        // Agrupar por estado de ITRB
+        const estadosAgrupados = itrbItems.reduce((acc: any, itrb) => {
+          const estado = itrb.estado;
+          acc[estado] = (acc[estado] || 0) + 1;
+          return acc;
+        }, {});
+
+        return Object.entries(estadosAgrupados).map(([name, value]: [string, any]) => ({
+          name,
+          value
+        }));
+
       case "actividades":
-        const sistemaCount: Record<string, number> = {};
-        actividades.forEach(act => {
-          sistemaCount[act.sistema] = (sistemaCount[act.sistema] || 0) + 1;
-        });
-        
-        return Object.entries(sistemaCount).map(([name, value], index) => ({
+        // Agrupar por sistema
+        const sistemasAgrupados = actividades.reduce((acc: any, actividad) => {
+          const sistema = actividad.sistema;
+          acc[sistema] = (acc[sistema] || 0) + 1;
+          return acc;
+        }, {});
+
+        return Object.entries(sistemasAgrupados).map(([name, value]: [string, any]) => ({
           name,
-          value,
-          color: COLORS[index % COLORS.length]
+          value
         }));
-        
+
       case "vencimientos":
-        const now = new Date();
-        const monthsData: Record<string, { vencidos: number, proximos: number }> = {};
-        
-        for (let i = 0; i < 6; i++) {
-          const month = new Date(now.getFullYear(), now.getMonth() + i, 1);
-          const monthKey = month.toLocaleString('default', { month: 'short', year: 'numeric' });
-          monthsData[monthKey] = { vencidos: 0, proximos: 0 };
-        }
-        
-        itrbItems.forEach(itrb => {
-          const fechaLimite = new Date(itrb.fechaLimite);
-          const monthKey = fechaLimite.toLocaleString('default', { month: 'short', year: 'numeric' });
-          
-          if (monthsData[monthKey]) {
-            if (fechaLimite < now && itrb.estado !== "Completado") {
-              monthsData[monthKey].vencidos++;
-            } else {
-              monthsData[monthKey].proximos++;
-            }
-          }
-        });
-        
-        return Object.entries(monthsData).map(([name, data]) => ({
+        // Agrupar por mes de fecha límite de ITRB
+        const vencimientosAgrupados = itrbItems.reduce((acc: any, itrb) => {
+          const fecha = new Date(itrb.fechaLimite);
+          const mes = fecha.toLocaleString('default', { month: 'long' });
+          acc[mes] = (acc[mes] || 0) + 1;
+          return acc;
+        }, {});
+
+        return Object.entries(vencimientosAgrupados).map(([name, value]: [string, any]) => ({
           name,
-          Vencidos: data.vencidos,
-          Próximos: data.proximos
+          value
         }));
-        
+
       default:
         return [];
     }
-  };
-  
+  }, [actividades, itrbItems, proyectos, widget.datos]);
+
   const renderChart = () => {
-    const data = getData();
-    const height = isMaximized ? 500 : 300;
-    
     switch (widget.tipo) {
       case "barras":
         return (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart
-              data={data}
-              margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-700" />
-              <XAxis 
-                dataKey="name" 
-                className="dark:fill-slate-400"
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis className="dark:fill-slate-400" />
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
               <Tooltip />
               <Legend />
-              {widget.datos === "vencimientos" ? (
-                <>
-                  <Bar dataKey="Vencidos" fill="#ef4444" />
-                  <Bar dataKey="Próximos" fill="#3b82f6" />
-                </>
-              ) : (
-                <Bar 
-                  dataKey="value" 
-                  fill={widget.color || "#3b82f6"}
-                  name={widget.datos === "avance" ? "Avance (%)" : "Cantidad"}
-                />
-              )}
+              <Bar dataKey="avance" fill={widget.color} />
             </BarChart>
           </ResponsiveContainer>
         );
-        
+
       case "lineas":
         return (
-          <ResponsiveContainer width="100%" height={height}>
-            <LineChart
-              data={data}
-              margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-700" />
-              <XAxis 
-                dataKey="name" 
-                className="dark:fill-slate-400"
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis className="dark:fill-slate-400" />
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
               <Tooltip />
               <Legend />
-              {widget.datos === "vencimientos" ? (
-                <>
-                  <Line type="monotone" dataKey="Vencidos" stroke="#ef4444" />
-                  <Line type="monotone" dataKey="Próximos" stroke="#3b82f6" />
-                </>
-              ) : (
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke={widget.color || "#3b82f6"}
-                  name={widget.datos === "avance" ? "Avance (%)" : "Cantidad"}
-                />
-              )}
+              <Line type="monotone" dataKey="value" stroke={widget.color} />
             </LineChart>
           </ResponsiveContainer>
         );
-        
+
       case "pastel":
+        const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+
         return (
-          <ResponsiveContainer width="100%" height={height}>
-            <RechartsPieChart>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
               <Pie
-                data={data}
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
                 cx="50%"
                 cy="50%"
-                labelLine={true}
-                outerRadius={isMaximized ? 180 : 100}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill={widget.color}
+                label
               >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                ))}
+                {
+                  chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))
+                }
               </Pie>
               <Tooltip />
               <Legend />
-            </RechartsPieChart>
+            </PieChart>
           </ResponsiveContainer>
         );
-        
       case "area":
         return (
-          <ResponsiveContainer width="100%" height={height}>
-            <LineChart
-              data={data}
-              margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-700" />
-              <XAxis 
-                dataKey="name" 
-                className="dark:fill-slate-400"
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis className="dark:fill-slate-400" />
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
               <Tooltip />
               <Legend />
-              {widget.datos === "vencimientos" ? (
-                <>
-                  <Line 
-                    type="monotone" 
-                    dataKey="Vencidos" 
-                    stroke="#ef4444"
-                    fill="#ef444455"
-                    fillOpacity={0.3}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="Próximos" 
-                    stroke="#3b82f6"
-                    fill="#3b82f655"
-                    fillOpacity={0.3}
-                  />
-                </>
-              ) : (
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke={widget.color || "#3b82f6"}
-                  fill={widget.color ? `${widget.color}55` : "#3b82f655"}
-                  fillOpacity={0.3}
-                  name={widget.datos === "avance" ? "Avance (%)" : "Cantidad"}
-                />
-              )}
-            </LineChart>
+              <Area type="monotone" dataKey="value" stroke={widget.color} fill={widget.color} />
+            </AreaChart>
           </ResponsiveContainer>
         );
-        
+
       default:
-        return <div>Tipo de gráfico no soportado</div>;
+        return <p>Tipo de gráfico no soportado</p>;
     }
   };
-  
-  const getChartIcon = () => {
-    switch (widget.tipo) {
-      case "barras":
-        return <BarChart4 className="h-5 w-5 mr-2" />;
-      case "pastel":
-        return <PieChart className="h-5 w-5 mr-2" />;
-      case "lineas":
-      case "area":
-        return <LineChartIcon className="h-5 w-5 mr-2" />;
-      default:
-        return <BarChart4 className="h-5 w-5 mr-2" />;
-    }
-  };
-  
+
   return (
-    <Card 
-      className={`dark:bg-slate-800 dark:border-slate-700 ${isMaximized ? "fixed inset-10 z-50" : "relative"}`}
-      style={isMaximized ? {} : { transform: `translate(${position.x}px, ${position.y}px)` }}
-    >
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div className="flex items-center">
-          {getChartIcon()}
-          <CardTitle>{widget.titulo}</CardTitle>
-        </div>
-        
-        <div className="flex items-center gap-1">
-          {!isMaximized && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 cursor-move"
-              {...bindDrag()}
-            >
-              <Move className="h-4 w-4" />
-            </Button>
-          )}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onEdit}>
-                Editar widget
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRemove} className="text-red-600 dark:text-red-400">
-                Eliminar widget
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8"
-            onClick={onMaximize}
-          >
-            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </Button>
-          
-          {isMaximized && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={onMaximize}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+    <Card className={`w-full ${isMaximized ? 'col-span-2' : ''}`}>
+      <CardHeader>
+        <CardTitle>{widget.titulo}</CardTitle>
+        <CardDescription>
+          Visualización personalizada de datos del proyecto
+        </CardDescription>
       </CardHeader>
-      
-      <CardContent className="p-4 pt-0">
+      <CardContent className="p-4">
         {renderChart()}
       </CardContent>
-      
-      <CardFooter className="text-xs text-muted-foreground justify-end pt-0">
-        {widget.datos === "avance" && "Datos de avance por proyecto"}
-        {widget.datos === "itrb" && "Distribución de ITR B por estado"}
-        {widget.datos === "actividades" && "Actividades por sistema"}
-        {widget.datos === "vencimientos" && "Próximos vencimientos"}
-      </CardFooter>
+      <div className="absolute top-2 right-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Abrir menú</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEdit}>
+              <Edit className="mr-2 h-4 w-4" /> Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onRemove}>
+              <Trash className="mr-2 h-4 w-4" /> Eliminar
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onMaximize}>
+              {isMaximized ? (
+                <>
+                  <Minimize className="mr-2 h-4 w-4" />
+                  Restaurar
+                </>
+              ) : (
+                <>
+                  <Maximize className="mr-2 h-4 w-4" />
+                  Maximizar
+                </>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </Card>
   );
 };

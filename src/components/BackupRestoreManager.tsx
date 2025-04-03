@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -26,10 +25,10 @@ const BackupRestoreManager = () => {
   } = useAppContext();
   
   const [backupOptions, setBackupOptions] = useState<BackupOptions>({
-    proyectos: true,
-    actividades: true,
-    itrbItems: true,
-    alertas: true,
+    includeProyectos: true,
+    includeActividades: true,
+    includeITRB: true,
+    includeAlertas: true,
     kpiConfig: true
   });
   
@@ -60,19 +59,19 @@ const BackupRestoreManager = () => {
       
       const backupData: any = {};
       
-      if (backupOptions.proyectos) {
+      if (backupOptions.includeProyectos) {
         backupData.proyectos = proyectos;
       }
       
-      if (backupOptions.actividades) {
+      if (backupOptions.includeActividades) {
         backupData.actividades = actividades;
       }
       
-      if (backupOptions.itrbItems) {
+      if (backupOptions.includeITRB) {
         backupData.itrbItems = itrbItems;
       }
       
-      if (backupOptions.alertas) {
+      if (backupOptions.includeAlertas) {
         backupData.alertas = alertas;
       }
       
@@ -146,8 +145,8 @@ const BackupRestoreManager = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="proyectos-backup" 
-                  checked={backupOptions.proyectos}
-                  onCheckedChange={() => handleBackupOptionChange('proyectos')}
+                  checked={backupOptions.includeProyectos}
+                  onCheckedChange={() => handleBackupOptionChange('includeProyectos')}
                 />
                 <Label htmlFor="proyectos-backup">Proyectos ({proyectos.length})</Label>
               </div>
@@ -155,8 +154,8 @@ const BackupRestoreManager = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="actividades-backup" 
-                  checked={backupOptions.actividades}
-                  onCheckedChange={() => handleBackupOptionChange('actividades')}
+                  checked={backupOptions.includeActividades}
+                  onCheckedChange={() => handleBackupOptionChange('includeActividades')}
                 />
                 <Label htmlFor="actividades-backup">Actividades ({actividades.length})</Label>
               </div>
@@ -164,8 +163,8 @@ const BackupRestoreManager = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="itrbs-backup" 
-                  checked={backupOptions.itrbItems}
-                  onCheckedChange={() => handleBackupOptionChange('itrbItems')}
+                  checked={backupOptions.includeITRB}
+                  onCheckedChange={() => handleBackupOptionChange('includeITRB')}
                 />
                 <Label htmlFor="itrbs-backup">ITR B ({itrbItems.length})</Label>
               </div>
@@ -173,8 +172,8 @@ const BackupRestoreManager = () => {
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="alertas-backup" 
-                  checked={backupOptions.alertas}
-                  onCheckedChange={() => handleBackupOptionChange('alertas')}
+                  checked={backupOptions.includeAlertas}
+                  onCheckedChange={() => handleBackupOptionChange('includeAlertas')}
                 />
                 <Label htmlFor="alertas-backup">Alertas ({alertas.length})</Label>
               </div>
@@ -203,10 +202,10 @@ const BackupRestoreManager = () => {
               <div className="text-sm">
                 <p className="font-medium">Total de elementos:</p>
                 <p className="text-muted-foreground">
-                  {(backupOptions.proyectos ? proyectos.length : 0) +
-                   (backupOptions.actividades ? actividades.length : 0) +
-                   (backupOptions.itrbItems ? itrbItems.length : 0) +
-                   (backupOptions.alertas ? alertas.length : 0) +
+                  {(backupOptions.includeProyectos ? proyectos.length : 0) +
+                   (backupOptions.includeActividades ? actividades.length : 0) +
+                   (backupOptions.includeITRB ? itrbItems.length : 0) +
+                   (backupOptions.includeAlertas ? alertas.length : 0) +
                    (backupOptions.kpiConfig ? 1 : 0)}
                 </p>
               </div>

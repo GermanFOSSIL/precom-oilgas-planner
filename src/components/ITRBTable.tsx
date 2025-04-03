@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import {
@@ -77,7 +76,7 @@ const ITRBTable: React.FC = () => {
 
   const [busqueda, setBusqueda] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoITRB | "todos">("todos");
-  const [cccFiltro, setCccFiltro] = useState<boolean | "todos">("todos");
+  const [mccFiltro, setMccFiltro] = useState<boolean | "todos">("todos");
   
   // Estado para la edición
   const [itrbEditando, setItrbEditando] = useState<ITRB | null>(null);
@@ -115,8 +114,8 @@ const ITRBTable: React.FC = () => {
         return false;
       }
       
-      // Filtrar por CCC
-      if (cccFiltro !== "todos" && itrb.ccc !== cccFiltro) {
+      // Filtrar por MCC
+      if (mccFiltro !== "todos" && itrb.mcc !== mccFiltro) {
         return false;
       }
       
@@ -133,7 +132,7 @@ const ITRBTable: React.FC = () => {
       
       return true;
     });
-  }, [itrbItems, actividades, proyectoActual, filtros, estadoFiltro, cccFiltro, busqueda]);
+  }, [itrbItems, actividades, proyectoActual, filtros, estadoFiltro, mccFiltro, busqueda]);
 
   // Función para abrir el diálogo de edición
   const handleEdit = (itrb: ITRB) => {
@@ -260,16 +259,16 @@ const ITRBTable: React.FC = () => {
         </Select>
         
         <Select
-          value={cccFiltro.toString()}
-          onValueChange={(value) => setCccFiltro(value === "true" ? true : value === "false" ? false : "todos")}
+          value={mccFiltro.toString()}
+          onValueChange={(value) => setMccFiltro(value === "true" ? true : value === "false" ? false : "todos")}
         >
           <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder="CCC" />
+            <SelectValue placeholder="MCC" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="true">CCC</SelectItem>
-            <SelectItem value="false">No CCC</SelectItem>
+            <SelectItem value="true">MCC</SelectItem>
+            <SelectItem value="false">No MCC</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -283,7 +282,7 @@ const ITRBTable: React.FC = () => {
               <TableHead>Actividad</TableHead>
               <TableHead className="w-[120px]">Progreso</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>CCC</TableHead>
+              <TableHead>MCC</TableHead>
               <TableHead>Fecha Límite</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -331,8 +330,8 @@ const ITRBTable: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {itrb.ccc ? (
-                        <Badge variant="default" className="bg-blue-500">CCC</Badge>
+                      {itrb.mcc ? (
+                        <Badge variant="default" className="bg-blue-500">MCC</Badge>
                       ) : (
                         <Badge variant="outline">No</Badge>
                       )}
@@ -508,15 +507,15 @@ const ITRBTable: React.FC = () => {
                 </div>
                 <div className="flex items-center pt-8">
                   <Checkbox
-                    id="ccc"
-                    checked={itrbEditando.ccc}
+                    id="mcc"
+                    checked={itrbEditando.mcc}
                     onCheckedChange={(checked) => setItrbEditando({
                       ...itrbEditando,
-                      ccc: checked === true
+                      mcc: checked === true
                     })}
                   />
-                  <Label htmlFor="ccc" className="ml-2">
-                    Marcar como CCC
+                  <Label htmlFor="mcc" className="ml-2">
+                    Marcar como MCC
                   </Label>
                 </div>
               </div>

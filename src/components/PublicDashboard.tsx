@@ -97,7 +97,11 @@ const PublicDashboard: React.FC = () => {
   );
 
   const handleFiltroChange = (key: keyof FiltrosDashboard, value: any) => {
-    setFiltros({ ...filtros, [key]: value });
+    if (key === 'timestamp' && typeof value === 'string') {
+      setFiltros({ ...filtros, [key]: Number(value) });
+    } else {
+      setFiltros({ ...filtros, [key]: value });
+    }
   };
 
   const handleTamanoGrafico = (tamano: ConfiguracionGrafico["tamano"]) => {
@@ -383,6 +387,17 @@ const PublicDashboard: React.FC = () => {
     }
   };
 
+  const handleSubsistemaToggle = (checked: boolean | "indeterminate") => {
+    if (typeof checked === 'boolean') {
+      setMostrarSubsistemas(checked);
+      
+      setConfiguracionGrafico({
+        ...configuracionGrafico,
+        mostrarSubsistemas: checked
+      });
+    }
+  };
+
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
       <PublicHeader />
@@ -524,9 +539,11 @@ const PublicDashboard: React.FC = () => {
                     <Checkbox 
                       id="mostrar-subsistemas"
                       checked={mostrarSubsistemas}
-                      onCheckedChange={setMostrarSubsistemas}
+                      onCheckedChange={handleSubsistemaToggle}
                     />
-                    <Label htmlFor="mostrar-subsistemas">Mostrar subsistemas en Gantt</Label>
+                    <Label htmlFor="mostrar-subsistemas">
+                      Mostrar Subsistemas
+                    </Label>
                   </div>
                   
                   <div className="flex justify-end">

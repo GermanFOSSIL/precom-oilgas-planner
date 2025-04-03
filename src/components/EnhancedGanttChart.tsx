@@ -104,10 +104,10 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
         return itrbsAsociados.some(itrb => itrb.estado === "Vencido");
       }
       
-      // Filtrar por CCC
-      if (filtros.ccc) {
+      // Filtrar por MCC
+      if (filtros.mcc) {
         const itrbsAsociados = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
-        return itrbsAsociados.some(itrb => itrb.ccc);
+        return itrbsAsociados.some(itrb => itrb.mcc);
       }
       
       return true;
@@ -128,8 +128,8 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
       // Verificar si hay ITRBs vencidos
       const tieneVencidos = itrbsAsociados.some(itrb => itrb.estado === "Vencido");
       
-      // Verificar si hay ITRBs CCC
-      const tieneCCC = itrbsAsociados.some(itrb => itrb.ccc);
+      // Verificar si hay ITRBs MCC
+      const tieneMCC = itrbsAsociados.some(itrb => itrb.mcc);
       
       // Calcular fechas para el gráfico
       const fechaInicio = new Date(actividad.fechaInicio);
@@ -145,7 +145,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
         duracion: actividad.duracion,
         progreso,
         tieneVencidos,
-        tieneCCC,
+        tieneMCC,
         proyecto: proyecto?.titulo || "Sin proyecto",
         color: getColorByProgress(progreso, tieneVencidos),
         itrbsAsociados
@@ -279,8 +279,8 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
                 {data.tieneVencidos && (
                   <Badge variant="destructive" className="text-xs">Vencido</Badge>
                 )}
-                {data.tieneCCC && (
-                  <Badge className="bg-blue-500 text-xs">CCC</Badge>
+                {data.tieneMCC && (
+                  <Badge className="bg-blue-500 text-xs">MCC</Badge>
                 )}
                 {data.progreso === 100 && (
                   <Badge className="bg-green-500 text-xs">Completado</Badge>

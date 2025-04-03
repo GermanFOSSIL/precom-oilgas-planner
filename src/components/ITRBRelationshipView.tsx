@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { ITRB, Actividad } from "@/types";
@@ -46,7 +45,6 @@ const ITRBRelationshipView: React.FC = () => {
   const [sortField, setSortField] = useState<string>("sistema");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  // Manejar expansión/colapso de actividades
   const toggleActividad = (actividadId: string) => {
     setExpandedActividades(prev => ({
       ...prev,
@@ -54,9 +52,7 @@ const ITRBRelationshipView: React.FC = () => {
     }));
   };
 
-  // Filtrar y agrupar actividades e ITRBs
   const actividadesConITRB = useMemo(() => {
-    // Primero filtrar actividades según los filtros actuales
     let actividadesFiltradas = actividades;
 
     if (filtros.proyecto !== "todos") {
@@ -77,7 +73,6 @@ const ITRBRelationshipView: React.FC = () => {
       );
     }
 
-    // Aplicar búsqueda
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       actividadesFiltradas = actividadesFiltradas.filter(
@@ -87,7 +82,6 @@ const ITRBRelationshipView: React.FC = () => {
       );
     }
 
-    // Mapear para incluir ITRBs asociados y calcular estadísticas
     return actividadesFiltradas.map(actividad => {
       const itrbsAsociados = itrbItems.filter(
         itrb => itrb.actividadId === actividad.id
@@ -99,7 +93,6 @@ const ITRBRelationshipView: React.FC = () => {
       const vencidos = itrbsAsociados.filter(itrb => itrb.estado === "Vencido").length;
       const progreso = totalITRBs > 0 ? (completados / totalITRBs) * 100 : 0;
 
-      // Proyecto relacionado
       const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
 
       return {
@@ -115,7 +108,6 @@ const ITRBRelationshipView: React.FC = () => {
     });
   }, [actividades, itrbItems, proyectos, filtros, searchQuery]);
 
-  // Ordenar actividades
   const actividadesOrdenadas = useMemo(() => {
     return [...actividadesConITRB].sort((a, b) => {
       let valueA, valueB;
@@ -154,12 +146,10 @@ const ITRBRelationshipView: React.FC = () => {
           valueB = b.actividad.sistema;
       }
 
-      // Ordenar números como números, no como strings
       if (typeof valueA === "number" && typeof valueB === "number") {
         return sortDirection === "asc" ? valueA - valueB : valueB - valueA;
       }
 
-      // Ordenar strings
       const strA = String(valueA).toLowerCase();
       const strB = String(valueB).toLowerCase();
       
@@ -171,7 +161,6 @@ const ITRBRelationshipView: React.FC = () => {
     });
   }, [actividadesConITRB, sortField, sortDirection]);
 
-  // Cambiar el campo de ordenación
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(prev => (prev === "asc" ? "desc" : "asc"));
@@ -181,7 +170,6 @@ const ITRBRelationshipView: React.FC = () => {
     }
   };
 
-  // Color según estado del ITR
   const getColorByEstado = (estado: string): string => {
     switch (estado) {
       case "Completado": return "bg-green-500 hover:bg-green-600";
@@ -191,7 +179,6 @@ const ITRBRelationshipView: React.FC = () => {
     }
   };
 
-  // Ícono según estado del ITR
   const getIconByEstado = (estado: string) => {
     switch (estado) {
       case "Completado": return <CheckCircle className="h-4 w-4" />;
@@ -376,8 +363,8 @@ const ITRBRelationshipView: React.FC = () => {
                                           <span className="font-medium">{itrb.cantidadRealizada}/{itrb.cantidadTotal}</span>
                                         </div>
                                         <div>
-                                          <span className="text-muted-foreground">CCC:</span>{" "}
-                                          <span className="font-medium">{itrb.ccc ? "Sí" : "No"}</span>
+                                          <span className="text-muted-foreground">MCC:</span>{" "}
+                                          <span className="font-medium">{itrb.mcc ? "Sí" : "No"}</span>
                                         </div>
                                         <div className="col-span-2">
                                           <span className="text-muted-foreground">Fecha límite:</span>{" "}
