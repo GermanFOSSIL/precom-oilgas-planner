@@ -38,6 +38,7 @@ export interface ITRB {
   estado: "Completado" | "En curso" | "Vencido";
   fechaLimite: string;
   ccc: boolean;
+  mcc: boolean;
   observaciones?: string;
 }
 
@@ -88,6 +89,15 @@ export interface AppContextType {
   deleteITRB: (id: string) => void;
   proyectoActual: string;
   setProyectoActual: (id: string) => void;
+}
+
+// Interface for backup options
+export interface BackupOptions {
+  proyectos?: boolean;
+  actividades?: boolean;
+  itrbItems?: boolean;
+  alertas?: boolean;
+  kpiConfig?: boolean;
 }
 
 // Interfaces for the new UserPermission components
