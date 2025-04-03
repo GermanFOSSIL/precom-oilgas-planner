@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import {
@@ -41,7 +42,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const { actividades, itrbItems, proyectos } = useAppContext();
   const [loading, setLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [viewMode, setViewMode<"month" | "week" | "day">("month");
+  const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
   const [currentStartDate, setCurrentStartDate] = useState<Date>(new Date());
   const [currentEndDate, setCurrentEndDate] = useState<Date>(addDays(new Date(), 30));
   
