@@ -48,11 +48,12 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
     // Verificar si está vencido - considerar tanto los marcados como "Vencido" como los que tienen fecha límite pasada
     const fechaLimite = new Date(item.fechaLimite);
     const hoy = new Date();
-    return (item.estado === "Vencido" || fechaLimite < hoy); // Es vencido si el estado es "Vencido" o fecha límite es anterior a hoy
+    return fechaLimite < hoy; // Es vencido si fecha límite es anterior a hoy
   });
   
   const vencidosCompletados = itrbsVencidos.filter(item => item.estado === "Completado").length;
   const vencidosFaltantes = itrbsVencidos.filter(item => item.estado !== "Completado").length;
+  const totalVencidos = vencidosCompletados + vencidosFaltantes;
   
   // Datos para el gráfico de vencidos
   const vencidosData = [
@@ -220,7 +221,7 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
                 <p className="text-sm font-medium text-muted-foreground mb-1">ITR B Vencidos</p>
               </div>
               <div className="flex items-baseline gap-1">
-                <h3 className="text-2xl font-bold text-red-500">{vencidosFaltantes + vencidosCompletados}</h3>
+                <h3 className="text-2xl font-bold text-red-500">{totalVencidos}</h3>
                 <span className="text-xs text-muted-foreground">en total</span>
               </div>
               <div className="text-xs mt-1 flex flex-col">

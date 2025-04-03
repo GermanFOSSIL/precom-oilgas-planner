@@ -354,8 +354,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .filter(Boolean)
     ).size;
     
-    // Contar actividades vencidas
-    const actividadesVencidas = itrbFiltrados.filter(item => item.estado === "Vencido").length;
+    // Contar actividades vencidas (mejorado)
+    const hoy = new Date();
+    const itrbsVencidos = itrbFiltrados.filter(item => {
+      const fechaLimite = new Date(item.fechaLimite);
+      return fechaLimite < hoy; // Es vencido si la fecha límite es anterior a hoy
+    });
+    
+    const actividadesVencidas = itrbsVencidos.filter(item => item.estado !== "Completado").length;
     
     return {
       avanceFisico,
