@@ -188,12 +188,12 @@ const ReportGenerator: React.FC = () => {
         ["PLAN DE PRECOMISIONADO - RESUMEN ESTADÍSTICO", "", ""],
         ["", "", ""],
         ["Estadística", "Valor", "Porcentaje"],
-        ["Total de Actividades", totalActividades, ""],
-        ["Total de ITR B", totalITRB, ""],
-        ["ITR B Completados", itrbCompletados, `${porcentajeCompletado.toFixed(2)}%`],
-        ["ITR B Pendientes", totalITRB - itrbCompletados, `${(100 - porcentajeCompletado).toFixed(2)}%`],
-        ["ITR B En Curso", itrbEnCurso, (totalITRB > 0 ? (itrbEnCurso / totalITRB * 100).toFixed(2) : "0") + "%"],
-        ["ITR B Vencidos", itrbVencidos, (totalITRB > 0 ? (itrbVencidos / totalITRB * 100).toFixed(2) : "0") + "%"]
+        ["Total de Actividades", totalActividades.toString(), ""],
+        ["Total de ITR B", totalITRB.toString(), ""],
+        ["ITR B Completados", itrbCompletados.toString(), `${porcentajeCompletado.toFixed(2)}%`],
+        ["ITR B Pendientes", (totalITRB - itrbCompletados).toString(), `${(100 - porcentajeCompletado).toFixed(2)}%`],
+        ["ITR B En Curso", itrbEnCurso.toString(), (totalITRB > 0 ? (itrbEnCurso / totalITRB * 100).toFixed(2) : "0") + "%"],
+        ["ITR B Vencidos", itrbVencidos.toString(), (totalITRB > 0 ? (itrbVencidos / totalITRB * 100).toFixed(2) : "0") + "%"]
       ];
       
       const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
@@ -220,7 +220,7 @@ const ReportGenerator: React.FC = () => {
           act.subsistema,
           new Date(act.fechaInicio).toLocaleDateString('es-ES'),
           new Date(act.fechaFin).toLocaleDateString('es-ES'),
-          act.duracion,
+          act.duracion.toString(),
           proyecto?.titulo || "N/A"
         ]);
       });
@@ -247,8 +247,8 @@ const ReportGenerator: React.FC = () => {
           actividad?.nombre || "N/A",
           actividad?.sistema || "N/A",
           actividad?.subsistema || "N/A",
-          itrb.cantidadRealizada,
-          itrb.cantidadTotal,
+          itrb.cantidadRealizada.toString(),
+          itrb.cantidadTotal.toString(),
           progreso.toFixed(1),
           itrb.estado,
           itrb.ccc ? "Sí" : "No",
