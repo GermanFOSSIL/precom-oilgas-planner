@@ -1,3 +1,4 @@
+
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -61,10 +62,19 @@ export interface KPIs {
 
 export interface FiltrosDashboard {
   proyecto: string | "todos";
+  sistema?: string;
+  subsistema?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+  busquedaActividad?: string;
+  estadoITRB?: "Completado" | "En curso" | "Vencido" | "todos";
+  ccc?: boolean;
+  tareaVencida?: boolean;
+  timestamp?: number; // Para refrescar cache
 }
 
 export interface ConfiguracionGrafico {
-  tamano: "pequeno" | "mediano" | "grande";
+  tamano: "pequeno" | "mediano" | "grande" | "completo";
   mostrarLeyenda: boolean;
 }
 
@@ -72,7 +82,41 @@ export interface AppTheme {
   mode: "light" | "dark";
 }
 
-// Nueva interfaz para la configuración de KPIs
+// Configuración de KPIs
 export interface KPIConfig {
   itrVencidosMostrar: "total" | "diferencia" | "pendientes" | "completados";
+}
+
+// Nueva configuración para Ruta Crítica
+export interface CriticalPathConfig {
+  vistaAgrupada: "proyecto" | "sistema" | "subsistema";
+  mostrarCompletados: boolean;
+  ordernarPor: "retraso" | "impacto" | "fechaVencimiento";
+}
+
+// Nueva interfaz para filtros avanzados
+export interface FiltrosAvanzados {
+  fechaInicioRango?: string;
+  fechaFinRango?: string;
+  prioridad?: "alta" | "media" | "baja" | "todas";
+  responsable?: string;
+  estado?: EstadoITRB[];
+}
+
+// Para mejorar la asignación de ITRBs a Actividades
+export interface ItemRelacionado {
+  id: string;
+  tipo: "actividad" | "itrb" | "proyecto";
+  nombre: string;
+}
+
+// Nueva interfaz para configurar gráficos dinámicos
+export interface GraficoPersonalizado {
+  id: string;
+  titulo: string;
+  tipo: "barras" | "lineas" | "pastel" | "area";
+  datos: "avance" | "itrb" | "actividades" | "vencimientos";
+  filtro?: Partial<FiltrosDashboard>;
+  color: string;
+  posicion: number;
 }

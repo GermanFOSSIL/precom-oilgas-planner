@@ -14,7 +14,9 @@ import {
   CalendarIcon,
   CheckCircle,
   Info,
-  Download
+  Download,
+  BarChart4,
+  PieChart
 } from "lucide-react";
 import {
   LineChart,
@@ -25,7 +27,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
+  PieChart as RechartsPieChart,
   Pie,
   Cell
 } from "recharts";
@@ -41,16 +43,32 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const CriticalPathView: React.FC = () => {
   const { itrbItems, actividades, proyectos, filtros } = useAppContext();
   
-  // Refs for the charts we want to download
+  // Estado para selección de vista
+  const [vistaAgrupada, setVistaAgrupada] = useState<"proyecto" | "sistema" | "subsistema">("sistema");
+  const [ordenarPor, setOrdenarPor] = useState<"retraso" | "impacto" | "fechaVencimiento">("retraso");
+  const [mostrarCompletados, setMostrarCompletados] = useState<boolean>(false);
+  const [selectedTab, setSelectedTab] = useState<"list" | "chart">("list");
+  
+  // Refs para los gráficos que queremos descargar
   const trendsChartRef = useRef<HTMLDivElement>(null);
   const statusChartRef = useRef<HTMLDivElement>(null);
   
   // Filtrar por proyecto si hay uno seleccionado
   const filtroProyecto = filtros.proyecto !== "todos" ? filtros.proyecto : null;
+  const filtroSistema = filtros.sistema;
+  const filtroSubsistema = filtros.subsistema;
   
   // Obtener elementos vencidos
   const itemsVencidos = useMemo(() => {
@@ -61,12 +79,30 @@ const CriticalPathView: React.FC = () => {
         const hoy = new Date();
         const esVencido = item.estado === "Vencido" || fechaLimite < hoy;
         
-        // Si no hay un filtro de proyecto, incluir todos los vencidos
-        if (!filtroProyecto) return esVencido;
-        
         // Si hay filtro de proyecto, verificar que la actividad pertenezca a ese proyecto
         const actividad = actividades.find(a => a.id === item.actividadId);
-        return esVencido && actividad && actividad.proyectoId === filtroProyecto;
+        let cumpleFiltros = true;
+        
+        if (filtroProyecto && actividad) {
+          cumpleFiltros = actividad.proyectoId === filtroProyecto;
+        }
+        
+        // Filtrar por sistema
+        if (filtroSistema && actividad) {
+          cumpleFiltros = cumpleFiltros && actividad.sistema === filtroSistema;
+        }
+        
+        // Filtrar por subsistema
+        if (filtroSubsistema && actividad) {
+          cumpleFiltros = cumpleFiltros && actividad.subsistema === filtroSubsistema;
+        }
+        
+        // Si mostrarCompletados es falso, excluir los completados
+        if (!mostrarCompletados && item.estado === "Completado") {
+          return false;
+        }
+        
+        return esVencido && cumpleFiltros;
       })
       .map(item => {
         const actividad = actividades.find(a => a.id === item.actividadId);
@@ -87,19 +123,82 @@ const CriticalPathView: React.FC = () => {
           impacto: diasRetraso > 30 ? "Alto" : diasRetraso > 15 ? "Medio" : "Bajo"
         };
       })
-      .sort((a, b) => b.diasRetraso - a.diasRetraso);
-  }, [itrbItems, actividades, proyectos, filtroProyecto]);
+      .sort((a, b) => {
+        // Ordenar según criterio seleccionado
+        switch (ordenarPor) {
+          case "retraso":
+            return b.diasRetraso - a.diasRetraso;
+          case "impacto":
+            const impactoValor = { "Alto": 3, "Medio": 2, "Bajo": 1 };
+            return impactoValor[b.impacto as keyof typeof impactoValor] - impactoValor[a.impacto as keyof typeof impactoValor];
+          case "fechaVencimiento":
+            return new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime();
+          default:
+            return b.diasRetraso - a.diasRetraso;
+        }
+      });
+  }, [itrbItems, actividades, proyectos, filtroProyecto, filtroSistema, filtroSubsistema, mostrarCompletados, ordenarPor]);
 
   // Contabilizar ITRB en curso y completados
   const itemsEnFecha = useMemo(() => {
     return itrbItems
       .filter(item => (item.estado === "Completado" || item.estado === "En curso"))
       .filter(item => {
-        if (!filtroProyecto) return true;
         const actividad = actividades.find(a => a.id === item.actividadId);
-        return actividad && actividad.proyectoId === filtroProyecto;
+        let cumpleFiltros = true;
+        
+        if (filtroProyecto && actividad) {
+          cumpleFiltros = actividad.proyectoId === filtroProyecto;
+        }
+        
+        if (filtroSistema && actividad) {
+          cumpleFiltros = cumpleFiltros && actividad.sistema === filtroSistema;
+        }
+        
+        if (filtroSubsistema && actividad) {
+          cumpleFiltros = cumpleFiltros && actividad.subsistema === filtroSubsistema;
+        }
+        
+        return cumpleFiltros;
       });
-  }, [itrbItems, actividades, filtroProyecto]);
+  }, [itrbItems, actividades, filtroProyecto, filtroSistema, filtroSubsistema]);
+
+  // Agrupar datos según la vista seleccionada
+  const datosAgrupados = useMemo(() => {
+    const grupos: Record<string, typeof itemsVencidos> = {};
+    
+    itemsVencidos.forEach(item => {
+      if (!item.actividad) return;
+      
+      let claveAgrupacion = "";
+      switch (vistaAgrupada) {
+        case "proyecto":
+          claveAgrupacion = item.proyecto?.titulo || "Sin proyecto";
+          break;
+        case "sistema":
+          claveAgrupacion = item.actividad.sistema;
+          break;
+        case "subsistema":
+          claveAgrupacion = `${item.actividad.sistema}: ${item.actividad.subsistema}`;
+          break;
+      }
+      
+      if (!grupos[claveAgrupacion]) {
+        grupos[claveAgrupacion] = [];
+      }
+      
+      grupos[claveAgrupacion].push(item);
+    });
+    
+    return Object.entries(grupos)
+      .map(([nombre, items]) => ({
+        nombre,
+        items,
+        cantidadTotal: items.length,
+        retrasoPromedio: Math.round(items.reduce((sum, item) => sum + item.diasRetraso, 0) / items.length || 0)
+      }))
+      .sort((a, b) => b.cantidadTotal - a.cantidadTotal);
+  }, [itemsVencidos, vistaAgrupada]);
 
   // Calcular datos para el gráfico de tendencia
   const datosTendencia = useMemo(() => {
@@ -122,11 +221,26 @@ const CriticalPathView: React.FC = () => {
 
   // Datos para gráfico de estado
   const datosEstado = useMemo(() => {
-    // Filtrar por proyecto si es necesario
+    // Filtrar según vista seleccionada
     const filteredItems = itrbItems.filter(item => {
-      if (!filtroProyecto) return true;
       const actividad = actividades.find(a => a.id === item.actividadId);
-      return actividad && actividad.proyectoId === filtroProyecto;
+      if (!actividad) return false;
+      
+      let cumpleFiltros = true;
+      
+      if (filtroProyecto) {
+        cumpleFiltros = actividad.proyectoId === filtroProyecto;
+      }
+      
+      if (filtroSistema) {
+        cumpleFiltros = cumpleFiltros && actividad.sistema === filtroSistema;
+      }
+      
+      if (filtroSubsistema) {
+        cumpleFiltros = cumpleFiltros && actividad.subsistema === filtroSubsistema;
+      }
+      
+      return cumpleFiltros;
     });
     
     const completados = filteredItems.filter(item => item.estado === "Completado").length;
@@ -138,24 +252,17 @@ const CriticalPathView: React.FC = () => {
       { name: "En curso", value: enCurso, color: "#f59e0b" },
       { name: "Vencidos", value: vencidos, color: "#ef4444" }
     ];
-  }, [itrbItems, actividades, filtroProyecto, itemsVencidos]);
+  }, [itrbItems, actividades, filtroProyecto, filtroSistema, filtroSubsistema, itemsVencidos]);
 
-  // Agrupar por sistemas para ver distribución
-  const sistemaConMasVencidos = useMemo(() => {
-    const sistemas: {[key: string]: number} = {};
-    
-    itemsVencidos.forEach(item => {
-      if (item.actividad) {
-        const sistema = item.actividad.sistema;
-        sistemas[sistema] = (sistemas[sistema] || 0) + 1;
-      }
-    });
-    
-    // Ordenar por cantidad
-    return Object.entries(sistemas)
-      .sort((a, b) => b[1] - a[1])
-      .map(([sistema, cantidad]) => ({ sistema, cantidad }));
-  }, [itemsVencidos]);
+  // Datos para gráfico agrupado
+  const datosPorAgrupacion = useMemo(() => {
+    return datosAgrupados.map(grupo => ({
+      nombre: grupo.nombre,
+      cantidad: grupo.cantidadTotal,
+      retraso: grupo.retrasoPromedio,
+      color: getColorPorRetraso(grupo.retrasoPromedio)
+    })).slice(0, 8); // Limitar a los 8 grupos principales
+  }, [datosAgrupados]);
 
   // Contar subsistemas vencidos
   const subsistemesVencidos = useMemo(() => {
@@ -186,6 +293,14 @@ const CriticalPathView: React.FC = () => {
       case "Bajo": return "bg-yellow-500";
       default: return "bg-gray-500";
     }
+  }
+  
+  // Color según retraso promedio
+  function getColorPorRetraso(retraso: number): string {
+    if (retraso > 30) return "#ef4444";
+    if (retraso > 15) return "#f97316";
+    if (retraso > 7) return "#eab308";
+    return "#84cc16";
   }
   
   // Función para descargar el gráfico como imagen
@@ -230,8 +345,57 @@ const CriticalPathView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={vistaAgrupada}
+            onValueChange={(value: "proyecto" | "sistema" | "subsistema") => setVistaAgrupada(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Agrupar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="proyecto">Agrupar por Proyecto</SelectItem>
+              <SelectItem value="sistema">Agrupar por Sistema</SelectItem>
+              <SelectItem value="subsistema">Agrupar por Subsistema</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select
+            value={ordenarPor}
+            onValueChange={(value: "retraso" | "impacto" | "fechaVencimiento") => setOrdenarPor(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="retraso">Días de retraso</SelectItem>
+              <SelectItem value="impacto">Impacto</SelectItem>
+              <SelectItem value="fechaVencimiento">Fecha vencimiento</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button 
+            variant={mostrarCompletados ? "default" : "outline"} 
+            size="sm"
+            onClick={() => setMostrarCompletados(!mostrarCompletados)}
+            className={mostrarCompletados ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            {mostrarCompletados ? "Ocultar completados" : "Mostrar completados"}
+          </Button>
+        </div>
+        
+        <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as "list" | "chart")}>
+          <TabsList>
+            <TabsTrigger value="list">Lista</TabsTrigger>
+            <TabsTrigger value="chart">Gráficos</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="md:col-span-2 dark:bg-slate-800 dark:border-slate-700">
+        <Card className={`md:col-span-${selectedTab === "list" ? "1" : "2"} dark:bg-slate-800 dark:border-slate-700`}>
           <CardHeader className="flex-row justify-between items-center">
             <CardTitle className="flex items-center text-lg">
               <AlertTriangle className="mr-2 h-5 w-5 text-red-500" />
@@ -288,6 +452,74 @@ const CriticalPathView: React.FC = () => {
           </CardContent>
         </Card>
 
+        {selectedTab === "chart" && (
+          <Card className="dark:bg-slate-800 dark:border-slate-700">
+            <CardHeader className="flex-row justify-between items-center">
+              <CardTitle className="flex items-center text-lg">
+                <BarChart4 className="mr-2 h-5 w-5 text-blue-500" />
+                {vistaAgrupada === "proyecto" 
+                  ? "ITR B por Proyecto" 
+                  : vistaAgrupada === "sistema" 
+                    ? "ITR B por Sistema" 
+                    : "ITR B por Subsistema"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={datosPorAgrupacion}
+                    margin={{ top: 5, right: 5, bottom: 25, left: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-700" />
+                    <XAxis 
+                      dataKey="nombre" 
+                      className="dark:fill-slate-400"
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval={0}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <YAxis className="dark:fill-slate-400" />
+                    <Tooltip 
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-white dark:bg-slate-800 p-2 border rounded shadow-sm text-xs">
+                              <p className="font-medium mb-1">{label}</p>
+                              <p>Cantidad: {payload[0].value}</p>
+                              <p>Retraso promedio: {payload[1].value} días</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend verticalAlign="top" height={36} />
+                    <Line
+                      type="monotone"
+                      dataKey="cantidad"
+                      name="Cantidad"
+                      stroke="#3b82f6"
+                      activeDot={{ r: 8 }}
+                      strokeWidth={2}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="retraso"
+                      name="Retraso (días)"
+                      stroke="#ef4444"
+                      activeDot={{ r: 6 }}
+                      strokeWidth={2}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="dark:bg-slate-800 dark:border-slate-700">
           <CardHeader className="flex-row justify-between items-center">
             <CardTitle className="flex items-center text-lg">
@@ -323,7 +555,7 @@ const CriticalPathView: React.FC = () => {
           <CardContent ref={statusChartRef}>
             <div className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                <RechartsPieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                   <Pie
                     data={datosEstado}
                     cx="50%"
@@ -340,7 +572,7 @@ const CriticalPathView: React.FC = () => {
                     ))}
                   </Pie>
                   <Tooltip />
-                </PieChart>
+                </RechartsPieChart>
               </ResponsiveContainer>
             </div>
             
@@ -364,74 +596,140 @@ const CriticalPathView: React.FC = () => {
         </Card>
       </div>
 
-      <Card className="dark:bg-slate-800 dark:border-slate-700">
-        <CardHeader>
-          <CardTitle className="flex items-center text-lg">
-            <AlertCircle className="mr-2 h-5 w-5 text-red-500" />
-            Ruta Crítica - Elementos Vencidos ({itemsVencidos.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-6">
-              {itemsVencidos.map((item, idx) => (
-                <div key={item.id} className="relative pl-8 pb-6 border-l-2 border-dashed border-gray-200 dark:border-gray-700 last:border-0">
-                  {/* Indicador de impacto */}
-                  <div className={`absolute top-0 left-0 w-4 h-4 rounded-full ${getColorPorImpacto(item.impacto)}`}></div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                      <div className="flex items-center flex-wrap gap-2">
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700">
-                          {item.diasRetraso} {item.diasRetraso === 1 ? "día" : "días"} de retraso
-                        </Badge>
-                        <Badge variant="outline" className="dark:border-gray-600">
-                          {item.impacto}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground flex items-center">
-                        <CalendarIcon className="h-3 w-3 mr-1" />
-                        {new Date(item.fechaLimite).toLocaleDateString()}
-                      </div>
-                    </div>
-                    
-                    <h3 className="font-semibold text-lg mb-1 break-words">
-                      {item.descripcion}
-                    </h3>
-                    
-                    <div className="flex flex-wrap items-center text-sm text-muted-foreground mb-3 gap-1">
-                      <span className="font-medium text-indigo-600 dark:text-indigo-400">
-                        {item.proyecto?.titulo || "Proyecto sin asignar"}
-                      </span>
-                      <ArrowRight className="h-3 w-3 mx-1" />
-                      <span>{item.actividad?.sistema}</span>
-                      <ArrowRight className="h-3 w-3 mx-1" />
-                      <span>{item.actividad?.subsistema}</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center flex-wrap gap-2">
-                      <div className="text-sm">
-                        Progreso: {item.cantidadRealizada}/{item.cantidadTotal}
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="text-xs dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600"
-                        onClick={() => {
-                          // Aquí se podría implementar una acción para ir a editar el elemento
-                          toast.info(`Ver detalle de ${item.descripcion}`);
-                        }}
-                      >
-                        Ver detalle
-                      </Button>
-                    </div>
-                  </div>
+      <TabsContent value="list" className="mt-4 space-y-6">
+        {datosAgrupados.map((grupo, grupoIndex) => (
+          <Card key={grupo.nombre} className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
+            <CardHeader className="bg-slate-100 dark:bg-slate-700 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`h-3 w-3 rounded-full mr-2`} style={{ backgroundColor: getColorPorRetraso(grupo.retrasoPromedio) }}></div>
+                  <CardTitle className="text-lg font-bold">
+                    {grupo.nombre}
+                  </CardTitle>
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="text-xs">
+                    {grupo.cantidadTotal} ITR B
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Retraso promedio: {grupo.retrasoPromedio} días
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[grupo.items.length > 3 ? '300px' : 'auto']">
+                <div className="space-y-2 p-4">
+                  {grupo.items.map((item, idx) => (
+                    <div key={item.id} className="relative pl-6 pb-4 border-l-2 border-dashed border-gray-200 dark:border-gray-700 last:border-0">
+                      {/* Indicador de impacto */}
+                      <div className={`absolute top-0 left-0 w-3 h-3 rounded-full ${getColorPorImpacto(item.impacto)}`}></div>
+                      
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                          <div className="flex items-center flex-wrap gap-2">
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700">
+                              {item.diasRetraso} {item.diasRetraso === 1 ? "día" : "días"} de retraso
+                            </Badge>
+                            <Badge variant="outline" className="dark:border-gray-600">
+                              {item.impacto}
+                            </Badge>
+                            {item.estado === "Completado" && (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700">
+                                Completado
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground flex items-center">
+                            <CalendarIcon className="h-3 w-3 mr-1" />
+                            {new Date(item.fechaLimite).toLocaleDateString()}
+                          </div>
+                        </div>
+                        
+                        <h3 className="font-semibold text-base mb-1 break-words">
+                          {item.descripcion}
+                        </h3>
+                        
+                        <div className="flex flex-wrap items-center text-sm text-muted-foreground mb-3 gap-1">
+                          {vistaAgrupada !== "proyecto" && (
+                            <>
+                              <span className="font-medium text-indigo-600 dark:text-indigo-400">
+                                {item.proyecto?.titulo || "Proyecto sin asignar"}
+                              </span>
+                              <ArrowRight className="h-3 w-3 mx-1" />
+                            </>
+                          )}
+                          {vistaAgrupada !== "sistema" && vistaAgrupada !== "subsistema" && (
+                            <>
+                              <span>{item.actividad?.sistema}</span>
+                              <ArrowRight className="h-3 w-3 mx-1" />
+                            </>
+                          )}
+                          {vistaAgrupada !== "subsistema" && (
+                            <span>{item.actividad?.subsistema}</span>
+                          )}
+                        </div>
+                        
+                        <div className="flex justify-between items-center flex-wrap gap-2">
+                          <div className="text-sm">
+                            Progreso: {item.cantidadRealizada}/{item.cantidadTotal}
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-xs dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600"
+                            onClick={() => {
+                              // Aquí se podría implementar una acción para ir a editar el elemento
+                              toast.info(`Ver detalle de ${item.descripcion}`);
+                            }}
+                          >
+                            Ver detalle
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        ))}
+      </TabsContent>
+      
+      <TabsContent value="chart" className="mt-4">
+        <Card className="dark:bg-slate-800 dark:border-slate-700">
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg">
+              <PieChart className="mr-2 h-5 w-5 text-purple-500" />
+              Distribución de ITR B por Estado
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsPieChart>
+                <Pie
+                  data={datosEstado}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                  labelLine={true}
+                >
+                  {datosEstado.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36} />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </TabsContent>
     </div>
   );
 };
