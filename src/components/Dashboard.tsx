@@ -89,9 +89,9 @@ const Dashboard: React.FC = () => {
 
   const getGanttHeight = useCallback(() => {
     switch (configuracionGrafico.tamano) {
-      case "pequeno": return "h-[400px]";
-      case "mediano": return "h-[600px]";
-      case "grande": return "h-[800px]";
+      case "pequeno": return "h-[600px]";
+      case "mediano": return "h-[800px]";
+      case "grande": return "h-[1000px]";
       case "completo": return "h-screen";
       default: return "h-[600px]";
     }
