@@ -11,7 +11,7 @@ import GanttNavigationControls from "./gantt/GanttNavigationControls";
 import GanttBarChart from "./gantt/GanttBarChart";
 import { useGanttData } from "./gantt/hooks/useGanttData";
 import { calculateNewDateRange } from "./gantt/utils/dateUtils";
-import { generateSampleData, processDataForGantt } from "./gantt/utils/sampleData";
+import { generateSampleData } from "./gantt/utils/sampleData";
 
 interface EnhancedGanttChartProps {
   filtros: FiltrosDashboard;
@@ -154,41 +154,45 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
   }
 
   return (
-    <div className="w-full h-full flex flex-col gantt-chart-container">
-      <div className="flex justify-between items-center mb-4">
-        <GanttNavigationControls
-          currentStartDate={currentStartDate}
-          currentEndDate={currentEndDate}
-          viewMode={viewMode}
-          zoomLevel={zoomLevel}
-          onNavigate={navigateTime}
-          onViewModeChange={handleViewModeChange}
-          onZoomChange={changeZoom}
-        />
-        
-        <div className="flex items-center mr-4">
-          <span className="text-sm font-medium text-muted-foreground mr-2">
-            {usingSampleData ? "Usando datos de muestra" : "Datos reales"}
-          </span>
-          <div 
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-              usingSampleData ? 'bg-primary' : 'bg-input'
-            }`}
-            onClick={toggleSampleData}
-            role="button"
-            tabIndex={0}
-          >
-            <span 
-              className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
-                usingSampleData ? 'translate-x-6' : 'translate-x-1'
-              }`} 
-            />
+    // Contenedor principal que ocupa todo el espacio disponible y permite scroll
+    <div className="w-full h-full flex flex-col">
+      {/* Controles de navegación fijos en la parte superior */}
+      <div className="sticky top-0 z-10 bg-background">
+        <div className="flex justify-between items-center mb-2">
+          <GanttNavigationControls
+            currentStartDate={currentStartDate}
+            currentEndDate={currentEndDate}
+            viewMode={viewMode}
+            zoomLevel={zoomLevel}
+            onNavigate={navigateTime}
+            onViewModeChange={handleViewModeChange}
+            onZoomChange={changeZoom}
+          />
+          
+          <div className="flex items-center mr-4">
+            <span className="text-sm font-medium text-muted-foreground mr-2">
+              {usingSampleData ? "Usando datos de muestra" : "Datos reales"}
+            </span>
+            <div 
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                usingSampleData ? 'bg-primary' : 'bg-input'
+              }`}
+              onClick={toggleSampleData}
+              role="button"
+              tabIndex={0}
+            >
+              <span 
+                className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                  usingSampleData ? 'translate-x-6' : 'translate-x-1'
+                }`} 
+              />
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Área de Gantt con scroll vertical que ocupa todo el espacio disponible */}
-      <div className="flex-1 w-full overflow-y-auto min-h-0">
+      {/* Contenedor principal del Gantt con scroll vertical y ocupando todo el espacio disponible */}
+      <div className="flex-1 min-h-0 overflow-y-auto w-full">
         <GanttBarChart
           data={ganttData}
           currentStartDate={currentStartDate}
