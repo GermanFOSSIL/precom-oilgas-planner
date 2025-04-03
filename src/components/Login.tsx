@@ -8,9 +8,11 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { LoginProps } from "@/types";
+import { useNavigate } from "react-router-dom";
 
 const Login: React.FC<LoginProps> = ({ onSuccess, onCancel }) => {
   const { login } = useAppContext();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -36,6 +38,8 @@ const Login: React.FC<LoginProps> = ({ onSuccess, onCancel }) => {
         toast.success(`Bienvenido al panel de precomisionado`);
         if (onSuccess) {
           onSuccess(email);
+        } else {
+          navigate("/");
         }
       } else {
         toast.error("Credenciales incorrectas");
