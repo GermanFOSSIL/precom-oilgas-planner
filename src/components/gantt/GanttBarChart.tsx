@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { isWithinInterval } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,7 +36,7 @@ interface GanttBarChartProps {
   viewMode: "month" | "week" | "day";
   mostrarSubsistemas: boolean;
   mostrarLeyenda?: boolean;
-  tamanoGrafico?: "pequeno" | "mediano" | "grande";
+  tamanoGrafico?: "pequeno" | "mediano" | "grande" | "completo";
 }
 
 const GanttBarChart: React.FC<GanttBarChartProps> = ({
@@ -55,12 +54,19 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Determine if dark mode is active
+  const getAlturaFila = (tamano: "pequeno" | "mediano" | "grande" | "completo") => {
+    switch (tamano) {
+      case "pequeno": return "h-6";
+      case "mediano": return "h-8";
+      case "grande": return "h-10";
+      case "completo": return "h-12";
+      default: return "h-8";
+    }
+  };
+
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
     setIsDarkMode(isDark);
-    
-    // Set up observer for theme changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === "class") {
@@ -68,57 +74,46 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
         }
       });
     });
-    
     observer.observe(document.documentElement, { attributes: true });
     return () => observer.disconnect();
   }, []);
 
-  // Group data by project, system, subsystem
   const groupedData = useMemo(() => {
     const result: Record<string, Record<string, string[]>> = {};
-    
     data.forEach(item => {
       if (!result[item.proyecto]) {
         result[item.proyecto] = {};
       }
-      
       if (!result[item.proyecto][item.sistema]) {
         result[item.proyecto][item.sistema] = [];
       }
-      
       if (!result[item.proyecto][item.sistema].includes(item.subsistema)) {
         result[item.proyecto][item.sistema].push(item.subsistema);
       }
     });
-    
     return result;
   }, [data]);
 
-  // Get dates for the timeline based on the current view mode
   const axisDates = useMemo(() => {
     return getAxisDates(currentStartDate, currentEndDate, viewMode);
   }, [currentStartDate, currentEndDate, viewMode]);
 
-  // Function to determine if a date is within displayed range
   const isDateInRange = (date: Date) => {
     return isWithinInterval(date, { start: currentStartDate, end: currentEndDate });
   };
 
-  // Function to calculate position as percentage
   const calculatePosition = (date: Date): number => {
     const totalDuration = currentEndDate.getTime() - currentStartDate.getTime();
     const timeFromStart = date.getTime() - currentStartDate.getTime();
     return (timeFromStart / totalDuration) * 100;
   };
 
-  // Handle mouse over for tooltip
   const handleMouseOver = (event: React.MouseEvent, item: GanttData) => {
     setHoveredItem(item);
     setHoveredItrb(null);
     setTooltipPosition({ x: event.clientX, y: event.clientY });
   };
 
-  // Handle mouse over for ITR tooltip
   const handleItrbMouseOver = (event: React.MouseEvent, itrb: any) => {
     setHoveredItrb(itrb);
     setHoveredItem(null);
@@ -126,28 +121,17 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
     event.stopPropagation();
   };
 
-  // Handle mouse out for tooltip
   const handleMouseOut = () => {
     setHoveredItem(null);
     setHoveredItrb(null);
   };
 
-  // Get row height based on size setting
-  const getRowHeight = () => {
-    switch (tamanoGrafico) {
-      case "pequeno": return "h-6";
-      case "mediano": return "h-8";
-      case "grande": return "h-10";
-      default: return "h-8";
-    }
-  };
-
-  // Get spacing class based on size setting
   const getSpacingClass = () => {
     switch (tamanoGrafico) {
       case "pequeno": return "space-y-1";
       case "mediano": return "space-y-2";
       case "grande": return "space-y-3";
+      case "completo": return "space-y-4";
       default: return "space-y-2";
     }
   };
@@ -157,91 +141,31 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
       <div className="w-full overflow-y-auto max-h-[70vh]">
         <ScrollArea className="w-full">
           <div className="min-w-[800px] relative">
-            {/* Date Headers */}
-            <GanttDateHeaders 
-              axisDates={axisDates}
-              viewMode={viewMode}
-              isDarkMode={isDarkMode}
-            />
-
-            {/* Today indicator */}
-            <GanttTodayIndicator 
-              currentStartDate={currentStartDate}
-              currentEndDate={currentEndDate}
-              calculatePosition={calculatePosition}
-            />
-
-            {/* Gantt Content */}
-            <div className={`w-full ${getSpacingClass()}`}>
+            <GanttDateHeaders axisDates={axisDates} viewMode={viewMode} isDarkMode={isDarkMode} />
+            <GanttTodayIndicator currentStartDate={currentStartDate} currentEndDate={currentEndDate} calculatePosition={calculatePosition} />
+            <div className={`w-full ${getSpacingClass()} ${getAlturaFila(tamanoGrafico)}`}>
               {Object.entries(groupedData).map(([proyecto, sistemas], proyectoIndex) => (
                 <React.Fragment key={`proyecto-${proyectoIndex}`}>
-                  {/* Project Header */}
-                  <GanttProjectHeader 
-                    proyecto={proyecto}
-                    axisDates={axisDates}
-                    isDarkMode={isDarkMode}
-                  />
-
+                  <GanttProjectHeader proyecto={proyecto} axisDates={axisDates} isDarkMode={isDarkMode} />
                   {Object.entries(sistemas).map(([sistema, subsistemas], sistemaIndex) => (
                     <React.Fragment key={`sistema-${proyectoIndex}-${sistemaIndex}`}>
-                      {/* System Header */}
-                      <GanttSystemHeader
-                        sistema={sistema}
-                        axisDates={axisDates}
-                        isDarkMode={isDarkMode}
-                      />
-
+                      <GanttSystemHeader sistema={sistema} axisDates={axisDates} isDarkMode={isDarkMode} />
                       {mostrarSubsistemas && subsistemas.map((subsistema, subsistemaIndex) => (
                         <React.Fragment key={`subsistema-${proyectoIndex}-${sistemaIndex}-${subsistemaIndex}`}>
-                          {/* Subsystem Header */}
-                          <GanttSubsystemHeader
-                            subsistema={subsistema}
-                            axisDates={axisDates}
-                            isDarkMode={isDarkMode}
-                          />
-
-                          {/* Activities for this subsystem */}
+                          <GanttSubsystemHeader subsistema={subsistema} axisDates={axisDates} isDarkMode={isDarkMode} />
                           {data
                             .filter(item => item.proyecto === proyecto && item.sistema === sistema && item.subsistema === subsistema)
                             .map((item, itemIndex) => (
-                              <GanttActivityBar
-                                key={`activity-${item.id}`}
-                                item={item}
-                                axisDates={axisDates}
-                                isDarkMode={isDarkMode}
-                                itemIndex={itemIndex}
-                                calculatePosition={calculatePosition}
-                                handleMouseOver={handleMouseOver}
-                                handleItrbMouseOver={handleItrbMouseOver}
-                                handleMouseOut={handleMouseOut}
-                                isDateInRange={isDateInRange}
-                                withSubsystem={true}
-                                tamanoGrafico={tamanoGrafico}
-                              />
+                              <GanttActivityBar key={`activity-${item.id}`} item={item} axisDates={axisDates} isDarkMode={isDarkMode} itemIndex={itemIndex} calculatePosition={calculatePosition} handleMouseOver={handleMouseOver} handleItrbMouseOver={handleItrbMouseOver} handleMouseOut={handleMouseOut} isDateInRange={isDateInRange} withSubsystem={true} tamanoGrafico={tamanoGrafico} />
                             ))}
                         </React.Fragment>
                       ))}
-
-                      {/* If subsystems are hidden, show activities directly under system */}
                       {!mostrarSubsistemas && (
                         <>
                           {data
                             .filter(item => item.proyecto === proyecto && item.sistema === sistema)
                             .map((item, itemIndex) => (
-                              <GanttActivityBar
-                                key={`activity-direct-${item.id}`}
-                                item={item}
-                                axisDates={axisDates}
-                                isDarkMode={isDarkMode}
-                                itemIndex={itemIndex}
-                                calculatePosition={calculatePosition}
-                                handleMouseOver={handleMouseOver}
-                                handleItrbMouseOver={handleItrbMouseOver}
-                                handleMouseOut={handleMouseOut}
-                                isDateInRange={isDateInRange}
-                                withSubsystem={false}
-                                tamanoGrafico={tamanoGrafico}
-                              />
+                              <GanttActivityBar key={`activity-direct-${item.id}`} item={item} axisDates={axisDates} isDarkMode={isDarkMode} itemIndex={itemIndex} calculatePosition={calculatePosition} handleMouseOver={handleMouseOver} handleItrbMouseOver={handleItrbMouseOver} handleMouseOut={handleMouseOut} isDateInRange={isDateInRange} withSubsystem={false} tamanoGrafico={tamanoGrafico} />
                             ))}
                         </>
                       )}
@@ -253,27 +177,12 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
           </div>
         </ScrollArea>
       </div>
-      
-      {/* Tooltip for activity */}
-      {hoveredItem && (
-        <GanttTooltip 
-          item={hoveredItem} 
-          position={tooltipPosition} 
-        />
-      )}
-      
-      {/* ITRB Tooltip */}
-      {hoveredItrb && (
-        <GanttItrbTooltip
-          hoveredItrb={hoveredItrb}
-          tooltipPosition={tooltipPosition}
-        />
-      )}
-
-      {/* Legend */}
+      {hoveredItem && <GanttTooltip item={hoveredItem} position={tooltipPosition} />}
+      {hoveredItrb && <GanttItrbTooltip hoveredItrb={hoveredItrb} tooltipPosition={tooltipPosition} />}
       <GanttLegend mostrarLeyenda={mostrarLeyenda} />
     </div>
   );
 };
 
 export default GanttBarChart;
+
