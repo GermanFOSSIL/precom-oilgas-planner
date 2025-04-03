@@ -241,8 +241,8 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                             >
                               <div className="p-2 pl-8 border-r border-gray-200 dark:border-gray-700 flex items-center">
                                 <span className="text-sm truncate">{item.nombre}</span>
-                                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                  ({item.itrbsAsociados.length} ITR)
+                                <span className="ml-2 text-xs font-medium px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
+                                  {item.itrbsAsociados.length} ITR
                                 </span>
                               </div>
                               
@@ -278,28 +278,36 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                                 {/* Individual ITR items as bars instead of points */}
                                 {item.itrbsAsociados.map((itrb, itrbIndex) => {
                                   const itrbStatus = itrb.estado || "En curso";
-                                  const itrbDate = new Date(itrb.fechaLimite);
                                   
-                                  // If ITRB is outside the visible range, don't render it
-                                  if (!isDateInRange(itrbDate)) return null;
+                                  // Calculate dates for the ITR bar
+                                  // Use the activity's start date or ITR's specific start date if available
+                                  const itrbStartDate = itrb.fechaInicio ? new Date(itrb.fechaInicio) : new Date(item.fechaInicio);
+                                  const itrbEndDate = itrb.fechaVencimiento ? new Date(itrb.fechaVencimiento) : 
+                                                    itrb.fechaLimite ? new Date(itrb.fechaLimite) : new Date(item.fechaFin);
                                   
-                                  // Use the activity's start date as the ITR's start date
-                                  const itrbStartDate = new Date(item.fechaInicio);
+                                  // Skip if outside visible range
+                                  if (!isDateInRange(itrbStartDate) && !isDateInRange(itrbEndDate)) return null;
                                   
-                                  // Calculate the ITR bar's position and width
-                                  const itrbLeft = calculatePosition(itrbStartDate);
-                                  const itrbRight = calculatePosition(itrbDate);
-                                  const itrbWidth = itrbRight - itrbLeft;
+                                  // Calculate the bar's position
+                                  const barStart = Math.max(calculatePosition(itrbStartDate), 0);
+                                  const barEnd = Math.min(calculatePosition(itrbEndDate), 100);
+                                  const barWidth = barEnd - barStart;
+                                  
+                                  // Progress calculation for the ITR
+                                  const itrbProgress = itrb.cantidadRealizada !== undefined && itrb.cantidadTotal !== undefined
+                                    ? Math.round((itrb.cantidadRealizada / itrb.cantidadTotal) * 100)
+                                    : itrbStatus === "Completado" ? 100 : 0;
                                   
                                   return (
                                     <div 
                                       key={`itrb-${itrb.id}`}
-                                      className="absolute h-3 rounded-sm z-10 border-2 border-white dark:border-gray-800"
+                                      className="absolute h-3 rounded-sm z-10 hover:h-4 hover:shadow-lg transition-all flex items-center"
                                       style={{ 
-                                        left: `${itrbLeft}%`,
-                                        width: `${itrbWidth}%`,
-                                        top: "calc(50% + 4px)",
-                                        backgroundColor: getStatusColor(itrbStatus)
+                                        left: `${barStart}%`,
+                                        width: `${barWidth}%`,
+                                        top: `calc(50% + 7px)`,
+                                        backgroundColor: getStatusColor(itrbStatus),
+                                        border: "1px solid rgba(255,255,255,0.5)"
                                       }}
                                       onMouseOver={(e) => handleItrbMouseOver(e, {
                                         ...itrb,
@@ -308,10 +316,17 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                                         subsistema: item.subsistema,
                                         proyecto: item.proyecto,
                                         fechaInicio: itrbStartDate,
-                                        fechaFin: itrbDate
+                                        fechaFin: itrbEndDate,
+                                        progreso: itrbProgress
                                       })}
                                       onMouseOut={handleMouseOut}
-                                    />
+                                    >
+                                      {barWidth > 5 && (
+                                        <div className="mx-1 text-white text-[10px] truncate">
+                                          {itrb.descripcion || `ITR ${itrbIndex + 1}`}
+                                        </div>
+                                      )}
+                                    </div>
                                   );
                                 })}
                               </div>
@@ -336,8 +351,8 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                             >
                               <div className="p-2 pl-6 border-r border-gray-200 dark:border-gray-700 flex items-center">
                                 <span className="text-sm truncate">{item.nombre}</span>
-                                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                  ({item.itrbsAsociados.length} ITR)
+                                <span className="ml-2 text-xs font-medium px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
+                                  {item.itrbsAsociados.length} ITR
                                 </span>
                               </div>
                               
@@ -369,31 +384,38 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                                   </div>
                                 </div>
 
-                                {/* Individual ITR items as bars instead of points */}
+                                {/* Individual ITR items as bars */}
                                 {item.itrbsAsociados.map((itrb, itrbIndex) => {
                                   const itrbStatus = itrb.estado || "En curso";
-                                  const itrbDate = new Date(itrb.fechaLimite);
                                   
-                                  // If ITRB is outside the visible range, don't render it
-                                  if (!isDateInRange(itrbDate)) return null;
+                                  // Calculate dates for the ITR bar
+                                  const itrbStartDate = itrb.fechaInicio ? new Date(itrb.fechaInicio) : new Date(item.fechaInicio);
+                                  const itrbEndDate = itrb.fechaVencimiento ? new Date(itrb.fechaVencimiento) : 
+                                                    itrb.fechaLimite ? new Date(itrb.fechaLimite) : new Date(item.fechaFin);
                                   
-                                  // Use the activity's start date as the ITR's start date
-                                  const itrbStartDate = new Date(item.fechaInicio);
+                                  // Skip if outside visible range
+                                  if (!isDateInRange(itrbStartDate) && !isDateInRange(itrbEndDate)) return null;
                                   
-                                  // Calculate the ITR bar's position and width
-                                  const itrbLeft = calculatePosition(itrbStartDate);
-                                  const itrbRight = calculatePosition(itrbDate);
-                                  const itrbWidth = itrbRight - itrbLeft;
+                                  // Calculate the bar's position
+                                  const barStart = Math.max(calculatePosition(itrbStartDate), 0);
+                                  const barEnd = Math.min(calculatePosition(itrbEndDate), 100);
+                                  const barWidth = barEnd - barStart;
+                                  
+                                  // Progress calculation for the ITR
+                                  const itrbProgress = itrb.cantidadRealizada !== undefined && itrb.cantidadTotal !== undefined
+                                    ? Math.round((itrb.cantidadRealizada / itrb.cantidadTotal) * 100)
+                                    : itrbStatus === "Completado" ? 100 : 0;
                                   
                                   return (
                                     <div 
                                       key={`itrb-direct-${itrb.id}`}
-                                      className="absolute h-3 rounded-sm z-10 border-2 border-white dark:border-gray-800"
+                                      className="absolute h-3 rounded-sm z-10 hover:h-4 hover:shadow-lg transition-all flex items-center"
                                       style={{ 
-                                        left: `${itrbLeft}%`,
-                                        width: `${itrbWidth}%`,
-                                        top: "calc(50% + 4px)",
-                                        backgroundColor: getStatusColor(itrbStatus)
+                                        left: `${barStart}%`,
+                                        width: `${barWidth}%`,
+                                        top: `calc(50% + 7px)`,
+                                        backgroundColor: getStatusColor(itrbStatus),
+                                        border: "1px solid rgba(255,255,255,0.5)"
                                       }}
                                       onMouseOver={(e) => handleItrbMouseOver(e, {
                                         ...itrb,
@@ -402,10 +424,17 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                                         subsistema: item.subsistema,
                                         proyecto: item.proyecto,
                                         fechaInicio: itrbStartDate,
-                                        fechaFin: itrbDate
+                                        fechaFin: itrbEndDate,
+                                        progreso: itrbProgress
                                       })}
                                       onMouseOut={handleMouseOut}
-                                    />
+                                    >
+                                      {barWidth > 5 && (
+                                        <div className="mx-1 text-white text-[10px] truncate">
+                                          {itrb.descripcion || `ITR ${itrbIndex + 1}`}
+                                        </div>
+                                      )}
+                                    </div>
                                   );
                                 })}
                               </div>
@@ -421,7 +450,7 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
         </div>
       </ScrollArea>
       
-      {/* Tooltip */}
+      {/* Tooltip for activity */}
       {hoveredItem && (
         <GanttTooltip 
           item={hoveredItem} 
@@ -438,7 +467,7 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
             left: `${tooltipPosition.x + 10}px`,
           }}
         >
-          <h3 className="font-bold text-base mb-1 border-b pb-1">{hoveredItrb.descripcion}</h3>
+          <h3 className="font-bold text-base mb-1 border-b pb-1">{hoveredItrb.descripcion || "ITR"}</h3>
           
           <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
             <div className="text-gray-500 dark:text-gray-400">Actividad:</div>
@@ -464,7 +493,7 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
             </div>
             
             <div className="text-gray-500 dark:text-gray-400">Estado:</div>
-            <div className="font-medium">
+            <div className="font-medium flex items-center">
               <span 
                 className={`inline-block w-2 h-2 rounded-full mr-1 ${
                   hoveredItrb.estado === "Completado" ? "bg-green-500" : 
@@ -475,11 +504,11 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
               {hoveredItrb.estado}
             </div>
             
-            {hoveredItrb.cantidadRealizada !== undefined && (
+            {(hoveredItrb.cantidadRealizada !== undefined && hoveredItrb.cantidadTotal !== undefined) && (
               <>
                 <div className="text-gray-500 dark:text-gray-400">Progreso:</div>
                 <div className="font-medium">
-                  {hoveredItrb.cantidadRealizada}/{hoveredItrb.cantidadTotal}
+                  {hoveredItrb.cantidadRealizada}/{hoveredItrb.cantidadTotal} ({hoveredItrb.progreso}%)
                 </div>
               </>
             )}
@@ -489,17 +518,17 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
 
       {/* Legend */}
       {mostrarLeyenda && (
-        <div className="flex justify-center mt-4 space-x-4 pb-4">
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2 bg-estado-completado"></div>
+        <div className="flex flex-wrap justify-center mt-4 space-x-4 space-y-2 pb-4">
+          <div className="flex items-center ml-4 mt-2">
+            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#22c55e" }}></div>
             <span className="text-sm">Completado</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2 bg-estado-curso"></div>
+            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#f59e0b" }}></div>
             <span className="text-sm">En curso</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2 bg-estado-vencido"></div>
+            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#ef4444" }}></div>
             <span className="text-sm">Vencido</span>
           </div>
           <div className="flex items-center">

@@ -7,12 +7,20 @@ import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, SunMoon, AlertTriangle, Eye, EyeOff, FileText, FileSpreadsheet } from "lucide-react";
+import { Calendar, SunMoon, AlertTriangle, Eye, EyeOff, FileText, FileSpreadsheet, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import PublicHeader from "@/components/PublicHeader";
 import { toast } from "sonner";
 import CriticalPathView from "@/components/CriticalPathView";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const PublicDashboard: React.FC = () => {
   const { 
@@ -123,6 +131,7 @@ const PublicDashboard: React.FC = () => {
       // Trigger PDF generation through window event
       const exportEvent = new CustomEvent('export-gantt-pdf');
       window.dispatchEvent(exportEvent);
+      toast.success("Exportando a PDF...");
     } catch (error) {
       console.error("Error al iniciar la exportación:", error);
       toast.error("Error al iniciar la exportación del gráfico Gantt");
@@ -134,10 +143,18 @@ const PublicDashboard: React.FC = () => {
       // Trigger Excel generation through window event
       const exportEvent = new CustomEvent('export-gantt-excel');
       window.dispatchEvent(exportEvent);
+      toast.success("Exportando a Excel...");
     } catch (error) {
       console.error("Error al iniciar la exportación a Excel:", error);
       toast.error("Error al iniciar la exportación a Excel");
     }
+  }, []);
+
+  const handleToggleDemoData = useCallback(() => {
+    // Trigger demo data toggle through window event
+    const toggleEvent = new CustomEvent('toggle-demo-data');
+    window.dispatchEvent(toggleEvent);
+    toast.success("Cambiando origen de datos...");
   }, []);
 
   // Memoized current timestamp for filters
@@ -212,27 +229,31 @@ const PublicDashboard: React.FC = () => {
               <SunMoon className="h-4 w-4" />
             </Button>
             
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border border-gray-200"
-                onClick={handleExportGantt}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Gantt PDF
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                className="border border-gray-200"
-                onClick={handleExportExcel}
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Gantt Excel
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="border border-gray-200">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Exportar datos</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportGantt}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Gantt PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Gantt Excel
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleToggleDemoData}>
+                  <Database className="h-4 w-4 mr-2" />
+                  Cambiar a {actividades.length > 0 ? 'datos demo' : 'datos reales'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
