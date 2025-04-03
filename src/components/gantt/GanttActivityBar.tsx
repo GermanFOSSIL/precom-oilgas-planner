@@ -29,6 +29,7 @@ interface GanttActivityBarProps {
   handleMouseOut: () => void;
   isDateInRange: (date: Date) => boolean;
   withSubsystem?: boolean;
+  tamanoGrafico?: "pequeno" | "mediano" | "grande";
 }
 
 const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
@@ -41,7 +42,8 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
   handleItrbMouseOver,
   handleMouseOut,
   isDateInRange,
-  withSubsystem = true
+  withSubsystem = true,
+  tamanoGrafico = "mediano"
 }) => {
   // Ensure positions are calculated correctly
   const startPosition = Math.max(calculatePosition(item.fechaInicio), 0);
@@ -51,19 +53,46 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
   // Count of ITRs for badge
   const itrbCount = item.itrbsAsociados?.length || 0;
 
+  // Get row and bar height based on size setting
+  const getRowHeight = () => {
+    switch (tamanoGrafico) {
+      case "pequeno": return "h-8";
+      case "mediano": return "h-10";
+      case "grande": return "h-12";
+      default: return "h-10";
+    }
+  };
+
+  // Get bar height based on size setting
+  const getBarHeight = () => {
+    switch (tamanoGrafico) {
+      case "pequeno": return "h-5 top-1/2 -mt-2.5";
+      case "mediano": return "h-6 top-1/2 -mt-3";
+      case "grande": return "h-7 top-1/2 -mt-3.5";
+      default: return "h-6 top-1/2 -mt-3";
+    }
+  };
+
+  // Get ITR bar vertical spacing
+  const getItrbVerticalSpacing = (index: number) => {
+    const baseSpacing = tamanoGrafico === "pequeno" ? 6 : 
+                        tamanoGrafico === "grande" ? 10 : 8;
+    return baseSpacing + (index * 4);
+  };
+
   return (
     <div 
       key={`activity-${item.id}`}
-      className="grid border-b relative"
+      className={`grid border-b relative ${getRowHeight()} mb-1`}
       style={{ 
         gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
         backgroundColor: getRowBackgroundColor(itemIndex, isDarkMode)
       }}
     >
-      <div className={`p-2 ${withSubsystem ? 'pl-8' : 'pl-6'} border-r border-gray-200 dark:border-gray-700 flex items-center`}>
+      <div className={`px-2 ${withSubsystem ? 'pl-8' : 'pl-6'} border-r border-gray-200 dark:border-gray-700 flex items-center gap-2`}>
         <span className="text-sm truncate">{item.nombre}</span>
         {itrbCount > 0 && (
-          <span className="ml-2 text-xs font-medium px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
+          <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
             {itrbCount} ITR
           </span>
         )}
@@ -72,7 +101,7 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
       <div className="col-span-full h-full relative">
         {/* Main activity bar */}
         <div 
-          className="absolute h-6 top-1/2 -mt-3 rounded"
+          className={`absolute rounded ${getBarHeight()}`}
           style={{ 
             left: `${startPosition}%`,
             width: `${barWidth}%`,
@@ -121,8 +150,8 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
             ? Math.round((itrb.cantidadRealizada / itrb.cantidadTotal) * 100)
             : itrbStatus === "Completado" ? 100 : 0;
           
-          // Determine the y-position based on index (distribute evenly)
-          const yOffset = 8 + (itrbIndex * 4); // More spacing between ITR bars
+          // Determine the y-position based on index and size setting
+          const yOffset = getItrbVerticalSpacing(itrbIndex);
           
           return (
             <div 

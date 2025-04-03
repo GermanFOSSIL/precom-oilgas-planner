@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 
 interface HeaderControlsProps {
@@ -47,48 +48,68 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
         </Button>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          onClick={onToggleTheme}
-          className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
-        >
-          <SunMoon className="h-4 w-4" />
-        </Button>
+      <div className="flex flex-col w-full md:w-auto gap-2">
+        <Tabs defaultValue="main" className="w-full">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="main" className="flex items-center gap-1">
+              <Bot className="h-4 w-4" />
+              <span>Principal</span>
+            </TabsTrigger>
+            <TabsTrigger value="exports" className="flex items-center gap-1">
+              <Download className="h-4 w-4" />
+              <span>Exportar</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-1">
+              <SunMoon className="h-4 w-4" />
+              <span>Ajustes</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div className="flex gap-2 mt-2">
+          <Button
+            variant="outline"
+            onClick={onToggleTheme}
+            className="dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+          >
+            <SunMoon className="h-4 w-4 mr-2" />
+            Cambiar tema
+          </Button>
 
-        <Button
-          variant="outline"
-          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-          asChild
-        >
-          <Link to="/ai-assistant">
-            <Bot className="h-4 w-4 mr-2" />
-            Asistente IA
-          </Link>
-        </Button>
+          <Button
+            variant="outline"
+            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+            asChild
+          >
+            <Link to="/ai-assistant">
+              <Bot className="h-4 w-4 mr-2" />
+              Asistente IA
+            </Link>
+          </Button>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="default"
-              disabled={exportingChart}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={onExportPDF} disabled={exportingChart}>
-              <Image className="h-4 w-4 mr-2" />
-              Generar PDF con Gantt
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onExportExcel} disabled={exportingChart}>
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Exportar Excel
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="default"
+                disabled={exportingChart}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={onExportPDF} disabled={exportingChart}>
+                <Image className="h-4 w-4 mr-2" />
+                Generar PDF con Gantt
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onExportExcel} disabled={exportingChart}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Exportar Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );

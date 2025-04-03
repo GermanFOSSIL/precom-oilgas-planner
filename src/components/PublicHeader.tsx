@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface PublicHeaderProps {
   onLoginClick?: () => void;
@@ -49,7 +50,7 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ onLoginClick }) => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="mr-2">
                   <Link to="/ai-assistant">
                     <Bot className="h-4 w-4 mr-2" />
                     Asistente IA
@@ -63,19 +64,25 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ onLoginClick }) => {
           </TooltipProvider>
           
           {user ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" onClick={handleLogoutClick}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Cerrar sesión
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Cerrar tu sesión actual</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
+                {user.nombre || user.email || 'Usuario'}
+              </Badge>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={handleLogoutClick} className="border-red-200 text-red-700 hover:bg-red-50">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Cerrar sesión
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Cerrar tu sesión actual</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           ) : (
             <TooltipProvider>
               <Tooltip>

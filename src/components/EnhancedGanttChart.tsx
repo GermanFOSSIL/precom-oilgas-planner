@@ -187,15 +187,18 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
         </div>
       </div>
       
-      <GanttBarChart
-        data={ganttData}
-        currentStartDate={currentStartDate}
-        currentEndDate={currentEndDate}
-        zoomLevel={zoomLevel}
-        viewMode={viewMode}
-        mostrarSubsistemas={mostrarSubsistemas}
-        mostrarLeyenda={configuracion.mostrarLeyenda}
-      />
+      <div className="overflow-y-auto max-h-[70vh]">
+        <GanttBarChart
+          data={ganttData}
+          currentStartDate={currentStartDate}
+          currentEndDate={currentEndDate}
+          zoomLevel={zoomLevel}
+          viewMode={viewMode}
+          mostrarSubsistemas={mostrarSubsistemas}
+          mostrarLeyenda={configuracion.mostrarLeyenda}
+          tamanoGrafico={configuracion.tamano}
+        />
+      </div>
     </div>
   );
 };

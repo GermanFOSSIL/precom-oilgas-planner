@@ -14,10 +14,10 @@ const GanttSubsystemHeader: React.FC<GanttSubsystemHeaderProps> = ({
 }) => {
   return (
     <div 
-      className="grid border-b"
+      className="grid border-b mb-1"
       style={{ 
         gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
-        backgroundColor: "#7d8ae8" // Azul claro para subsistemas
+        backgroundColor: "#7d8ae8" // Light blue for subsystems
       }}
     >
       <div className="p-1 pl-6 font-medium text-sm text-white">

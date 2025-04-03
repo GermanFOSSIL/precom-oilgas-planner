@@ -37,6 +37,7 @@ interface GanttBarChartProps {
   viewMode: "month" | "week" | "day";
   mostrarSubsistemas: boolean;
   mostrarLeyenda?: boolean;
+  tamanoGrafico?: "pequeno" | "mediano" | "grande";
 }
 
 const GanttBarChart: React.FC<GanttBarChartProps> = ({
@@ -46,7 +47,8 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   zoomLevel,
   viewMode,
   mostrarSubsistemas,
-  mostrarLeyenda = true
+  mostrarLeyenda = true,
+  tamanoGrafico = "mediano"
 }) => {
   const [hoveredItem, setHoveredItem] = useState<GanttData | null>(null);
   const [hoveredItrb, setHoveredItrb] = useState<any | null>(null);
@@ -130,103 +132,127 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
     setHoveredItrb(null);
   };
 
+  // Get row height based on size setting
+  const getRowHeight = () => {
+    switch (tamanoGrafico) {
+      case "pequeno": return "h-6";
+      case "mediano": return "h-8";
+      case "grande": return "h-10";
+      default: return "h-8";
+    }
+  };
+
+  // Get spacing class based on size setting
+  const getSpacingClass = () => {
+    switch (tamanoGrafico) {
+      case "pequeno": return "space-y-1";
+      case "mediano": return "space-y-2";
+      case "grande": return "space-y-3";
+      default: return "space-y-2";
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col">
-      <ScrollArea className="w-full h-full">
-        <div className="min-w-[800px] relative">
-          {/* Date Headers */}
-          <GanttDateHeaders 
-            axisDates={axisDates}
-            viewMode={viewMode}
-            isDarkMode={isDarkMode}
-          />
+      <div className="w-full overflow-y-auto max-h-[70vh]">
+        <ScrollArea className="w-full">
+          <div className="min-w-[800px] relative">
+            {/* Date Headers */}
+            <GanttDateHeaders 
+              axisDates={axisDates}
+              viewMode={viewMode}
+              isDarkMode={isDarkMode}
+            />
 
-          {/* Today indicator */}
-          <GanttTodayIndicator 
-            currentStartDate={currentStartDate}
-            currentEndDate={currentEndDate}
-            calculatePosition={calculatePosition}
-          />
+            {/* Today indicator */}
+            <GanttTodayIndicator 
+              currentStartDate={currentStartDate}
+              currentEndDate={currentEndDate}
+              calculatePosition={calculatePosition}
+            />
 
-          {/* Gantt Content */}
-          <div className="w-full">
-            {Object.entries(groupedData).map(([proyecto, sistemas], proyectoIndex) => (
-              <React.Fragment key={`proyecto-${proyectoIndex}`}>
-                {/* Project Header */}
-                <GanttProjectHeader 
-                  proyecto={proyecto}
-                  axisDates={axisDates}
-                  isDarkMode={isDarkMode}
-                />
+            {/* Gantt Content */}
+            <div className={`w-full ${getSpacingClass()}`}>
+              {Object.entries(groupedData).map(([proyecto, sistemas], proyectoIndex) => (
+                <React.Fragment key={`proyecto-${proyectoIndex}`}>
+                  {/* Project Header */}
+                  <GanttProjectHeader 
+                    proyecto={proyecto}
+                    axisDates={axisDates}
+                    isDarkMode={isDarkMode}
+                  />
 
-                {Object.entries(sistemas).map(([sistema, subsistemas], sistemaIndex) => (
-                  <React.Fragment key={`sistema-${proyectoIndex}-${sistemaIndex}`}>
-                    {/* System Header */}
-                    <GanttSystemHeader
-                      sistema={sistema}
-                      axisDates={axisDates}
-                      isDarkMode={isDarkMode}
-                    />
+                  {Object.entries(sistemas).map(([sistema, subsistemas], sistemaIndex) => (
+                    <React.Fragment key={`sistema-${proyectoIndex}-${sistemaIndex}`}>
+                      {/* System Header */}
+                      <GanttSystemHeader
+                        sistema={sistema}
+                        axisDates={axisDates}
+                        isDarkMode={isDarkMode}
+                      />
 
-                    {mostrarSubsistemas && subsistemas.map((subsistema, subsistemaIndex) => (
-                      <React.Fragment key={`subsistema-${proyectoIndex}-${sistemaIndex}-${subsistemaIndex}`}>
-                        {/* Subsystem Header */}
-                        <GanttSubsystemHeader
-                          subsistema={subsistema}
-                          axisDates={axisDates}
-                          isDarkMode={isDarkMode}
-                        />
+                      {mostrarSubsistemas && subsistemas.map((subsistema, subsistemaIndex) => (
+                        <React.Fragment key={`subsistema-${proyectoIndex}-${sistemaIndex}-${subsistemaIndex}`}>
+                          {/* Subsystem Header */}
+                          <GanttSubsystemHeader
+                            subsistema={subsistema}
+                            axisDates={axisDates}
+                            isDarkMode={isDarkMode}
+                          />
 
-                        {/* Activities for this subsystem */}
-                        {data
-                          .filter(item => item.proyecto === proyecto && item.sistema === sistema && item.subsistema === subsistema)
-                          .map((item, itemIndex) => (
-                            <GanttActivityBar
-                              key={`activity-${item.id}`}
-                              item={item}
-                              axisDates={axisDates}
-                              isDarkMode={isDarkMode}
-                              itemIndex={itemIndex}
-                              calculatePosition={calculatePosition}
-                              handleMouseOver={handleMouseOver}
-                              handleItrbMouseOver={handleItrbMouseOver}
-                              handleMouseOut={handleMouseOut}
-                              isDateInRange={isDateInRange}
-                              withSubsystem={true}
-                            />
-                          ))}
-                      </React.Fragment>
-                    ))}
+                          {/* Activities for this subsystem */}
+                          {data
+                            .filter(item => item.proyecto === proyecto && item.sistema === sistema && item.subsistema === subsistema)
+                            .map((item, itemIndex) => (
+                              <GanttActivityBar
+                                key={`activity-${item.id}`}
+                                item={item}
+                                axisDates={axisDates}
+                                isDarkMode={isDarkMode}
+                                itemIndex={itemIndex}
+                                calculatePosition={calculatePosition}
+                                handleMouseOver={handleMouseOver}
+                                handleItrbMouseOver={handleItrbMouseOver}
+                                handleMouseOut={handleMouseOut}
+                                isDateInRange={isDateInRange}
+                                withSubsystem={true}
+                                tamanoGrafico={tamanoGrafico}
+                              />
+                            ))}
+                        </React.Fragment>
+                      ))}
 
-                    {/* If subsystems are hidden, show activities directly under system */}
-                    {!mostrarSubsistemas && (
-                      <>
-                        {data
-                          .filter(item => item.proyecto === proyecto && item.sistema === sistema)
-                          .map((item, itemIndex) => (
-                            <GanttActivityBar
-                              key={`activity-direct-${item.id}`}
-                              item={item}
-                              axisDates={axisDates}
-                              isDarkMode={isDarkMode}
-                              itemIndex={itemIndex}
-                              calculatePosition={calculatePosition}
-                              handleMouseOver={handleMouseOver}
-                              handleItrbMouseOver={handleItrbMouseOver}
-                              handleMouseOut={handleMouseOut}
-                              isDateInRange={isDateInRange}
-                              withSubsystem={false}
-                            />
-                          ))}
-                      </>
-                    )}
-                  </React.Fragment>
-                ))}
-              </React.Fragment>
-            ))}
+                      {/* If subsystems are hidden, show activities directly under system */}
+                      {!mostrarSubsistemas && (
+                        <>
+                          {data
+                            .filter(item => item.proyecto === proyecto && item.sistema === sistema)
+                            .map((item, itemIndex) => (
+                              <GanttActivityBar
+                                key={`activity-direct-${item.id}`}
+                                item={item}
+                                axisDates={axisDates}
+                                isDarkMode={isDarkMode}
+                                itemIndex={itemIndex}
+                                calculatePosition={calculatePosition}
+                                handleMouseOver={handleMouseOver}
+                                handleItrbMouseOver={handleItrbMouseOver}
+                                handleMouseOut={handleMouseOut}
+                                isDateInRange={isDateInRange}
+                                withSubsystem={false}
+                                tamanoGrafico={tamanoGrafico}
+                              />
+                            ))}
+                        </>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
       
       {/* Tooltip for activity */}
       {hoveredItem && (
