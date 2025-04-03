@@ -35,6 +35,10 @@ export interface FiltrosDashboard {
   sistema?: string;
   subsistema?: string;
   timestamp?: string;
+  busquedaActividad?: string;
+  estadoITRB?: string;
+  tareaVencida?: boolean;
+  mcc?: boolean;
 }
 
 export interface ConfiguracionGrafico {
