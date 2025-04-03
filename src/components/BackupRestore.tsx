@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -156,9 +157,8 @@ const BackupRestore = () => {
       const file = event.target.files[0];
       
       const isJsonExtension = file.name.toLowerCase().endsWith('.json');
-      const isJsonType = file.type === 'application/json' || file.type === '';
       
-      if (isJsonExtension || isJsonType) {
+      if (isJsonExtension) {
         setBackupFile(file);
       } else {
         toast.error("Formato de archivo no válido", {
@@ -199,13 +199,15 @@ const BackupRestore = () => {
             try {
               data = JSON.parse(e.target.result as string);
             } catch (parseError) {
+              console.error("Error al analizar JSON:", parseError);
               throw new Error("Error al analizar el archivo JSON. El formato del archivo no es válido.");
             }
             
-            if (!data.metadata) {
+            if (!data || !data.metadata) {
               throw new Error("El archivo seleccionado no es un backup válido. No se encontraron metadatos.");
             }
             
+            // Utilizar funciones de setter en lugar de valores directos
             if (restoreOptions.proyectos && data.proyectos) {
               setProyectos(data.proyectos);
             }
@@ -259,7 +261,8 @@ const BackupRestore = () => {
         }
       };
       
-      reader.onerror = () => {
+      reader.onerror = (error) => {
+        console.error("Error al leer el archivo:", error);
         toast.error("Error al leer el archivo", {
           description: "No se pudo leer el contenido del archivo"
         });
