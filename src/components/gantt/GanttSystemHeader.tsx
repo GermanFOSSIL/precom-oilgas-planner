@@ -17,7 +17,7 @@ const GanttSystemHeader: React.FC<GanttSystemHeaderProps> = ({
       className="grid border-b"
       style={{ 
         gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
-        backgroundColor: "#6366f1" // Medium indigo/purple color from image
+        backgroundColor: "#4e5ed4" // Azul medio para sistemas
       }}
     >
       <div className="p-2 pl-4 font-semibold text-white">

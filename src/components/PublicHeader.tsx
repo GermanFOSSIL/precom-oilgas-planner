@@ -2,7 +2,7 @@
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, LogIn, Bot } from "lucide-react";
+import { CalendarIcon, LogIn, Bot, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import {
@@ -18,11 +18,19 @@ interface PublicHeaderProps {
 
 const PublicHeader: React.FC<PublicHeaderProps> = ({ onLoginClick }) => {
   const navigate = useNavigate();
+  const { user, logout } = useAppContext();
 
   const handleLoginClick = () => {
     if (onLoginClick) {
       onLoginClick();
     } else {
+      navigate("/login");
+    }
+  };
+
+  const handleLogoutClick = () => {
+    if (logout) {
+      logout();
       navigate("/login");
     }
   };
@@ -54,19 +62,35 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ onLoginClick }) => {
             </Tooltip>
           </TooltipProvider>
           
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" onClick={handleLoginClick}>
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Iniciar sesión
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Acceder como administrador o técnico</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {user ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={handleLogoutClick}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar sesión
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Cerrar tu sesión actual</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={handleLoginClick}>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Iniciar sesión
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Acceder como administrador o técnico</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </div>
     </header>

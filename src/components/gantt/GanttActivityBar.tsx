@@ -46,7 +46,10 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
   // Ensure positions are calculated correctly
   const startPosition = Math.max(calculatePosition(item.fechaInicio), 0);
   const endPosition = Math.min(calculatePosition(item.fechaFin), 100);
-  const barWidth = endPosition - startPosition;
+  const barWidth = Math.max(endPosition - startPosition, 0.5); // Ensure minimum width for visibility
+
+  // Count of ITRs for badge
+  const itrbCount = item.itrbsAsociados?.length || 0;
 
   return (
     <div 
@@ -59,9 +62,11 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
     >
       <div className={`p-2 ${withSubsystem ? 'pl-8' : 'pl-6'} border-r border-gray-200 dark:border-gray-700 flex items-center`}>
         <span className="text-sm truncate">{item.nombre}</span>
-        <span className="ml-2 text-xs font-medium px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
-          {item.itrbsAsociados.length} ITR
-        </span>
+        {itrbCount > 0 && (
+          <span className="ml-2 text-xs font-medium px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
+            {itrbCount} ITR
+          </span>
+        )}
       </div>
       
       <div className="col-span-full h-full relative">
@@ -109,7 +114,7 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
           // Calculate the bar's position
           const barStart = Math.max(calculatePosition(itrbStartDate), 0);
           const barEnd = Math.min(calculatePosition(itrbEndDate), 100);
-          const itrbBarWidth = barEnd - barStart;
+          const itrbBarWidth = Math.max(barEnd - barStart, 0.5); // Ensure minimum width
           
           // Progress calculation for the ITR
           const itrbProgress = itrb.cantidadRealizada !== undefined && itrb.cantidadTotal !== undefined

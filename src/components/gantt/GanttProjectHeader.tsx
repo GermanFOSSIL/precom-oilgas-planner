@@ -17,7 +17,7 @@ const GanttProjectHeader: React.FC<GanttProjectHeaderProps> = ({
       className="grid border-b"
       style={{ 
         gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
-        backgroundColor: "#4338ca" // Strong indigo/purple color from image
+        backgroundColor: "#4b32c3" // Violeta sólido para proyectos
       }}
     >
       <div className="p-2 font-bold text-white">
