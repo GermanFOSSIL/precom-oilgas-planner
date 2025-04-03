@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +64,7 @@ import UserManagement from "@/components/UserManagement";
 import ReportGenerator from "@/components/ReportGenerator";
 import { FiltrosDashboard, ConfiguracionGrafico, Proyecto, Actividad, ITRB, KPIConfig } from "@/types";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
+import BackupRestore from "@/components/BackupRestore";
 
 const AdminPanel: React.FC = () => {
   const { 
@@ -95,7 +95,6 @@ const AdminPanel: React.FC = () => {
     mostrarLeyenda: true
   });
 
-  // Estado para diálogos
   const [showNewActivityDialog, setShowNewActivityDialog] = useState(false);
   const [showNewITRBDialog, setShowNewITRBDialog] = useState(false);
 
@@ -146,7 +145,6 @@ const AdminPanel: React.FC = () => {
     setNuevoProyecto({ titulo: "", descripcion: "" });
     toast.success("Proyecto creado exitosamente");
     
-    // Cerrar diálogo automáticamente
     const dialogTrigger = document.querySelector<HTMLButtonElement>('[data-state="open"]');
     if (dialogTrigger) {
       dialogTrigger.click();
@@ -222,7 +220,6 @@ const AdminPanel: React.FC = () => {
       duracion: 7
     });
     
-    // Mostrar mensaje y cerrar diálogo automáticamente
     toast.success("Actividad creada exitosamente");
     setShowNewActivityDialog(false);
   };
@@ -252,7 +249,6 @@ const AdminPanel: React.FC = () => {
       observaciones: ""
     });
     
-    // Mostrar mensaje y cerrar diálogo automáticamente
     toast.success("ITR B creado exitosamente");
     setShowNewITRBDialog(false);
   };
@@ -396,7 +392,6 @@ const AdminPanel: React.FC = () => {
     toast.info("Funcionalidad de exportación a Excel en desarrollo");
   };
   
-  // Manejar cambio de configuración para un KPI específico
   const handleKPIConfigChange = (option: keyof KPIConfig, value: any) => {
     updateKPIConfig({ [option]: value });
     toast.success("Configuración actualizada", {
@@ -861,7 +856,6 @@ const AdminPanel: React.FC = () => {
           </DialogContent>
         </Dialog>
         
-        {/* Nueva Actividad Dialog */}
         <Dialog open={showNewActivityDialog} onOpenChange={setShowNewActivityDialog}>
           <DialogContent>
             <DialogHeader>
@@ -969,7 +963,6 @@ const AdminPanel: React.FC = () => {
           </DialogContent>
         </Dialog>
         
-        {/* Nuevo ITR B Dialog */}
         <Dialog open={showNewITRBDialog} onOpenChange={setShowNewITRBDialog}>
           <DialogContent>
             <DialogHeader>
@@ -1082,6 +1075,29 @@ const AdminPanel: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="users">Usuarios</TabsTrigger>
+          <TabsTrigger value="projects">Proyectos</TabsTrigger>
+          <TabsTrigger value="reports">Reportes</TabsTrigger>
+          <TabsTrigger value="backup">Backup y Restauración</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="users" className="space-y-4">
+          <UserManagement />
+        </TabsContent>
+        
+        <TabsContent value="projects" className="space-y-4">
+          <ProyectoSelector />
+        </TabsContent>
+        
+        <TabsContent value="reports" className="space-y-4">
+          <ReportGenerator />
+        </TabsContent>
+        
+        <TabsContent value="backup" className="space-y-4">
+          <BackupRestore />
+        </TabsContent>
       </main>
     </div>
   );
