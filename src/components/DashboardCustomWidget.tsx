@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { 
@@ -57,11 +56,9 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
   const { actividades, itrbItems, proyectos } = useAppContext();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   
-  // Datos para los gráficos
   const getData = () => {
     switch (widget.datos) {
       case "avance":
-        // Datos de avance por proyecto/sistema
         return proyectos.map(proyecto => {
           const actividadesProyecto = actividades.filter(a => a.proyectoId === proyecto.id);
           const itrbsProyecto = itrbItems.filter(i => {
@@ -83,7 +80,6 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
         });
         
       case "itrb":
-        // Datos de ITRBs por estado
         const estadosCount = { Completado: 0, "En curso": 0, Vencido: 0 };
         itrbItems.forEach(itrb => {
           estadosCount[itrb.estado as keyof typeof estadosCount]++;
@@ -96,7 +92,6 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
         ];
         
       case "actividades":
-        // Datos de actividades por sistema
         const sistemaCount: Record<string, number> = {};
         actividades.forEach(act => {
           sistemaCount[act.sistema] = (sistemaCount[act.sistema] || 0) + 1;
@@ -109,18 +104,15 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
         }));
         
       case "vencimientos":
-        // Datos de vencimientos por mes
         const now = new Date();
         const monthsData: Record<string, { vencidos: number, proximos: number }> = {};
         
-        // Inicializar los próximos 6 meses
         for (let i = 0; i < 6; i++) {
           const month = new Date(now.getFullYear(), now.getMonth() + i, 1);
           const monthKey = month.toLocaleString('default', { month: 'short', year: 'numeric' });
           monthsData[monthKey] = { vencidos: 0, proximos: 0 };
         }
         
-        // Contar ITRBs por mes de vencimiento
         itrbItems.forEach(itrb => {
           const fechaLimite = new Date(itrb.fechaLimite);
           const monthKey = fechaLimite.toLocaleString('default', { month: 'short', year: 'numeric' });
@@ -145,7 +137,6 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
     }
   };
   
-  // Renderizar el gráfico según el tipo
   const renderChart = () => {
     const data = getData();
     const height = isMaximized ? 500 : 300;
@@ -298,7 +289,6 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
     }
   };
   
-  // Obtener el ícono según el tipo de gráfico
   const getChartIcon = () => {
     switch (widget.tipo) {
       case "barras":
@@ -313,17 +303,8 @@ const DashboardCustomWidget: React.FC<DashboardCustomWidgetProps> = ({
     }
   };
   
-  // Drag handler para mover el widget
-  // Fix: useDrag returns an object, not a function, so we need to destructure it
-  const bindDrag = useDrag(({ movement: [x, y], first, last }) => {
-    if (first) {
-      const startPos = { ...position };
-      setPosition(startPos);
-    }
-    
-    if (!last) {
-      setPosition({ x, y });
-    }
+  const bindDrag = useDrag(({ movement: [x, y] }) => {
+    setPosition({ x, y });
   });
   
   return (

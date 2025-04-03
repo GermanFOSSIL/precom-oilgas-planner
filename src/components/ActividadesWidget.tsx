@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,26 +15,21 @@ interface ActividadesWidgetProps {
 const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) => {
   const { actividades, itrbItems, proyectos, filtros } = useAppContext();
   
-  // Filtrar las actividades según los filtros aplicados
   const actividadesFiltradas = useMemo(() => {
     let filtered = actividades;
     
-    // Filtrar por proyecto
     if (filtros.proyecto !== "todos") {
       filtered = filtered.filter(act => act.proyectoId === filtros.proyecto);
     }
     
-    // Filtrar por sistema
     if (filtros.sistema) {
       filtered = filtered.filter(act => act.sistema === filtros.sistema);
     }
     
-    // Filtrar por subsistema
     if (filtros.subsistema) {
       filtered = filtered.filter(act => act.subsistema === filtros.subsistema);
     }
     
-    // Filtrar por búsqueda
     if (filtros.busquedaActividad) {
       const search = filtros.busquedaActividad.toLowerCase();
       filtered = filtered.filter(act => 
@@ -48,24 +42,19 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
     return filtered;
   }, [actividades, filtros]);
   
-  // Enriquecer las actividades con información adicional
   const actividadesConInfo = useMemo(() => {
     return actividadesFiltradas.map(actividad => {
-      // Obtener ITRBs asociados
       const itrbs = itrbItems.filter(itrb => itrb.actividadId === actividad.id);
       
-      // Calcular progreso
       const totalITRBs = itrbs.length;
       const completados = itrbs.filter(itrb => itrb.estado === "Completado").length;
       const vencidos = itrbs.filter(itrb => itrb.estado === "Vencido").length;
       const progreso = totalITRBs > 0 ? (completados / totalITRBs) * 100 : 0;
       
-      // Verificar fechas
       const fechaInicio = new Date(actividad.fechaInicio);
       const fechaFin = new Date(actividad.fechaFin);
       const hoy = new Date();
       
-      // Calcular estado de la actividad
       let estado: "pendiente" | "en-curso" | "completada" | "vencida" = "pendiente";
       
       if (fechaInicio > hoy) {
@@ -78,7 +67,6 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
         estado = "en-curso";
       }
       
-      // Obtener nombre del proyecto
       const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
       
       return {
@@ -93,11 +81,9 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
       };
     })
     .sort((a, b) => {
-      // Ordenar primero por estado (vencidas primero)
       if (a.estado === "vencida" && b.estado !== "vencida") return -1;
       if (a.estado !== "vencida" && b.estado === "vencida") return 1;
       
-      // Luego por fecha de fin (más próximas primero)
       const fechaFinA = new Date(a.fechaFin);
       const fechaFinB = new Date(b.fechaFin);
       return fechaFinA.getTime() - fechaFinB.getTime();
@@ -105,7 +91,6 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
     .slice(0, maxItems);
   }, [actividadesFiltradas, itrbItems, proyectos]);
   
-  // Función para obtener el color según el estado
   const getColorByEstado = (estado: string): string => {
     switch (estado) {
       case "completada": return "bg-green-500";
@@ -116,7 +101,6 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
     }
   };
   
-  // Función para obtener el badge según el estado
   const getBadgeByEstado = (estado: string) => {
     switch (estado) {
       case "completada":
@@ -132,7 +116,6 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
     }
   };
   
-  // Si no hay actividades que mostrar
   if (actividadesConInfo.length === 0) {
     return (
       <Card className="dark:bg-slate-800 dark:border-slate-700">
@@ -209,9 +192,6 @@ const ActividadesWidget: React.FC<ActividadesWidgetProps> = ({ maxItems = 5 }) =
                   <div className="mt-1">
                     <Progress 
                       value={actividad.progreso} 
-                      className="h-2" 
-                      // Fix: Remove indicatorClassName and style the indicator directly using the class prop
-                      // with conditional styling based on the state
                       className={`h-2 ${
                         actividad.progreso === 100 
                           ? "bg-green-500" 
