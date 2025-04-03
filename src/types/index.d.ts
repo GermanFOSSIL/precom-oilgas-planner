@@ -1,3 +1,4 @@
+
 export interface Proyecto {
   id: string;
   titulo: string;
@@ -54,6 +55,11 @@ export interface KPIConfig {
   itrVencidosMostrar?: "total" | "diferencia" | "pendientes" | "completados";
 }
 
+export interface APIKeys {
+  openAI?: string;
+  aiModel?: string;
+}
+
 export interface AppContextType {
   user: any;
   setUser: (user: any) => void;
@@ -87,11 +93,6 @@ export interface AppContextType {
   apiKeys: APIKeys;
   updateAPIKeys: (keys: Partial<APIKeys>) => void;
   getKPIs: (proyectoId?: string) => KPIs;
-}
-
-export interface APIKeys {
-  openAI?: string;
-  aiModel?: string;
 }
 
 export interface KPIs {

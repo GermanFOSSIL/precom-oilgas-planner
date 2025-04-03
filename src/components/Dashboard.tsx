@@ -48,11 +48,11 @@ const Dashboard: React.FC = () => {
   // Safe update of filters
   const safeUpdateFilters = useCallback(() => {
     const currentTimestamp = ensureStringTimestamp(Date.now());
-    setFiltros(prevFiltros => ({
-      ...prevFiltros,
+    setFiltros({
+      ...filtros,
       timestamp: currentTimestamp
-    }));
-  }, [ensureStringTimestamp, setFiltros]);
+    });
+  }, [ensureStringTimestamp, setFiltros, filtros]);
 
   // Update timestamp when component mounts or when dependency changes
   useEffect(() => {
@@ -64,11 +64,17 @@ const Dashboard: React.FC = () => {
 
   const handleFiltroChange = useCallback((key: keyof FiltrosDashboard, value: any) => {
     if (key === 'timestamp') {
-      setFiltros(prev => ({ ...prev, [key]: ensureStringTimestamp(value) }));
+      setFiltros({
+        ...filtros,
+        [key]: ensureStringTimestamp(value)
+      });
     } else {
-      setFiltros(prev => ({ ...prev, [key]: value }));
+      setFiltros({
+        ...filtros,
+        [key]: value
+      });
     }
-  }, [ensureStringTimestamp, setFiltros]);
+  }, [ensureStringTimestamp, setFiltros, filtros]);
 
   const handleTamanoGrafico = useCallback((tamano: ConfiguracionGrafico["tamano"]) => {
     setConfiguracionGrafico(prev => ({ ...prev, tamano }));
