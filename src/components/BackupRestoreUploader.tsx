@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ const BackupRestoreUploader = () => {
   const { 
     proyectos, 
     setProyectos, 
+    actividades, 
     setActividades, 
     setItrbItems, 
     setAlertas,
