@@ -155,7 +155,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col gantt-chart-container">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <GanttNavigationControls
           currentStartDate={currentStartDate}
           currentEndDate={currentEndDate}

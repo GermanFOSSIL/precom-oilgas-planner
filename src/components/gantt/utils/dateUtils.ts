@@ -2,7 +2,7 @@
 import { addDays, addWeeks, addMonths, startOfDay, startOfWeek, startOfMonth, endOfMonth, format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 
-// Formatear el eje X según el modo de visualización
+// Format the X-axis based on view mode
 export const formatXAxis = (timestamp: number, viewMode: string): string => {
   const date = new Date(timestamp);
   
@@ -17,11 +17,11 @@ export const formatXAxis = (timestamp: number, viewMode: string): string => {
   }
 };
 
-// Obtener fechas para el eje X según el modo de visualización
+// Get axis dates based on view mode
 export const getAxisDates = (startDate: Date, endDate: Date, viewMode: string): Date[] => {
   switch (viewMode) {
     case "day":
-      // Para vista diaria, mostrar intervalos de hora
+      // For daily view, show hourly intervals
       const hoursInDay = [];
       const dayStart = new Date(startDate);
       dayStart.setHours(0, 0, 0, 0);
@@ -34,19 +34,17 @@ export const getAxisDates = (startDate: Date, endDate: Date, viewMode: string): 
       return hoursInDay;
       
     case "week":
-      // Para vista semanal, mostrar cada día
-      const weekInterval = { start: startDate, end: endDate };
-      return eachDayOfInterval(weekInterval);
+      // For weekly view, show each day
+      return eachDayOfInterval({ start: startDate, end: endDate });
       
     case "month":
     default:
-      // Para vista mensual, mostrar cada día
-      const monthInterval = { start: startDate, end: endDate };
-      return eachDayOfInterval(monthInterval);
+      // For monthly view, show each day
+      return eachDayOfInterval({ start: startDate, end: endDate });
   }
 };
 
-// Calcular el nuevo rango de fechas al navegar en el tiempo
+// Calculate new date range when navigating
 export const calculateNewDateRange = (
   currentStartDate: Date,
   currentEndDate: Date,
@@ -58,7 +56,7 @@ export const calculateNewDateRange = (
   let newEndDate: Date;
 
   if (direction === "today") {
-    // Centrar en la fecha actual
+    // Center on current date
     const today = new Date();
     
     switch (viewMode) {
@@ -80,7 +78,7 @@ export const calculateNewDateRange = (
     return { newStartDate, newEndDate };
   }
 
-  // Para navegación prev/next
+  // For prev/next navigation
   switch (viewMode) {
     case "day":
       newStartDate = direction === "prev" 
