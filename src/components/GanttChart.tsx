@@ -126,7 +126,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
         onZoomChange={changeZoom}
       />
       
-      <div className="overflow-y-auto max-h-[70vh]">
+      <div className="overflow-y-auto flex-1">
         <GanttBarChart
           data={ganttData}
           currentStartDate={currentStartDate}
