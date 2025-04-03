@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
@@ -13,11 +13,6 @@ import { useNavigate } from "react-router-dom";
 import PublicHeader from "@/components/PublicHeader";
 import { toast } from "sonner";
 import CriticalPathView from "@/components/CriticalPathView";
-import {
-  Dialog,
-  DialogContent,
-  DialogOverlay
-} from "@/components/ui/dialog";
 
 const PublicDashboard: React.FC = () => {
   const { 
@@ -29,6 +24,7 @@ const PublicDashboard: React.FC = () => {
   
   const navigate = useNavigate();
   
+  // Initialize filtros with timestamp as string
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ 
     proyecto: "todos", 
     timestamp: String(Date.now()) 
@@ -43,9 +39,29 @@ const PublicDashboard: React.FC = () => {
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
   const [tabActual, setTabActual] = useState("gantt");
   
-  useEffect(() => {
-    setFiltros({ ...filtros, timestamp: String(Date.now()) });
+  // Ensure timestamp is always a string
+  const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
+    if (timestamp === undefined) return String(Date.now());
+    return typeof timestamp === 'number' ? String(timestamp) : timestamp;
   }, []);
+  
+  // Update timestamp at regular intervals to force refreshes
+  useEffect(() => {
+    const updateTimestamp = () => {
+      setFiltros(prev => ({ 
+        ...prev, 
+        timestamp: ensureStringTimestamp(Date.now()) 
+      }));
+    };
+    
+    // Initial update
+    updateTimestamp();
+    
+    // Set up interval for updates
+    const interval = setInterval(updateTimestamp, 60000); // Every minute
+    
+    return () => clearInterval(interval);
+  }, [ensureStringTimestamp]);
   
   const sistemasDisponibles = Array.from(
     new Set(actividades.map(act => act.sistema))
@@ -59,29 +75,29 @@ const PublicDashboard: React.FC = () => {
     )
   );
   
-  const handleFiltroChange = (key: keyof FiltrosDashboard, value: any) => {
+  const handleFiltroChange = useCallback((key: keyof FiltrosDashboard, value: any) => {
     if (key === 'timestamp') {
-      setFiltros({ ...filtros, [key]: String(value) });
+      setFiltros(prev => ({ ...prev, [key]: ensureStringTimestamp(value) }));
     } else {
-      setFiltros({ ...filtros, [key]: value });
+      setFiltros(prev => ({ ...prev, [key]: value }));
     }
-  };
+  }, [ensureStringTimestamp]);
   
-  const handleTamanoGrafico = (tamano: ConfiguracionGrafico["tamano"]) => {
-    setConfiguracionGrafico({ ...configuracionGrafico, tamano });
-  };
+  const handleTamanoGrafico = useCallback((tamano: ConfiguracionGrafico["tamano"]) => {
+    setConfiguracionGrafico(prev => ({ ...prev, tamano }));
+  }, []);
   
-  const handleSubsistemaToggle = (checked: boolean | "indeterminate") => {
+  const handleSubsistemaToggle = useCallback((checked: boolean | "indeterminate") => {
     if (typeof checked === 'boolean') {
       setMostrarSubsistemas(checked);
-      setConfiguracionGrafico({
-        ...configuracionGrafico,
+      setConfiguracionGrafico(prev => ({
+        ...prev,
         mostrarSubsistemas: checked
-      });
+      }));
     }
-  };
+  }, []);
   
-  const getGanttHeight = () => {
+  const getGanttHeight = useCallback(() => {
     switch (configuracionGrafico.tamano) {
       case "pequeno": return "h-[400px]";
       case "mediano": return "h-[600px]";
@@ -89,13 +105,13 @@ const PublicDashboard: React.FC = () => {
       case "completo": return "h-screen";
       default: return "h-[600px]";
     }
-  };
+  }, [configuracionGrafico.tamano]);
   
-  const handleLoginClick = () => {
+  const handleLoginClick = useCallback(() => {
     navigate("/login");
-  };
+  }, [navigate]);
 
-  const handleExportGantt = () => {
+  const handleExportGantt = useCallback(() => {
     try {
       // Simple check to prevent errors in non-dashboard pages
       const ganttContainer = document.querySelector('.gantt-chart-container');
@@ -111,9 +127,9 @@ const PublicDashboard: React.FC = () => {
       console.error("Error al iniciar la exportación:", error);
       toast.error("Error al iniciar la exportación del gráfico Gantt");
     }
-  };
+  }, []);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = useCallback(() => {
     try {
       // Trigger Excel generation through window event
       const exportEvent = new CustomEvent('export-gantt-excel');
@@ -122,7 +138,10 @@ const PublicDashboard: React.FC = () => {
       console.error("Error al iniciar la exportación a Excel:", error);
       toast.error("Error al iniciar la exportación a Excel");
     }
-  };
+  }, []);
+
+  // Memoized current timestamp for filters
+  const currentFilterTimestamp = ensureStringTimestamp(Date.now());
 
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
@@ -273,7 +292,10 @@ const PublicDashboard: React.FC = () => {
             <Card className="dark:bg-slate-800 dark:border-slate-700">
               <CardContent className={`p-0 overflow-hidden ${getGanttHeight()}`}>
                 <EnhancedGanttChart 
-                  filtros={filtros} 
+                  filtros={{
+                    ...filtros,
+                    timestamp: currentFilterTimestamp
+                  }} 
                   configuracion={{
                     ...configuracionGrafico,
                     mostrarSubsistemas

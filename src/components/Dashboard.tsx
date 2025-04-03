@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
@@ -40,47 +40,56 @@ const Dashboard: React.FC = () => {
   const ganttChartRef = React.useRef<HTMLDivElement | null>(null);
 
   // This function ensures timestamps are always handled as strings
-  const ensureStringTimestamp = (timestamp: number | string | undefined): string => {
+  const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
     return typeof timestamp === 'number' ? String(timestamp) : timestamp;
-  };
+  }, []);
 
+  // Safe update of filters
+  const safeUpdateFilters = useCallback(() => {
+    const currentTimestamp = ensureStringTimestamp(Date.now());
+    setFiltros(prevFiltros => ({
+      ...prevFiltros,
+      timestamp: currentTimestamp
+    }));
+  }, [ensureStringTimestamp, setFiltros]);
+
+  // Update timestamp when component mounts or when dependency changes
   useEffect(() => {
-    // Update the timestamp as a string
-    setFiltros({
-      ...filtros,
-      timestamp: ensureStringTimestamp(Date.now())
-    });
-  }, [setFiltros, filtros]);
+    safeUpdateFilters();
+    // Set up an interval to update the timestamp periodically to force refreshes
+    const interval = setInterval(safeUpdateFilters, 60000); // Every minute
+    return () => clearInterval(interval);
+  }, [safeUpdateFilters]);
 
-  const handleFiltroChange = (key: keyof FiltrosDashboard, value: any) => {
+  const handleFiltroChange = useCallback((key: keyof FiltrosDashboard, value: any) => {
     if (key === 'timestamp') {
-      setFiltros({ ...filtros, [key]: ensureStringTimestamp(value) });
+      setFiltros(prev => ({ ...prev, [key]: ensureStringTimestamp(value) }));
     } else {
-      setFiltros({ ...filtros, [key]: value });
+      setFiltros(prev => ({ ...prev, [key]: value }));
     }
-  };
+  }, [ensureStringTimestamp, setFiltros]);
 
-  const handleTamanoGrafico = (tamano: ConfiguracionGrafico["tamano"]) => {
-    setConfiguracionGrafico({ ...configuracionGrafico, tamano });
-  };
+  const handleTamanoGrafico = useCallback((tamano: ConfiguracionGrafico["tamano"]) => {
+    setConfiguracionGrafico(prev => ({ ...prev, tamano }));
+  }, []);
 
-  const handleResetSession = () => {
+  const handleResetSession = useCallback(() => {
     logout();
     window.location.reload();
-  };
+  }, [logout]);
 
-  const handleSubsistemaToggle = (checked: boolean | "indeterminate") => {
+  const handleSubsistemaToggle = useCallback((checked: boolean | "indeterminate") => {
     if (typeof checked === 'boolean') {
       setMostrarSubsistemas(checked);
-      setConfiguracionGrafico({
-        ...configuracionGrafico,
+      setConfiguracionGrafico(prev => ({
+        ...prev,
         mostrarSubsistemas: checked
-      });
+      }));
     }
-  };
+  }, []);
 
-  const getGanttHeight = () => {
+  const getGanttHeight = useCallback(() => {
     const tamano = configuracionGrafico?.tamano || "mediano";
     
     switch (tamano) {
@@ -90,7 +99,7 @@ const Dashboard: React.FC = () => {
       case "completo": return "h-screen";
       default: return "h-[600px]";
     }
-  };
+  }, [configuracionGrafico?.tamano]);
 
   const { generarPDF, generarExcel } = useExportUtils({
     proyectos,
@@ -99,25 +108,28 @@ const Dashboard: React.FC = () => {
     getKPIs
   });
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = useCallback(async () => {
     setExportingChart(true);
     await generarPDF(filtros);
     setExportingChart(false);
-  };
+  }, [filtros, generarPDF]);
 
-  const handleExportExcel = async () => {
+  const handleExportExcel = useCallback(async () => {
     setExportingChart(true);
     await generarExcel(filtros);
     setExportingChart(false);
-  };
+  }, [filtros, generarExcel]);
 
-  const getGanttConfiguration = () => {
+  const getGanttConfiguration = useCallback(() => {
     return {
       ...defaultConfiguracionGrafico,
       ...configuracionGrafico,
       mostrarSubsistemas: mostrarSubsistemas
     };
-  };
+  }, [configuracionGrafico, mostrarSubsistemas]);
+
+  // Memoized filter timestamp
+  const currentFilterTimestamp = ensureStringTimestamp(Date.now());
 
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
@@ -182,7 +194,7 @@ const Dashboard: React.FC = () => {
                   <EnhancedGanttChart
                     filtros={{
                       ...filtros,
-                      timestamp: ensureStringTimestamp(Date.now())
+                      timestamp: currentFilterTimestamp
                     }}
                     configuracion={getGanttConfiguration()}
                   />

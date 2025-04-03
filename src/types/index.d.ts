@@ -34,6 +34,7 @@ export interface FiltrosDashboard {
   proyecto: string;
   sistema?: string;
   subsistema?: string;
+  timestamp?: string;
 }
 
 export interface ConfiguracionGrafico {
@@ -86,6 +87,7 @@ export interface AppContextType {
   updateKPIConfig: (config: Partial<KPIConfig>) => void;
   apiKeys: APIKeys;
   updateAPIKeys: (keys: Partial<APIKeys>) => void;
+  getKPIs: (proyectoId?: string) => KPIs;
 }
 
 // Add the interface for API keys
@@ -93,3 +95,40 @@ export interface APIKeys {
   openAI?: string;
   aiModel?: string;
 }
+
+// Ensure we have the KPIs interface defined
+export interface KPIs {
+  avanceFisico: number;
+  totalITRB: number;
+  realizadosITRB: number;
+  subsistemasMCC: number;
+  actividadesVencidas: number;
+  totalSubsistemas: number;
+  proyectoId?: string;
+}
+
+// User type definition
+export interface User {
+  email: string;
+  role: "admin" | "tecnico" | "viewer";
+  nombre: string;
+}
+
+// App theme definition
+export interface AppTheme {
+  mode: "light" | "dark";
+}
+
+// Alert type definition
+export interface Alerta {
+  id: string;
+  tipo: "Vencimiento" | "Recordatorio" | "Sistema";
+  mensaje: string;
+  fechaCreacion: string;
+  leida: boolean;
+  itemsRelacionados?: string[];
+  proyectoId?: string;
+}
+
+// Estado ITRB type
+export type EstadoITRB = "En curso" | "Completado" | "Pendiente" | "Vencido";
