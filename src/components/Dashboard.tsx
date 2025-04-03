@@ -517,6 +517,10 @@ const Dashboard: React.FC = () => {
     cancelarEdicion();
   };
 
+  const updateTimestamp = () => {
+    return { ...filtros, timestamp: String(Date.now()) };
+  };
+
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
       <PublicHeader />
