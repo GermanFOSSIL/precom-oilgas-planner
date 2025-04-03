@@ -180,7 +180,7 @@ const Dashboard: React.FC = () => {
           
           <TabsContent value="gantt" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
-              <CardContent className="p-0 h-full overflow-auto">
+              <CardContent className="p-0 max-h-[85vh] overflow-y-auto">
                 <EnhancedGanttChart 
                   filtros={{
                     ...filtros,
