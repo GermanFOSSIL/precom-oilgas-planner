@@ -187,7 +187,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
         </div>
       </div>
       
-      <div className="overflow-y-auto max-h-[70vh]">
+      <div className="overflow-y-auto h-full">
         <GanttBarChart
           data={ganttData}
           currentStartDate={currentStartDate}
