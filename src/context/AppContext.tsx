@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { 
   User, 
@@ -370,10 +369,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       actividadesFiltradas.map(a => `${a.sistema}-${a.subsistema}`)
     );
     
-    // Contar subsistemas únicos con CCC
-    const subsistemasCCC = new Set(
+    // Contar subsistemas únicos con MCC (changed from CCC)
+    const subsistemasMCC = new Set(
       itrbFiltrados
-        .filter(item => item.ccc)
+        .filter(item => item.mcc) // Changed from ccc to mcc
         .map(item => {
           const actividad = actividades.find(act => act.id === item.actividadId);
           return actividad ? `${actividad.sistema}-${actividad.subsistema}` : "";
@@ -394,7 +393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       avanceFisico,
       totalITRB,
       realizadosITRB,
-      subsistemasCCC,
+      subsistemasMCC,
       actividadesVencidas,
       totalSubsistemas: todosSubsistemas.size,
       proyectoId

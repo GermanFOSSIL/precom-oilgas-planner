@@ -36,7 +36,7 @@ export interface ITRB {
   cantidadRealizada: number;
   fechaLimite: string;
   estado: EstadoITRB;
-  mcc: boolean; // Cambiado de ccc a mcc
+  mcc: boolean; // This was previously modified from ccc to mcc
   observaciones?: string;
 }
 
