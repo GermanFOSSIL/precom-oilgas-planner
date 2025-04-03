@@ -18,6 +18,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Calendar,
@@ -806,7 +807,7 @@ const Dashboard: React.FC = () => {
           </TabsContent>
         </Tabs>
 
-        <Card className="dark:bg-slate-800 dark:border-slate-700">
+        <Card className="dark:bg-slate-800 dark:border-slate-700 mt-6">
           <CardHeader>
             <CardTitle>Gráficos Personalizados</CardTitle>
             <CardDescription>
@@ -828,4 +829,174 @@ const Dashboard: React.FC = () => {
                             className="mb-4 p-4 border rounded-md shadow-sm bg-white dark:bg-slate-700 dark:border-slate-600"
                           >
                             <div className="flex justify-between items-center">
-                              <div className="flex items-center
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-4 h-4 rounded-full" 
+                                  style={{ backgroundColor: grafico.color }}
+                                />
+                                <span className="font-medium">{grafico.titulo}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ({grafico.tipo} • {grafico.datos})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => editarGrafico(grafico.id)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span className="sr-only">Editar</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteCustomChart(grafico.id)}
+                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Eliminar</span>
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+            
+            <Button
+              variant="outline"
+              onClick={addNewCustomChart}
+              className="mt-4"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar nuevo gráfico
+            </Button>
+            
+            {editandoGraficoId && (
+              <div className="mt-6 p-4 border rounded-md bg-gray-50 dark:bg-slate-800 dark:border-slate-700">
+                <h3 className="text-lg font-medium mb-4">Editar gráfico</h3>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="titulo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Título</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Título del gráfico" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="tipo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tipo de gráfico</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar tipo" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="barras">Barras</SelectItem>
+                                <SelectItem value="lineas">Líneas</SelectItem>
+                                <SelectItem value="area">Área</SelectItem>
+                                <SelectItem value="pastel">Pastel</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="datos"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fuente de datos</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar datos" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="actividades">Actividades</SelectItem>
+                                <SelectItem value="itrb">ITRB</SelectItem>
+                                <SelectItem value="avance">Avance</SelectItem>
+                                <SelectItem value="vencimientos">Vencimientos</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="color"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Color principal</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-8 h-8 rounded-md border"
+                              style={{ backgroundColor: field.value }}
+                            />
+                            <FormControl>
+                              <Input type="text" placeholder="#3b82f6" {...field} />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={cancelarEdicion}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button type="submit">Guardar cambios</Button>
+                    </div>
+                  </form>
+                </Form>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <div className="py-6 border-t text-center text-xs text-muted-foreground dark:border-slate-700 mt-6">
+          Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Dashboard;
