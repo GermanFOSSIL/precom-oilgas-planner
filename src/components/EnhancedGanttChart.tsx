@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Actividad, ITRB, FiltrosDashboard, ConfiguracionGrafico } from "@/types";
@@ -66,7 +67,7 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
     });
   }, [itrbItems, actividadesFiltradas, filtros]);
   
-  const { viewStartDate, viewEndDate, timeSlots, slotWidth } = useMemo(() => {
+  const timeConfig = useMemo(() => {
     let start = new Date(currentStartDate);
     let end, slots, width;
     
@@ -100,10 +101,26 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
         }
         width = 80;
         break;
+      default:
+        start.setDate(1);
+        end = addMonths(start, 3);
+        slots = [];
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          slots.push(new Date(d));
+        }
+        width = 20;
     }
     
-    return { viewStartDate, viewEndDate, timeSlots, slotWidth };
+    return { 
+      viewStartDate: start,
+      viewEndDate: end,
+      timeSlots: slots,
+      slotWidth: width
+    };
   }, [currentStartDate, viewMode]);
+  
+  // Destructure the timeConfig variables for easier access
+  const { viewStartDate, viewEndDate, timeSlots, slotWidth } = timeConfig;
   
   const handleChangeViewMode = (mode: "month" | "week" | "day") => {
     setViewMode(mode);
