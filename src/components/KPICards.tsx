@@ -31,10 +31,10 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
     { name: 'Pendiente', value: kpis.totalITRB - kpis.realizadosITRB },
   ];
   
-  // Data para el gráfico de CCC
-  const cccData = [
-    { name: 'Con CCC', value: kpis.subsistemasCCC },
-    { name: 'Sin CCC', value: kpis.totalSubsistemas - kpis.subsistemasCCC },
+  // Data para el gráfico de MCC
+  const mccData = [
+    { name: 'Con MCC', value: kpis.subsistemasMCC },
+    { name: 'Sin MCC', value: kpis.totalSubsistemas - kpis.subsistemasMCC },
   ];
   
   // Calcular ITRBs vencidos completados vs faltantes
@@ -122,32 +122,70 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
         );
     }
   };
+
+  // Función para renderizar el valor KPI según la configuración
+  const renderKPIValue = (type: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasMCC") => {
+    switch (type) {
+      case "avanceFisico":
+        return (
+          <h3 className="text-2xl font-bold">
+            {typeof avancePorcentaje === 'number' ? avancePorcentaje.toFixed(1) : '0.0'}%
+          </h3>
+        );
+      case "totalITRB":
+        return <h3 className="text-2xl font-bold">{kpis.totalITRB}</h3>;
+      case "realizadosITRB":
+        return <h3 className="text-2xl font-bold">{kpis.realizadosITRB} / {kpis.totalITRB}</h3>;
+      case "subsistemasMCC":
+        return <h3 className="text-2xl font-bold">{kpis.subsistemasMCC} / {kpis.totalSubsistemas}</h3>;
+      case "actividadesVencidas":
+        return renderDatoITRBVencidos();
+      default:
+        return <h3 className="text-2xl font-bold">N/A</h3>;
+    }
+  };
+  
+  // Función para obtener el porcentaje para la barra de progreso basado en el tipo
+  const getProgressValue = (type: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasMCC") => {
+    switch (type) {
+      case "avanceFisico":
+        return avancePorcentaje;
+      case "realizadosITRB":
+        return (kpis.realizadosITRB / (kpis.totalITRB || 1)) * 100;
+      case "subsistemasMCC":
+        return (kpis.subsistemasMCC / (kpis.totalSubsistemas || 1)) * 100;
+      default:
+        return 0;
+    }
+  };
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {/* Avance Físico */}
+      {/* KPI 1 */}
       <Card className="relative overflow-hidden">
         <CardContent className="pt-6">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Avance Físico</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                {kpiConfig.nombreKPI1 || "Avance Físico"}
+              </p>
               <div className="flex items-baseline">
-                <h3 className="text-2xl font-bold">
-                  {typeof avancePorcentaje === 'number' ? avancePorcentaje.toFixed(1) : '0.0'}%
-                </h3>
-                <span className="text-xs text-green-500 ml-2 flex items-center">
-                  <ArrowUpFromLine className="h-3 w-3 mr-1" />
-                  Progreso
-                </span>
+                {renderKPIValue(kpiConfig.kpiPersonalizado1 || "avanceFisico")}
+                {(kpiConfig.kpiPersonalizado1 === "avanceFisico" || !kpiConfig.kpiPersonalizado1) && (
+                  <span className="text-xs text-green-500 ml-2 flex items-center">
+                    <ArrowUpFromLine className="h-3 w-3 mr-1" />
+                    Progreso
+                  </span>
+                )}
               </div>
-              <Progress value={avancePorcentaje} className="h-2 mt-2" />
+              <Progress value={getProgressValue(kpiConfig.kpiPersonalizado1 || "avanceFisico")} className="h-2 mt-2" />
             </div>
             
             <div className="w-[70px] h-[70px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={avanceData}
+                    data={kpiConfig.kpiPersonalizado1 === "subsistemasMCC" ? mccData : avanceData}
                     cx="50%"
                     cy="50%"
                     innerRadius={18}
@@ -167,22 +205,22 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
         </CardContent>
       </Card>
       
-      {/* ITR B Completados */}
+      {/* KPI 2 */}
       <Card className="relative overflow-hidden">
         <CardContent className="pt-6">
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center">
                 <FileText className="h-4 w-4 mr-1 text-indigo-500" />
-                <p className="text-sm font-medium text-muted-foreground mb-1">ITR B Completados</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {kpiConfig.nombreKPI2 || "ITR B Completados"}
+                </p>
               </div>
               <div className="flex items-baseline">
-                <h3 className="text-2xl font-bold">
-                  {kpis.realizadosITRB} / {kpis.totalITRB}
-                </h3>
+                {renderKPIValue(kpiConfig.kpiPersonalizado2 || "realizadosITRB")}
               </div>
               <Progress 
-                value={(kpis.realizadosITRB / (kpis.totalITRB || 1)) * 100} 
+                value={getProgressValue(kpiConfig.kpiPersonalizado2 || "realizadosITRB")} 
                 className="h-2 mt-2" 
               />
             </div>
@@ -191,7 +229,7 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={[
+                    data={kpiConfig.kpiPersonalizado2 === "subsistemasMCC" ? mccData : [
                       { name: 'Completados', value: kpis.realizadosITRB },
                       { name: 'Pendientes', value: kpis.totalITRB - kpis.realizadosITRB }
                     ]}
@@ -213,22 +251,22 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
         </CardContent>
       </Card>
       
-      {/* Subsistemas con CCC */}
+      {/* KPI 3 */}
       <Card className="relative overflow-hidden">
         <CardContent className="pt-6">
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center">
                 <CheckCircle className="h-4 w-4 mr-1 text-indigo-500" />
-                <p className="text-sm font-medium text-muted-foreground mb-1">Subsistemas con CCC</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {kpiConfig.nombreKPI3 || "Subsistemas con MCC"}
+                </p>
               </div>
               <div className="flex items-baseline">
-                <h3 className="text-2xl font-bold">
-                  {kpis.subsistemasCCC} / {kpis.totalSubsistemas}
-                </h3>
+                {renderKPIValue(kpiConfig.kpiPersonalizado3 || "subsistemasMCC")}
               </div>
               <Progress 
-                value={(kpis.subsistemasCCC / (kpis.totalSubsistemas || 1)) * 100} 
+                value={getProgressValue(kpiConfig.kpiPersonalizado3 || "subsistemasMCC")} 
                 className="h-2 mt-2" 
               />
             </div>
@@ -237,7 +275,10 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={cccData}
+                    data={kpiConfig.kpiPersonalizado3 === "subsistemasMCC" || !kpiConfig.kpiPersonalizado3 ? mccData : [
+                      { name: 'Completados', value: kpis.realizadosITRB },
+                      { name: 'Pendientes', value: kpis.totalITRB - kpis.realizadosITRB }
+                    ]}
                     cx="50%"
                     cy="50%"
                     innerRadius={18}
@@ -245,7 +286,7 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {cccData.map((entry, index) => (
+                    {mccData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -257,17 +298,19 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
         </CardContent>
       </Card>
       
-      {/* Vencidos - Modificado para mostrar completados vs faltantes fuera de fecha */}
+      {/* KPI 4 - Vencidos */}
       <Card className="relative overflow-hidden bg-gradient-to-br from-red-50 to-white dark:from-red-900/20 dark:to-slate-800/50">
         <CardContent className="pt-6">
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center">
                 <AlertTriangle className="h-4 w-4 mr-1 text-red-500" />
-                <p className="text-sm font-medium text-muted-foreground mb-1">ITR B Vencidos</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {kpiConfig.nombreKPI4 || "ITR B Vencidos"}
+                </p>
               </div>
               <div className="flex items-baseline gap-1">
-                {renderDatoITRBVencidos()}
+                {renderKPIValue(kpiConfig.kpiPersonalizado4 || "actividadesVencidas")}
               </div>
               <div className="text-xs mt-1 flex flex-col">
                 <span className="text-green-500 flex items-center">

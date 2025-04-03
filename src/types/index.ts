@@ -36,7 +36,7 @@ export interface ITRB {
   cantidadRealizada: number;
   fechaLimite: string;
   estado: EstadoITRB;
-  ccc: boolean; // Mantenemos el nombre de la propiedad para compatibilidad, pero representa MCC
+  mcc: boolean; // Cambiado de ccc a mcc
   observaciones?: string;
 }
 
@@ -54,7 +54,7 @@ export interface KPIs {
   avanceFisico: number;
   totalITRB: number;
   realizadosITRB: number;
-  subsistemasCCC: number;
+  subsistemasMCC: number; // Cambiado de subsistemasCCC a subsistemasMCC
   totalSubsistemas: number;
   actividadesVencidas: number;
   proyectoId?: string;
@@ -68,7 +68,7 @@ export interface FiltrosDashboard {
   fechaFin?: string;
   busquedaActividad?: string;
   estadoITRB?: "Completado" | "En curso" | "Vencido" | "todos";
-  mcc?: boolean; // Cambiado de ccc a mcc
+  mcc?: boolean; // Mantenemos como mcc
   tareaVencida?: boolean;
   timestamp?: number; // Para refrescar cache
 }
@@ -89,10 +89,10 @@ export interface KPIConfig {
   nombreKPI2?: string;
   nombreKPI3?: string;
   nombreKPI4?: string;
-  kpiPersonalizado1?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasCCC";
-  kpiPersonalizado2?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasCCC";
-  kpiPersonalizado3?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasCCC";
-  kpiPersonalizado4?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasCCC";
+  kpiPersonalizado1?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasMCC";
+  kpiPersonalizado2?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasMCC";
+  kpiPersonalizado3?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasMCC";
+  kpiPersonalizado4?: "avanceFisico" | "totalITRB" | "realizadosITRB" | "actividadesVencidas" | "subsistemasMCC";
 }
 
 // Nueva configuración para Ruta Crítica

@@ -37,7 +37,7 @@ const Header: React.FC = () => {
       const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
       doc.text(`Avance físico total: ${kpis.avanceFisico.toFixed(2)}%`, 14, 40);
       doc.text(`ITR B realizados: ${kpis.realizadosITRB} de ${kpis.totalITRB}`, 14, 46);
-      doc.text(`Subsistemas con CCC: ${kpis.subsistemasCCC}`, 14, 52);
+      doc.text(`Subsistemas con MCC: ${kpis.subsistemasMCC}`, 14, 52);
       doc.text(`Actividades vencidas: ${kpis.actividadesVencidas}`, 14, 58);
       
       // Filtrar ITR B por proyecto seleccionado
@@ -57,13 +57,13 @@ const Header: React.FC = () => {
           `${item.cantidadRealizada}/${item.cantidadTotal}`,
           `${((item.cantidadRealizada / item.cantidadTotal) * 100).toFixed(2)}%`,
           item.estado,
-          item.ccc ? "Sí" : "No",
+          item.mcc ? "Sí" : "No",
           new Date(item.fechaLimite).toLocaleDateString("es-ES")
         ];
       });
       
       (doc as any).autoTable({
-        head: [["Descripción", "Sistema", "Subsistema", "Realizados/Total", "Avance", "Estado", "CCC", "Fecha Límite"]],
+        head: [["Descripción", "Sistema", "Subsistema", "Realizados/Total", "Avance", "Estado", "MCC", "Fecha Límite"]],
         body: tableData,
         startY: 65,
         theme: "grid",
@@ -104,7 +104,7 @@ const Header: React.FC = () => {
           "Total": item.cantidadTotal,
           "Avance": `${((item.cantidadRealizada / item.cantidadTotal) * 100).toFixed(2)}%`,
           "Estado": item.estado,
-          "CCC": item.ccc ? "Sí" : "No",
+          "MCC": item.mcc ? "Sí" : "No",
           "Fecha Límite": new Date(item.fechaLimite).toLocaleDateString("es-ES")
         };
       });

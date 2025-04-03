@@ -7,13 +7,6 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import {
   Input
 } from "@/components/ui/input";
@@ -21,14 +14,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { KPIConfig } from "@/types";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const kpiOptions = [
   { value: "avanceFisico", label: "Avance Físico" },
   { value: "totalITRB", label: "Total ITR B" },
   { value: "realizadosITRB", label: "ITR B Completados" },
   { value: "actividadesVencidas", label: "ITR B Vencidos" },
-  { value: "subsistemasCCC", label: "Subsistemas con MCC" } // Cambiado de CCC a MCC
+  { value: "subsistemasMCC", label: "Subsistemas con MCC" } // Cambiado de CCC a MCC
 ];
 
 const KPIConfigManager: React.FC = () => {
@@ -42,7 +36,7 @@ const KPIConfigManager: React.FC = () => {
     nombreKPI4: kpiConfig.nombreKPI4 || "ITR B Vencidos",
     kpiPersonalizado1: kpiConfig.kpiPersonalizado1 || "avanceFisico",
     kpiPersonalizado2: kpiConfig.kpiPersonalizado2 || "realizadosITRB",
-    kpiPersonalizado3: kpiConfig.kpiPersonalizado3 || "subsistemasCCC",
+    kpiPersonalizado3: kpiConfig.kpiPersonalizado3 || "subsistemasMCC",
     kpiPersonalizado4: kpiConfig.kpiPersonalizado4 || "actividadesVencidas",
   });
   
@@ -53,7 +47,7 @@ const KPIConfigManager: React.FC = () => {
     });
   };
   
-  const handleSelectChange = (field: keyof KPIConfig, value: string) => {
+  const handleCheckboxChange = (field: keyof KPIConfig, value: string) => {
     setEditedConfig({
       ...editedConfig,
       [field]: value
@@ -85,22 +79,26 @@ const KPIConfigManager: React.FC = () => {
                 placeholder="Nombre del KPI 1"
               />
               
-              <Label htmlFor="kpi1-type" className="mt-2">Valor a mostrar</Label>
-              <Select
-                value={editedConfig.kpiPersonalizado1 || "avanceFisico"}
-                onValueChange={(value) => handleSelectChange("kpiPersonalizado1", value)}
-              >
-                <SelectTrigger id="kpi1-type">
-                  <SelectValue placeholder="Seleccionar valor" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="mt-4">
+                <Label className="mb-2 block">Valor a mostrar</Label>
+                <div className="space-y-2">
                   {kpiOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`kpi1-${option.value}`}
+                        checked={editedConfig.kpiPersonalizado1 === option.value}
+                        onCheckedChange={() => handleCheckboxChange("kpiPersonalizado1", option.value)}
+                      />
+                      <label 
+                        htmlFor={`kpi1-${option.value}`}
+                        className="text-sm"
+                      >
+                        {option.label}
+                      </label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             </div>
             
             {/* KPI 2 Configuration */}
@@ -113,22 +111,26 @@ const KPIConfigManager: React.FC = () => {
                 placeholder="Nombre del KPI 2"
               />
               
-              <Label htmlFor="kpi2-type" className="mt-2">Valor a mostrar</Label>
-              <Select
-                value={editedConfig.kpiPersonalizado2 || "realizadosITRB"}
-                onValueChange={(value) => handleSelectChange("kpiPersonalizado2", value)}
-              >
-                <SelectTrigger id="kpi2-type">
-                  <SelectValue placeholder="Seleccionar valor" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="mt-4">
+                <Label className="mb-2 block">Valor a mostrar</Label>
+                <div className="space-y-2">
                   {kpiOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`kpi2-${option.value}`}
+                        checked={editedConfig.kpiPersonalizado2 === option.value}
+                        onCheckedChange={() => handleCheckboxChange("kpiPersonalizado2", option.value)}
+                      />
+                      <label 
+                        htmlFor={`kpi2-${option.value}`}
+                        className="text-sm"
+                      >
+                        {option.label}
+                      </label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             </div>
             
             {/* KPI 3 Configuration */}
@@ -141,22 +143,26 @@ const KPIConfigManager: React.FC = () => {
                 placeholder="Nombre del KPI 3"
               />
               
-              <Label htmlFor="kpi3-type" className="mt-2">Valor a mostrar</Label>
-              <Select
-                value={editedConfig.kpiPersonalizado3 || "subsistemasCCC"}
-                onValueChange={(value) => handleSelectChange("kpiPersonalizado3", value)}
-              >
-                <SelectTrigger id="kpi3-type">
-                  <SelectValue placeholder="Seleccionar valor" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="mt-4">
+                <Label className="mb-2 block">Valor a mostrar</Label>
+                <div className="space-y-2">
                   {kpiOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`kpi3-${option.value}`}
+                        checked={editedConfig.kpiPersonalizado3 === option.value}
+                        onCheckedChange={() => handleCheckboxChange("kpiPersonalizado3", option.value)}
+                      />
+                      <label 
+                        htmlFor={`kpi3-${option.value}`}
+                        className="text-sm"
+                      >
+                        {option.label}
+                      </label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             </div>
             
             {/* KPI 4 Configuration */}
@@ -169,22 +175,26 @@ const KPIConfigManager: React.FC = () => {
                 placeholder="Nombre del KPI 4"
               />
               
-              <Label htmlFor="kpi4-type" className="mt-2">Valor a mostrar</Label>
-              <Select
-                value={editedConfig.kpiPersonalizado4 || "actividadesVencidas"}
-                onValueChange={(value) => handleSelectChange("kpiPersonalizado4", value)}
-              >
-                <SelectTrigger id="kpi4-type">
-                  <SelectValue placeholder="Seleccionar valor" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="mt-4">
+                <Label className="mb-2 block">Valor a mostrar</Label>
+                <div className="space-y-2">
                   {kpiOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`kpi4-${option.value}`}
+                        checked={editedConfig.kpiPersonalizado4 === option.value}
+                        onCheckedChange={() => handleCheckboxChange("kpiPersonalizado4", option.value)}
+                      />
+                      <label 
+                        htmlFor={`kpi4-${option.value}`}
+                        className="text-sm"
+                      >
+                        {option.label}
+                      </label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -192,20 +202,40 @@ const KPIConfigManager: React.FC = () => {
             <Label htmlFor="itrVencidosMostrar">
               Visualización de ITR B Vencidos
             </Label>
-            <Select 
-              value={editedConfig.itrVencidosMostrar}
-              onValueChange={(value) => handleSelectChange("itrVencidosMostrar", value)}
-            >
-              <SelectTrigger id="itrVencidosMostrar" className="w-full">
-                <SelectValue placeholder="Seleccionar visualización" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="total">Total de vencidos</SelectItem>
-                <SelectItem value="diferencia">Diferencia (completados - pendientes)</SelectItem>
-                <SelectItem value="pendientes">Pendientes vencidos</SelectItem>
-                <SelectItem value="completados">Completados fuera de fecha</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="vencidos-total"
+                  checked={editedConfig.itrVencidosMostrar === "total"}
+                  onCheckedChange={() => handleCheckboxChange("itrVencidosMostrar", "total")}
+                />
+                <label htmlFor="vencidos-total" className="text-sm">Total de vencidos</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="vencidos-diferencia"
+                  checked={editedConfig.itrVencidosMostrar === "diferencia"}
+                  onCheckedChange={() => handleCheckboxChange("itrVencidosMostrar", "diferencia")}
+                />
+                <label htmlFor="vencidos-diferencia" className="text-sm">Diferencia (completados - pendientes)</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="vencidos-pendientes"
+                  checked={editedConfig.itrVencidosMostrar === "pendientes"}
+                  onCheckedChange={() => handleCheckboxChange("itrVencidosMostrar", "pendientes")}
+                />
+                <label htmlFor="vencidos-pendientes" className="text-sm">Pendientes vencidos</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="vencidos-completados"
+                  checked={editedConfig.itrVencidosMostrar === "completados"}
+                  onCheckedChange={() => handleCheckboxChange("itrVencidosMostrar", "completados")}
+                />
+                <label htmlFor="vencidos-completados" className="text-sm">Completados fuera de fecha</label>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               Seleccione qué dato desea ver destacado en el KPI de ITR B Vencidos
             </p>

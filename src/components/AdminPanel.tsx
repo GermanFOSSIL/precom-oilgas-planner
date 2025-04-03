@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1067,15 +1066,15 @@ const AdminPanel: React.FC = () => {
               </div>
               
               <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="ccc"
-                  checked={nuevoITRB.ccc}
-                  onChange={(e) => setNuevoITRB({...nuevoITRB, ccc: e.target.checked})}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                <Checkbox
+                  id="mcc"
+                  checked={nuevoITRB.mcc}
+                  onCheckedChange={(checked) => 
+                    setNuevoITRB({...nuevoITRB, mcc: checked === true})
+                  }
                 />
-                <Label htmlFor="ccc" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Control de Calidad Completado (CCC)
+                <Label htmlFor="mcc" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Control de Calidad Completado (MCC)
                 </Label>
               </div>
               
