@@ -70,21 +70,17 @@ const BackupRestoreUploader = () => {
         return;
       }
       
-      // Validar estructura mínima del backup
-      if (!parsedData || typeof parsedData !== "object") {
-        setError("El formato del backup es inválido");
+      // Verify backup data structure more thoroughly
+      if (!isValidBackupData(parsedData)) {
+        setError("El formato del backup es inválido o no contiene los datos necesarios");
         clearInterval(progressInterval);
         setIsUploading(false);
         setProgress(0);
         return;
       }
       
-      // Guardar datos del backup para su uso posterior
+      // Set backup data
       setBackupData(parsedData);
-      
-      // Finalizar carga
-      clearInterval(progressInterval);
-      setProgress(100);
       
       // Si hay proyectos en el backup, proponemos el nombre del primero
       if (parsedData.proyectos && Array.isArray(parsedData.proyectos) && parsedData.proyectos.length > 0) {
@@ -103,6 +99,18 @@ const BackupRestoreUploader = () => {
       setIsUploading(false);
       setProgress(0);
     }
+  };
+  
+  // New validation function to ensure backup has required structure
+  const isValidBackupData = (data: any): boolean => {
+    if (!data || typeof data !== "object") return false;
+    
+    // Check for basic structure, at least one of these should exist
+    const hasProyectos = Array.isArray(data.proyectos);
+    const hasActividades = Array.isArray(data.actividades);
+    const hasItrbItems = Array.isArray(data.itrbItems);
+    
+    return hasProyectos || hasActividades || hasItrbItems;
   };
   
   const readFileAsText = (file: File): Promise<string> => {
@@ -154,18 +162,17 @@ const BackupRestoreUploader = () => {
         targetProyectoIdToUse = nuevoProyecto.id;
       }
       
-      // Mapear proyectos del backup al proyecto seleccionado
+      // Safely restore data in the correct order - first projects, then activities, then ITRBs
       if (backupData.proyectos && Array.isArray(backupData.proyectos)) {
-        // Si es un nuevo proyecto, no necesitamos preservar los existentes
+        // Only update projects if we're creating a new one
         if (targetProyectoId === "new") {
-          setProyectos([...proyectos]);
-        } else {
-          // Si se eligió un proyecto existente, no tocamos los proyectos
-          // ya que solo importaremos al proyecto seleccionado
+          // Keep existing projects and add new ones
+          const existingProjectIds = new Set(proyectos.map(p => p.id));
+          const newProjects = backupData.proyectos.filter(p => !existingProjectIds.has(p.id));
+          setProyectos([...proyectos, ...newProjects]);
         }
       }
       
-      // Procesar actividades: solo importar las del proyecto original que correspondan
       if (backupData.actividades && Array.isArray(backupData.actividades)) {
         const actividadesModificadas = [...backupData.actividades];
         
@@ -180,14 +187,31 @@ const BackupRestoreUploader = () => {
           });
         }
         
-        // Fusionar con las actividades existentes
-        const actividadesExistentes = [...actividades];
-        setActividades([...actividadesExistentes, ...actividadesModificadas]);
+        // Make sure we're not adding duplicate activities
+        const existingActivityIds = new Set(actividades.map(a => a.id));
+        const newActivities = actividadesModificadas.filter(a => !existingActivityIds.has(a.id));
+        
+        // Merge with existing activities
+        setActividades([...actividades, ...newActivities]);
       }
       
-      // Procesar ITRBs: deben asignarse a las actividades correctas
       if (backupData.itrbItems && Array.isArray(backupData.itrbItems)) {
-        setItrbItems([...backupData.itrbItems]);
+        // Process ITRBs properly
+        const existingItrbIds = new Set(itrbItems.map(i => i.id));
+        const newItrbs = backupData.itrbItems.filter(i => !existingItrbIds.has(i.id));
+        
+        // Ensure ITRBs have valid timestamps (convert numbers to strings if needed)
+        const processedItrbs = newItrbs.map(itrb => ({
+          ...itrb,
+          fechaCreacion: typeof itrb.fechaCreacion === 'number' 
+            ? new Date(itrb.fechaCreacion).toISOString() 
+            : itrb.fechaCreacion,
+          fechaLimite: typeof itrb.fechaLimite === 'number' 
+            ? new Date(itrb.fechaLimite).toISOString() 
+            : itrb.fechaLimite
+        }));
+        
+        setItrbItems([...itrbItems, ...processedItrbs]);
       }
       
       // Procesar alertas
@@ -213,10 +237,12 @@ const BackupRestoreUploader = () => {
       setShowRestoreDialog(false);
       setBackupData(null);
       
-      // Recargar la página después de una breve pausa
+      // Give a second for data to be processed before reloading
       setTimeout(() => {
+        // Force update the timestamp in localStorage to ensure fresh state
+        localStorage.setItem("timestamp", Date.now().toString());
         window.location.reload();
-      }, 1500);
+      }, 2000);
       
     } catch (error) {
       console.error("Error al restaurar backup:", error);

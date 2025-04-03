@@ -129,8 +129,12 @@ const Dashboard: React.FC = () => {
   ]);
   const [editandoGraficoId, setEditandoGraficoId] = useState<string | null>(null);
 
+  const ensureStringTimestamp = (timestamp: number | string): string => {
+    return typeof timestamp === 'number' ? timestamp.toString() : timestamp;
+  };
+
   useEffect(() => {
-    setFiltros({ ...filtros, timestamp: String(Date.now()) });
+    setFiltros({ ...filtros, timestamp: ensureStringTimestamp(Date.now()) });
   }, []);
 
   const sistemasDisponibles = Array.from(
@@ -147,7 +151,7 @@ const Dashboard: React.FC = () => {
 
   const handleFiltroChange = (key: keyof FiltrosDashboard, value: any) => {
     if (key === 'timestamp') {
-      setFiltros({ ...filtros, [key]: String(value) });
+      setFiltros({ ...filtros, [key]: ensureStringTimestamp(value) });
     } else {
       setFiltros({ ...filtros, [key]: value });
     }
@@ -518,7 +522,7 @@ const Dashboard: React.FC = () => {
   };
 
   const updateTimestamp = () => {
-    return { ...filtros, timestamp: String(Date.now()) };
+    return { ...filtros, timestamp: ensureStringTimestamp(Date.now()) };
   };
 
   return (
@@ -783,7 +787,7 @@ const Dashboard: React.FC = () => {
                     filtros={{
                       ...filtros,
                       busquedaActividad: codigoITRFilter || filtros.busquedaActividad,
-                      timestamp: String(Date.now())
+                      timestamp: ensureStringTimestamp(Date.now())
                     }}
                     configuracion={{
                       ...configuracionGrafico,
