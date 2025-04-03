@@ -56,6 +56,13 @@ const GanttChart: React.FC<GanttChartProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
+  const getColorByProgress = (progreso: number, tieneVencidos: boolean): string => {
+    if (tieneVencidos) return "#ef4444";
+    if (progreso === 100) return "#22c55e";
+    if (progreso > 0) return "#f59e0b";
+    return "#94a3b8";
+  };
+
   const actividadesFiltradas = useMemo(() => {
     return actividades.filter(actividad => {
       if (filtros.proyecto !== "todos" && actividad.proyectoId !== filtros.proyecto) {
@@ -134,13 +141,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
       };
     });
   }, [actividadesFiltradas, proyectos, itrbItems]);
-
-  const getColorByProgress = (progreso: number, tieneVencidos: boolean): string => {
-    if (tieneVencidos) return "#ef4444";
-    if (progreso === 100) return "#22c55e";
-    if (progreso > 0) return "#f59e0b";
-    return "#94a3b8";
-  };
 
   const formatXAxis = (date: number) => {
     const dateObj = new Date(date);

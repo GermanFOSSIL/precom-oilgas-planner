@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import {
@@ -55,6 +56,14 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     }, 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Define the getColorByProgress function BEFORE it's used in ganttData
+  const getColorByProgress = (progreso: number, tieneVencidos: boolean): string => {
+    if (tieneVencidos) return "#ef4444";
+    if (progreso === 100) return "#22c55e";
+    if (progreso > 0) return "#f59e0b";
+    return "#94a3b8";
+  };
 
   const actividadesFiltradas = useMemo(() => {
     return actividades.filter(actividad => {
@@ -135,12 +144,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     });
   }, [actividadesFiltradas, proyectos, itrbItems]);
 
-  const getColorByProgress = (progreso: number, tieneVencidos: boolean): string => {
-    if (tieneVencidos) return "#ef4444";
-    if (progreso === 100) return "#22c55e";
-    if (progreso > 0) return "#f59e0b";
-    return "#94a3b8";
-  };
+  // The original getColorByProgress function was here, moved it above
 
   const formatXAxis = (date: number) => {
     const dateObj = new Date(date);
