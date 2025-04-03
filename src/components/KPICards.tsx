@@ -45,10 +45,10 @@ const KPICards: React.FC<KPICardsProps> = ({ proyectoId }) => {
       if (!actividad || actividad.proyectoId !== proyectoId) return false;
     }
     
-    // Verificar si está vencido
+    // Verificar si está vencido - considerar tanto los marcados como "Vencido" como los que tienen fecha límite pasada
     const fechaLimite = new Date(item.fechaLimite);
     const hoy = new Date();
-    return fechaLimite < hoy; // Es vencido si la fecha límite es anterior a hoy
+    return item.estado === "Vencido" || fechaLimite < hoy; // Es vencido si el estado es "Vencido" o fecha límite es anterior a hoy
   });
   
   const vencidosCompletados = itrbsVencidos.filter(item => item.estado === "Completado").length;

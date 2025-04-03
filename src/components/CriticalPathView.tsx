@@ -55,10 +55,19 @@ const CriticalPathView: React.FC = () => {
   // Obtener elementos vencidos
   const itemsVencidos = useMemo(() => {
     return itrbItems
-      .filter(item => item.estado === "Vencido")
-      .filter(item => !filtroProyecto || 
-        actividades.find(a => a.id === item.actividadId)?.proyectoId === filtroProyecto
-      )
+      .filter(item => {
+        // Filtrar por estado vencido o fecha límite pasada
+        const fechaLimite = new Date(item.fechaLimite);
+        const hoy = new Date();
+        const esVencido = item.estado === "Vencido" || fechaLimite < hoy;
+        
+        // Si no hay un filtro de proyecto, incluir todos los vencidos
+        if (!filtroProyecto) return esVencido;
+        
+        // Si hay filtro de proyecto, verificar que la actividad pertenezca a ese proyecto
+        const actividad = actividades.find(a => a.id === item.actividadId);
+        return esVencido && actividad && actividad.proyectoId === filtroProyecto;
+      })
       .map(item => {
         const actividad = actividades.find(a => a.id === item.actividadId);
         const proyecto = actividad 
@@ -84,10 +93,12 @@ const CriticalPathView: React.FC = () => {
   // Contabilizar ITRB en curso y completados
   const itemsEnFecha = useMemo(() => {
     return itrbItems
-      .filter(item => item.estado === "Completado" || item.estado === "En curso")
-      .filter(item => !filtroProyecto || 
-        actividades.find(a => a.id === item.actividadId)?.proyectoId === filtroProyecto
-      );
+      .filter(item => (item.estado === "Completado" || item.estado === "En curso"))
+      .filter(item => {
+        if (!filtroProyecto) return true;
+        const actividad = actividades.find(a => a.id === item.actividadId);
+        return actividad && actividad.proyectoId === filtroProyecto;
+      });
   }, [itrbItems, actividades, filtroProyecto]);
 
   // Calcular datos para el gráfico de tendencia
@@ -111,12 +122,15 @@ const CriticalPathView: React.FC = () => {
 
   // Datos para gráfico de estado
   const datosEstado = useMemo(() => {
-    const completados = itrbItems.filter(item => item.estado === "Completado" && 
-      (!filtroProyecto || actividades.find(a => a.id === item.actividadId)?.proyectoId === filtroProyecto)).length;
+    // Filtrar por proyecto si es necesario
+    const filteredItems = itrbItems.filter(item => {
+      if (!filtroProyecto) return true;
+      const actividad = actividades.find(a => a.id === item.actividadId);
+      return actividad && actividad.proyectoId === filtroProyecto;
+    });
     
-    const enCurso = itrbItems.filter(item => item.estado === "En curso" && 
-      (!filtroProyecto || actividades.find(a => a.id === item.actividadId)?.proyectoId === filtroProyecto)).length;
-    
+    const completados = filteredItems.filter(item => item.estado === "Completado").length;
+    const enCurso = filteredItems.filter(item => item.estado === "En curso").length;
     const vencidos = itemsVencidos.length;
     
     return [
@@ -234,41 +248,43 @@ const CriticalPathView: React.FC = () => {
             </Button>
           </CardHeader>
           <CardContent className="h-[300px]" ref={trendsChartRef}>
-            <ChartContainer 
-              config={{
-                "1-7 días": { color: "#fbbf24" },
-                "8-15 días": { color: "#fb923c" },
-                "16-30 días": { color: "#f43f5e" },
-                ">30 días": { color: "#ef4444" }
-              }}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={datosTendencia}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-700" />
-                  <XAxis 
-                    dataKey="nombre" 
-                    className="dark:fill-slate-400"
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis className="dark:fill-slate-400" />
-                  <Tooltip content={<ChartTooltipContent />} />
-                  <Legend verticalAlign="top" height={36} />
-                  <Line
-                    type="monotone"
-                    dataKey="cantidad"
-                    name="Cantidad"
-                    stroke="#ef4444"
-                    activeDot={{ r: 8 }}
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={datosTendencia}
+                margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="dark:stroke-slate-700" />
+                <XAxis 
+                  dataKey="nombre" 
+                  className="dark:fill-slate-400"
+                  angle={0}
+                  textAnchor="middle"
+                  height={60}
+                />
+                <YAxis className="dark:fill-slate-400" />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-white dark:bg-slate-800 p-2 border rounded shadow-sm text-xs">
+                          <p className="font-medium">{`${label}: ${payload[0].value}`}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend verticalAlign="top" height={36} />
+                <Line
+                  type="monotone"
+                  dataKey="cantidad"
+                  name="Cantidad"
+                  stroke="#ef4444"
+                  activeDot={{ r: 8 }}
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
@@ -316,7 +332,8 @@ const CriticalPathView: React.FC = () => {
                     outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => 
+                      percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
                   >
                     {datosEstado.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -363,8 +380,8 @@ const CriticalPathView: React.FC = () => {
                   <div className={`absolute top-0 left-0 w-4 h-4 rounded-full ${getColorPorImpacto(item.impacto)}`}></div>
                   
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                      <div className="flex items-center flex-wrap gap-2">
                         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700">
                           {item.diasRetraso} {item.diasRetraso === 1 ? "día" : "días"} de retraso
                         </Badge>
@@ -378,21 +395,21 @@ const CriticalPathView: React.FC = () => {
                       </div>
                     </div>
                     
-                    <h3 className="font-semibold text-lg mb-1">
+                    <h3 className="font-semibold text-lg mb-1 break-words">
                       {item.descripcion}
                     </h3>
                     
-                    <div className="flex flex-wrap items-center text-sm text-muted-foreground mb-3">
-                      <span className="font-medium text-indigo-600 dark:text-indigo-400 mr-2">
+                    <div className="flex flex-wrap items-center text-sm text-muted-foreground mb-3 gap-1">
+                      <span className="font-medium text-indigo-600 dark:text-indigo-400">
                         {item.proyecto?.titulo || "Proyecto sin asignar"}
                       </span>
                       <ArrowRight className="h-3 w-3 mx-1" />
-                      <span className="mr-2">{item.actividad?.sistema}</span>
+                      <span>{item.actividad?.sistema}</span>
                       <ArrowRight className="h-3 w-3 mx-1" />
                       <span>{item.actividad?.subsistema}</span>
                     </div>
                     
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center flex-wrap gap-2">
                       <div className="text-sm">
                         Progreso: {item.cantidadRealizada}/{item.cantidadTotal}
                       </div>
@@ -402,7 +419,7 @@ const CriticalPathView: React.FC = () => {
                         className="text-xs dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600"
                         onClick={() => {
                           // Aquí se podría implementar una acción para ir a editar el elemento
-                          alert(`Ir a editar elemento vencido: ${item.id}`);
+                          toast.info(`Ver detalle de ${item.descripcion}`);
                         }}
                       >
                         Ver detalle

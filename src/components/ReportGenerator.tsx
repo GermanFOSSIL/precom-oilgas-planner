@@ -90,7 +90,11 @@ const ReportGenerator: React.FC = () => {
       const totalITRB = itrbFiltrados.length;
       const itrbCompletados = itrbFiltrados.filter(itrb => itrb.estado === "Completado").length;
       const itrbEnCurso = itrbFiltrados.filter(itrb => itrb.estado === "En curso").length;
-      const itrbVencidos = itrbFiltrados.filter(itrb => itrb.estado === "Vencido").length;
+      const itrbVencidos = itrbFiltrados.filter(itrb => {
+        const fechaLimite = new Date(itrb.fechaLimite);
+        const hoy = new Date();
+        return itrb.estado === "Vencido" || fechaLimite < hoy;
+      }).length;
       
       const porcentajeCompletado = totalITRB > 0 ? (itrbCompletados / totalITRB) * 100 : 0;
       
@@ -98,7 +102,7 @@ const ReportGenerator: React.FC = () => {
       const itrbsVencidos = itrbFiltrados.filter(item => {
         const fechaLimite = new Date(item.fechaLimite);
         const hoy = new Date();
-        return fechaLimite < hoy;
+        return fechaLimite < hoy || item.estado === "Vencido";
       });
       
       const vencidosCompletados = itrbsVencidos.filter(item => item.estado === "Completado").length;
