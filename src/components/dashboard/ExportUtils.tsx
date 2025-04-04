@@ -1,7 +1,4 @@
 
-// Si este archivo es de solo lectura, recomendamos crear una copia con un nombre diferente
-// como ExportUtilsEnhanced.tsx y usar ese en su lugar.
-
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { saveAs } from 'file-saver';
@@ -90,9 +87,9 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
       pdf.text("Indicadores:", 14, 35);
       
       pdf.setFontSize(10);
-      pdf.text(`Progreso ITRs: ${kpis.progresoITRs.toFixed(1)}%`, 14, 40);
-      pdf.text(`ITRs activos: ${kpis.itrsActivos}`, 14, 45);
-      pdf.text(`ITRs vencidos: ${kpis.itrsVencidos}`, 14, 50);
+      pdf.text(`Progreso ITRs: ${kpis.avanceFisico.toFixed(1)}%`, 14, 40);
+      pdf.text(`ITRs activos: ${kpis.totalITRB - kpis.realizadosITRB}`, 14, 45);
+      pdf.text(`ITRs vencidos: ${kpis.actividadesVencidas}`, 14, 50);
       
       // Añadir imagen al PDF (ajustado para dejar espacio para encabezado y KPIs)
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 14, 55, imgWidth - 28, imgHeight);
@@ -112,7 +109,7 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
     }
   }, [proyectos, getKPIs]);
   
-  const generarExcel = useCallback(async (filtros: FiltrosDashboard) => {
+  const generarExcel = useCallback(async (currentFiltros: FiltrosDashboard) => {
     try {
       toast.info("Preparando exportación a Excel...");
       
@@ -122,11 +119,11 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
       // Filtrar datos según filtros aplicados
       const actividadesFiltradas = actividades.filter((actividad) => {
         return (
-          (filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto) &&
-          (!filtros.sistema || actividad.sistema === filtros.sistema) &&
-          (!filtros.subsistema || actividad.subsistema === filtros.subsistema) &&
-          (!filtros.busquedaActividad || 
-            actividad.nombre.toLowerCase().includes((filtros.busquedaActividad || "").toLowerCase()))
+          (currentFiltros.proyecto === "todos" || actividad.proyectoId === currentFiltros.proyecto) &&
+          (!currentFiltros.sistema || actividad.sistema === currentFiltros.sistema) &&
+          (!currentFiltros.subsistema || actividad.subsistema === currentFiltros.subsistema) &&
+          (!currentFiltros.busquedaActividad || 
+            actividad.nombre.toLowerCase().includes((currentFiltros.busquedaActividad || "").toLowerCase()))
         );
       });
       
@@ -135,14 +132,14 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
         if (!actividad) return false;
         
         const cumpleFiltroBasico = 
-          (filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto) &&
-          (!filtros.sistema || actividad.sistema === filtros.sistema) &&
-          (!filtros.subsistema || actividad.subsistema === filtros.subsistema);
+          (currentFiltros.proyecto === "todos" || actividad.proyectoId === currentFiltros.proyecto) &&
+          (!currentFiltros.sistema || actividad.sistema === currentFiltros.sistema) &&
+          (!currentFiltros.subsistema || actividad.subsistema === currentFiltros.subsistema);
           
-        const cumpleFiltroEstado = !filtros.estadoITRB || itrb.estado === filtros.estadoITRB;
+        const cumpleFiltroEstado = !currentFiltros.estadoITRB || itrb.estado === currentFiltros.estadoITRB;
         
-        const cumpleBusquedaITR = !filtros.itrFilter || 
-          itrb.descripcion.toLowerCase().includes((filtros.itrFilter || "").toLowerCase());
+        const cumpleBusquedaITR = !currentFiltros.itrFilter || 
+          itrb.descripcion.toLowerCase().includes((currentFiltros.itrFilter || "").toLowerCase());
           
         return cumpleFiltroBasico && cumpleFiltroEstado && cumpleBusquedaITR;
       });
@@ -198,7 +195,7 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
       console.error("Error al generar Excel:", error);
       toast.error("Error al generar el archivo Excel. Por favor intente nuevamente.");
     }
-  }, [actividades, itrbItems, proyectos, filtros]);
+  }, [actividades, itrbItems, proyectos]);
   
   return { generarPDF, generarExcel };
 };

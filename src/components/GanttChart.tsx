@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
@@ -47,11 +46,10 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
   const [itrFilter, setItrFilter] = useState<string>("");
-  const [estadoFilter, setEstadoFilter] = useState<string>("todos");
+  const [estadoFilter, setEstadoFilter] = useState<"todos" | "Completado" | "En curso" | "Vencido">("todos");
   const [fechaInicioFilter, setFechaInicioFilter] = useState<string>("");
   const [fechaFinFilter, setFechaFinFilter] = useState<string>("");
   
-  // Initialize view based on current date
   const today = new Date();
   const [currentStartDate, setCurrentStartDate] = useState<Date>(() => {
     switch (viewMode) {
@@ -81,7 +79,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     ? configuracion.mostrarSubsistemas 
     : true;
 
-  // Get filtered and processed data from custom hook
   const { ganttData } = useGanttData(actividades, itrbItems, proyectos, {
     ...filtros,
     itrFilter: itrFilter,
@@ -90,7 +87,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     fechaFinFilter: fechaFinFilter || undefined
   });
 
-  // Simulate loading for a smoother experience
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -98,7 +94,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle zoom level changes
   const changeZoom = (direction: "in" | "out") => {
     if (direction === "in" && zoomLevel < 2) {
       setZoomLevel(zoomLevel + 0.25);
@@ -107,15 +102,13 @@ const GanttChart: React.FC<GanttChartProps> = ({
     }
   };
 
-  // Handle view mode changes
   const handleViewModeChange = (newMode: "month" | "week" | "day") => {
     setViewMode(newMode);
     
-    // Update date range based on new view mode
     const { newStartDate, newEndDate } = calculateNewDateRange(
       currentStartDate,
       currentEndDate,
-      "today", // Reset to today when changing view mode
+      "today",
       newMode
     );
     
@@ -123,7 +116,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     setCurrentEndDate(newEndDate);
   };
 
-  // Handle time navigation
   const navigateTime = (direction: "prev" | "next" | "today") => {
     const { newStartDate, newEndDate } = calculateNewDateRange(
       currentStartDate,
@@ -136,7 +128,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     setCurrentEndDate(newEndDate);
   };
 
-  // Exportar a PDF con html2canvas y jsPDF
   const exportToPDF = async () => {
     if (!ganttRef.current) {
       toast.error("No se pudo encontrar el gráfico para exportar");
@@ -146,7 +137,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
     try {
       toast.info("Generando PDF, por favor espere...");
       
-      // Importamos las librerías dinámicamente para mejorar rendimiento
       const [html2canvas, jsPDF] = await Promise.all([
         import('html2canvas'),
         import('jspdf')
@@ -155,9 +145,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
       const Html2Canvas = html2canvas.default;
       const JsPDF = jsPDF.default;
       
-      // Capturar elemento Gantt
       const canvas = await Html2Canvas(ganttRef.current, {
-        scale: 1.5, // Mayor calidad
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
@@ -167,22 +156,17 @@ const GanttChart: React.FC<GanttChartProps> = ({
         windowHeight: ganttRef.current.scrollHeight
       });
       
-      // Dimensiones de la imagen
-      const imgWidth = 210; // A4 width (210mm)
+      const imgWidth = 210;
       const imgHeight = canvas.height * imgWidth / canvas.width;
       
-      // Crear PDF (orientación horizontal para gráficos Gantt)
       const pdf = new JsPDF('landscape', 'mm', 'a4');
       
-      // Añadir título
       pdf.setFontSize(16);
       pdf.text("Diagrama de Gantt - Plan de Precomisionado", 14, 15);
       
-      // Añadir fecha de generación
       pdf.setFontSize(10);
       pdf.text(`Fecha de generación: ${new Date().toLocaleDateString('es-ES')}`, 14, 23);
       
-      // Añadir filtros aplicados
       const filtrosAplicados = [];
       if (filtros.proyecto !== "todos") filtrosAplicados.push(`Proyecto: ${proyectos.find(p => p.id === filtros.proyecto)?.titulo || filtros.proyecto}`);
       if (filtros.sistema) filtrosAplicados.push(`Sistema: ${filtros.sistema}`);
@@ -196,11 +180,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
         pdf.text(`Filtros: ${filtrosAplicados.join(', ')}`, 14, 28);
       }
       
-      // Añadir imagen al PDF (posición y tamaño)
-      // Ajustamos la posición Y para dejar espacio para el encabezado
       pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 10, 35, imgWidth, imgHeight);
       
-      // Guardar PDF
       pdf.save('gantt-plan-precomisionado.pdf');
       
       toast.success("PDF generado correctamente");
@@ -240,7 +221,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
         />
         
         <div className="flex flex-wrap gap-2">
-          {/* Filtros rápidos */}
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-1">
@@ -266,7 +246,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
                 
                 <div className="grid grid-cols-1 gap-2">
                   <Label htmlFor="estado-filter">Estado de ITR</Label>
-                  <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+                  <Select value={estadoFilter} onValueChange={(value) => setEstadoFilter(value as "todos" | "Completado" | "En curso" | "Vencido")}>
                     <SelectTrigger id="estado-filter">
                       <SelectValue placeholder="Seleccionar estado" />
                     </SelectTrigger>
@@ -317,7 +297,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
             Exportar PDF
           </Button>
           
-          {/* Indicador de filtros activos */}
           {(itrFilter || estadoFilter !== "todos" || fechaInicioFilter || fechaFinFilter) && (
             <div className="flex items-center text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded-md">
               <AlertCircle className="h-3 w-3 mr-1" />
@@ -327,7 +306,6 @@ const GanttChart: React.FC<GanttChartProps> = ({
         </div>
       </div>
       
-      {/* Contenedor con overflow y altura flexible */}
       <div className="overflow-y-auto min-h-0 flex-1" ref={ganttRef}>
         <GanttBarChart
           data={ganttData}
