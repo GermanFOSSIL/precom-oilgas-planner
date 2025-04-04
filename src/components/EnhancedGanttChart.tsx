@@ -16,6 +16,13 @@ import { generateSampleData } from "./gantt/utils/sampleData";
 // Import custom styles for enhanced Gantt
 import "./gantt/styles/EnhancedGantt.css";
 
+// Extend the Task interface to include our custom properties
+interface ExtendedTask extends Task {
+  sistema?: string;
+  subsistema?: string;
+  proyecto?: string;
+}
+
 interface EnhancedGanttChartProps {
   filtros: FiltrosDashboard;
   configuracion: ConfiguracionGrafico;
@@ -34,7 +41,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
   const [currentEndDate, setCurrentEndDate] = useState<Date>(endOfMonth(today));
   const [loading, setLoading] = useState(true);
   const [usingSampleData, setUsingSampleData] = useState<boolean>(false);
-  const [ganttTasks, setGanttTasks] = useState<Task[]>([]);
+  const [ganttTasks, setGanttTasks] = useState<ExtendedTask[]>([]);
 
   const [sampleData, setSampleData] = useState<{
     actividades: any[];
@@ -59,7 +66,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
   // Transformar datos al formato requerido por la librería gantt-task-react
   useEffect(() => {
     if (ganttData.length > 0) {
-      const transformedTasks: Task[] = [];
+      const transformedTasks: ExtendedTask[] = [];
       
       ganttData.forEach((item, index) => {
         // Agregar la tarea principal (actividad)
@@ -79,7 +86,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
             backgroundColor: `${item.color}50`, // Semi-transparente
             backgroundSelectedColor: `${item.color}90`,
           },
-          project: item.proyecto,
+          proyecto: item.proyecto,
           sistema: item.sistema,
           subsistema: item.subsistema,
         });
@@ -190,13 +197,15 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     }
   };
 
+  // Calculate the height based on configuration
+  const ganttHeight = configuracion.tamano === "pequeno" ? 400 : 
+                      configuracion.tamano === "mediano" ? 600 : 
+                      configuracion.tamano === "grande" ? 800 : 1000;
+
   // Opciones de visualización para el componente Gantt
   const displayOptions: DisplayOption = {
     viewMode: getLibraryViewMode(),
     viewDate: new Date((currentStartDate.getTime() + currentEndDate.getTime()) / 2),
-    ganttHeight: configuracion.tamano === "pequeno" ? 400 : 
-                configuracion.tamano === "mediano" ? 600 : 
-                configuracion.tamano === "grande" ? 800 : 1000,
     locale: 'es',
     preStepsCount: 1,
   };
@@ -295,35 +304,39 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
               onExpanderClick={handleExpanderClick}
               listCellWidth={mostrarSubsistemas ? "240px" : "180px"}
               columnWidth={columnWidth}
-              ganttHeight={displayOptions.ganttHeight}
+              ganttHeight={ganttHeight}
               locale="es"
               viewDate={displayOptions.viewDate}
-              TooltipContent={({ task }) => (
-                <div className="gantt-tooltip p-2 rounded shadow-lg bg-background border">
-                  <div className="font-bold">{task.name}</div>
-                  <div className="text-sm">
-                    Progreso: {Math.round(task.progress * 100)}%
-                  </div>
-                  <div className="text-sm">
-                    {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
-                  </div>
-                  {task.project && task.type === 'task' && (
-                    <div className="text-sm text-muted-foreground">
-                      ITRB de actividad
-                    </div>
-                  )}
-                  {task.sistema && (
+              TooltipContent={({ task }) => {
+                // Cast to our extended task type to access custom properties
+                const extendedTask = task as ExtendedTask;
+                return (
+                  <div className="gantt-tooltip p-2 rounded shadow-lg bg-background border">
+                    <div className="font-bold">{task.name}</div>
                     <div className="text-sm">
-                      Sistema: {task.sistema}
+                      Progreso: {Math.round(task.progress * 100)}%
                     </div>
-                  )}
-                  {task.subsistema && mostrarSubsistemas && (
                     <div className="text-sm">
-                      Subsistema: {task.subsistema}
+                      {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
                     </div>
-                  )}
-                </div>
-              )}
+                    {task.project && task.type === 'task' && (
+                      <div className="text-sm text-muted-foreground">
+                        ITRB de actividad
+                      </div>
+                    )}
+                    {extendedTask.sistema && (
+                      <div className="text-sm">
+                        Sistema: {extendedTask.sistema}
+                      </div>
+                    )}
+                    {extendedTask.subsistema && mostrarSubsistemas && (
+                      <div className="text-sm">
+                        Subsistema: {extendedTask.subsistema}
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
             />
           </div>
         )}
