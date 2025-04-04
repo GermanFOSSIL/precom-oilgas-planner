@@ -11,7 +11,9 @@ interface GanttControlsProps {
   onExportExcel?: () => void;
 }
 
-// Componente simplificado sin los elementos del DOM mencionados
+// Este componente ahora está vacío ya que eliminamos todos los elementos según lo solicitado
+// Se mantiene la estructura del componente para compatibilidad con el código existente
+// pero no renderiza ningún elemento en el DOM
 const GanttControls: React.FC<GanttControlsProps> = ({
   configuracionGrafico,
   mostrarSubsistemas,
@@ -20,8 +22,6 @@ const GanttControls: React.FC<GanttControlsProps> = ({
   onExportPDF,
   onExportExcel,
 }) => {
-  // Este componente ahora está vacío ya que eliminamos todos los elementos solicitados
-  // pero mantenemos la estructura para no romper las referencias existentes
   return null;
 };
 

@@ -137,6 +137,16 @@ const GanttChart: React.FC<GanttChartProps> = ({
     try {
       toast.info("Generando PDF, por favor espere...");
       
+      const originalWidth = ganttRef.current.style.width;
+      const originalHeight = ganttRef.current.style.height;
+      const originalOverflow = ganttRef.current.style.overflow;
+      
+      ganttRef.current.style.width = `${ganttRef.current.scrollWidth}px`;
+      ganttRef.current.style.height = `${ganttRef.current.scrollHeight}px`;
+      ganttRef.current.style.overflow = 'visible';
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const [html2canvas, jsPDF] = await Promise.all([
         import('html2canvas'),
         import('jspdf')
@@ -146,15 +156,20 @@ const GanttChart: React.FC<GanttChartProps> = ({
       const JsPDF = jsPDF.default;
       
       const canvas = await Html2Canvas(ganttRef.current, {
-        scale: 1.5,
+        scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
+        logging: false,
         scrollX: 0,
         scrollY: 0,
         windowWidth: ganttRef.current.scrollWidth,
         windowHeight: ganttRef.current.scrollHeight
       });
+      
+      ganttRef.current.style.width = originalWidth;
+      ganttRef.current.style.height = originalHeight;
+      ganttRef.current.style.overflow = originalOverflow;
       
       const imgWidth = 210;
       const imgHeight = canvas.height * imgWidth / canvas.width;

@@ -34,19 +34,35 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
       const Html2Canvas = html2canvas.default;
       const JsPDF = jsPDF.default;
       
-      // Capturar elemento completo del Gantt
+      // Mejorado: Esperamos a que el DOM esté completamente listo
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Notificación de progreso
       toast.info("Capturando imagen del gráfico...");
+      
+      // Mejorado: Capturar elemento completo del Gantt con mejor calidad y configuración
       const canvas = await Html2Canvas(ganttEl as HTMLElement, {
-        scale: 1.5, // Mayor calidad
+        scale: 2, // Mayor calidad (aumentado de 1.5 a 2)
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        windowWidth: ganttEl.scrollWidth || window.innerWidth,
+        windowHeight: ganttEl.scrollHeight || window.innerHeight,
+        logging: false,
+        onclone: (clonedDoc) => {
+          // Aseguramos que el elemento clonado tenga el tamaño correcto
+          const clonedGantt = clonedDoc.querySelector('.gantt-chart-container');
+          if (clonedGantt) {
+            (clonedGantt as HTMLElement).style.width = `${ganttEl.scrollWidth}px`;
+            (clonedGantt as HTMLElement).style.height = `${ganttEl.scrollHeight}px`;
+          }
+        }
       });
       
       // Dimensiones de la imagen
-      const imgWidth = 210; // A4 width (210mm)
+      const imgWidth = 270; // A4 landscape width (297mm) con margen
       const imgHeight = canvas.height * imgWidth / canvas.width;
       
       // Crear PDF (orientación horizontal para gráficos Gantt)
@@ -74,7 +90,6 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
       if (filtros.estadoITRB) filtrosAplicados.push(`Estado: ${filtros.estadoITRB}`);
       if (filtros.busquedaActividad) filtrosAplicados.push(`Búsqueda: ${filtros.busquedaActividad}`);
       
-      // Ahora usamos la propiedad correcta itrFilter que hemos añadido a la interfaz
       if (filtros.itrFilter) filtrosAplicados.push(`ITR: ${filtros.itrFilter}`);
       
       if (filtrosAplicados.length > 0) {
@@ -93,8 +108,15 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
       pdf.text(`ITRs activos: ${kpis.totalITRB - kpis.realizadosITRB}`, 14, 45);
       pdf.text(`ITRs vencidos: ${kpis.actividadesVencidas}`, 14, 50);
       
-      // Añadir imagen al PDF (ajustado para dejar espacio para encabezado y KPIs)
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 14, 55, imgWidth - 28, imgHeight);
+      // Añadir imagen al PDF con mejor calidad
+      toast.info("Generando PDF con el gráfico...");
+      pdf.addImage(
+        canvas.toDataURL('image/jpeg', 1.0), // Máxima calidad de imagen
+        'JPEG', 
+        14, 55, 
+        imgWidth, 
+        imgHeight
+      );
       
       // Logo y datos de la empresa
       pdf.setFontSize(8);

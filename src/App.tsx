@@ -14,7 +14,8 @@ import LoginPage from "./pages/LoginPage";
 import AIAssistant from "./pages/AIAssistant";
 import TestGanttPage from "./pages/TestGanttPage";
 import ChatbotButton from "./components/ChatbotButton";
-import UserProfilePage from "./pages/UserProfilePage"; // Nuevo componente que crearemos
+import UserProfilePage from "./pages/UserProfilePage";
+import ITRSidebar from "./components/sidebar/ITRSidebar";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -52,6 +53,24 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+// Componente para mostrar el ITR Sidebar en rutas protegidas
+const ProtectedRouteWithSidebar = ({ children }: { children: JSX.Element }) => {
+  const { user } = useAppContext();
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return (
+    <>
+      {/* El sidebar de ITR solo visible para usuarios autenticados con roles apropiados */}
+      <ITRSidebar />
+      {children}
+    </>
+  );
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -63,30 +82,29 @@ const AppRoutes = () => {
 
       {/* Rutas protegidas */}
       <Route path="/" element={
-        <ProtectedRoute>
+        <ProtectedRouteWithSidebar>
           <Index />
-        </ProtectedRoute>
+        </ProtectedRouteWithSidebar>
       } />
       
       <Route path="/itr-management" element={
-        <ProtectedRoute>
+        <ProtectedRouteWithSidebar>
           <ITRManagement />
-        </ProtectedRoute>
+        </ProtectedRouteWithSidebar>
       } />
       
       <Route path="/ai-assistant" element={
-        <ProtectedRoute>
+        <ProtectedRouteWithSidebar>
           <AIAssistant />
-        </ProtectedRoute>
+        </ProtectedRouteWithSidebar>
       } />
       
       <Route path="/test-gantt" element={
-        <ProtectedRoute>
+        <ProtectedRouteWithSidebar>
           <TestGanttPage />
-        </ProtectedRoute>
+        </ProtectedRouteWithSidebar>
       } />
       
-      {/* Nueva ruta para perfil de usuario */}
       <Route path="/user-profile" element={
         <ProtectedRoute>
           <UserProfilePage />

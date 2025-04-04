@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Filter, ChevronDown, Search } from "lucide-react";
+import { Filter, ChevronDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { toast } from "sonner";
 
 interface FilterControlsProps {
   filtros: FiltrosDashboard;
@@ -57,8 +58,43 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     )
   );
 
+  // Verificar si hay filtros activos
+  const hayFiltrosActivos = !!(
+    filtros.sistema ||
+    filtros.subsistema ||
+    filtros.estadoITRB ||
+    filtros.tareaVencida ||
+    filtros.busquedaActividad ||
+    filtros.itrFilter
+  );
+  
+  // Nueva función para limpiar todos los filtros
+  const limpiarTodosFiltros = () => {
+    onFiltroChange("sistema", undefined);
+    onFiltroChange("subsistema", undefined);
+    onFiltroChange("estadoITRB", undefined);
+    onFiltroChange("tareaVencida", false);
+    onFiltroChange("busquedaActividad", "");
+    onFiltroChange("itrFilter", "");
+    setCodigoITRFilter("");
+    setModoFiltroAvanzado(false);
+    toast.success("Todos los filtros han sido restablecidos");
+  };
+
   return (
     <div className="flex flex-wrap gap-2 justify-end w-full md:w-auto">
+      {/* Botón para limpiar todos los filtros */}
+      {hayFiltrosActivos && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={limpiarTodosFiltros}
+          className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+        >
+          <X className="h-4 w-4 mr-1" /> Limpiar filtros
+        </Button>
+      )}
+    
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="flex items-center gap-1">
@@ -154,6 +190,18 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             />
             <Label htmlFor="filter-vencidas">Mostrar sólo vencidas</Label>
           </div>
+          
+          <DropdownMenuSeparator />
+          <div className="p-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full"
+              onClick={limpiarTodosFiltros}
+            >
+              <X className="h-4 w-4 mr-1" /> Limpiar todos los filtros
+            </Button>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -197,7 +245,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
               <Label htmlFor="mostrar-subsistemas">Mostrar Subsistemas</Label>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-between">
               <Button
                 variant="outline"
                 size="sm"
@@ -208,6 +256,13 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                 }}
               >
                 Limpiar filtros
+              </Button>
+              
+              <Button 
+                size="sm"
+                onClick={() => toast.success("Filtros aplicados")}
+              >
+                Aplicar
               </Button>
             </div>
           </div>
