@@ -139,7 +139,7 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   return (
     <div className="w-full h-full flex flex-col">
       <div className="w-full overflow-y-auto flex-1">
-        <ScrollArea className="w-full">
+        <ScrollArea className="w-full h-[calc(100vh-300px)]">
           <div className="min-w-[800px] relative">
             <GanttDateHeaders axisDates={axisDates} viewMode={viewMode} isDarkMode={isDarkMode} />
             <GanttTodayIndicator currentStartDate={currentStartDate} currentEndDate={currentEndDate} calculatePosition={calculatePosition} />
