@@ -39,6 +39,7 @@ const BackupRestoreUploader = () => {
   const [newProyectoNombre, setNewProyectoNombre] = useState<string>("");
   const [backupRestored, setBackupRestored] = useState(false);
   const [forceReload, setForceReload] = useState(false);
+  const [forcePersistence, setForcePersistence] = useState(true);
   
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -91,6 +92,8 @@ const BackupRestoreUploader = () => {
       }
       
       setTimeout(() => {
+        clearInterval(progressInterval);
+        setProgress(100);
         setIsUploading(false);
         setShowRestoreDialog(true);
       }, 500);
@@ -106,6 +109,7 @@ const BackupRestoreUploader = () => {
   const isValidBackupData = (data: any): boolean => {
     if (!data || typeof data !== "object") return false;
     
+    // Verificar si tiene al menos uno de los campos esperados
     const hasProyectos = Array.isArray(data.proyectos);
     const hasActividades = Array.isArray(data.actividades);
     const hasItrbItems = Array.isArray(data.itrbItems);
@@ -140,7 +144,7 @@ const BackupRestoreUploader = () => {
     newActividades: any[], 
     newItrbs: any[], 
     newAlertas: Alerta[]
-  ) => {
+  ): boolean => {
     try {
       // Guardar datos en localStorage explícitamente
       localStorage.setItem("proyectos", JSON.stringify(newProyectos));
@@ -310,18 +314,20 @@ const BackupRestoreUploader = () => {
         updateKPIConfig(backupData.kpiConfig);
       }
       
-      // Persistir datos en localStorage
-      const persistSuccess = persistDataToLocalStorage(
-        nuevosProyectos,
-        nuevasActividades, 
-        nuevosITRBs,
-        nuevasAlertas
-      );
-      
-      if (!persistSuccess) {
-        toast.error("Error al guardar datos en almacenamiento local");
-        setProgress(0);
-        return;
+      // Persistir datos en localStorage si está habilitada la opción
+      if (forcePersistence) {
+        const persistSuccess = persistDataToLocalStorage(
+          nuevosProyectos,
+          nuevasActividades, 
+          nuevosITRBs,
+          nuevasAlertas
+        );
+        
+        if (!persistSuccess) {
+          toast.error("Error al guardar datos en almacenamiento local");
+          setProgress(0);
+          return;
+        }
       }
       
       // Actualizar el estado de la aplicación
@@ -460,7 +466,7 @@ const BackupRestoreUploader = () => {
                     <SelectItem value="new">Crear nuevo proyecto</SelectItem>
                     {proyectos.map(proyecto => (
                       <SelectItem key={proyecto.id} value={proyecto.id}>
-                        {proyecto.titulo}
+                        {proyecto.titulo || "Proyecto sin nombre"}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -480,7 +486,11 @@ const BackupRestoreUploader = () => {
               )}
               
               <div className="flex items-center space-x-2 pt-2">
-                <Checkbox id="persistencia" defaultChecked />
+                <Checkbox 
+                  id="persistencia" 
+                  checked={forcePersistence} 
+                  onCheckedChange={(checked) => setForcePersistence(!!checked)}
+                />
                 <Label htmlFor="persistencia">Forzar persistencia de datos (recomendado)</Label>
               </div>
             </div>
@@ -489,7 +499,10 @@ const BackupRestoreUploader = () => {
               <Button variant="outline" onClick={() => setShowRestoreDialog(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleRestoreBackup} disabled={isUploading || progress > 0}>
+              <Button 
+                onClick={handleRestoreBackup} 
+                disabled={targetProyectoId === "new" && !newProyectoNombre.trim()}
+              >
                 Restaurar datos
               </Button>
             </DialogFooter>

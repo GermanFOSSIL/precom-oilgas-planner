@@ -99,7 +99,8 @@ const BackupRestoreManager = () => {
       
       const date = new Date();
       const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-      link.download = `backup-proyectos-${formattedDate}.json`;
+      const formattedTime = `${date.getHours().toString().padStart(2, '0')}-${date.getMinutes().toString().padStart(2, '0')}`;
+      link.download = `backup-proyectos-${formattedDate}-${formattedTime}.json`;
       
       setTimeout(() => {
         clearInterval(progressInterval);
@@ -207,7 +208,7 @@ const BackupRestoreManager = () => {
             <CardContent className="space-y-4">
               <div className="text-sm">
                 <p className="font-medium">Fecha de creación:</p>
-                <p className="text-muted-foreground">{new Date().toLocaleDateString()}</p>
+                <p className="text-muted-foreground">{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
               </div>
               
               <div className="text-sm">
