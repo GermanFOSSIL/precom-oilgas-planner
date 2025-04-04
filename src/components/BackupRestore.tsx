@@ -31,7 +31,7 @@ const BackupRestore = () => {
               Restaurar Backup
             </TabsTrigger>
             <TabsTrigger value="itr-manager" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
+              <Database className="h-4 w-4" />
               Gestión de ITR
             </TabsTrigger>
           </TabsList>

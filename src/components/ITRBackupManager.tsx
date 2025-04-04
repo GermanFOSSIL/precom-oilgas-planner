@@ -26,15 +26,12 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
   const [targetSistema, setTargetSistema] = useState<string>("");
   const [targetSubsistema, setTargetSubsistema] = useState<string>("");
   const [targetActividad, setTargetActividad] = useState<string>("");
-  const [newName, setNewName] = useState<string>("");
   const [keepOriginal, setKeepOriginal] = useState<boolean>(true);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [newNames, setNewNames] = useState<{[key: string]: string}>({});
   
   // Estados para filtrado de ITRs
   const [filtroProyecto, setFiltroProyecto] = useState<string>("");
-  const [filtroSistema, setFiltroSistema] = useState<string>("");
-  const [filtroSubsistema, setFiltroSubsistema] = useState<string>("");
   const [busquedaITR, setBusquedaITR] = useState<string>("");
   
   // Checkbox filters for systems and subsystems
@@ -45,14 +42,16 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
   
   // Sistemas disponibles basados en el proyecto seleccionado (para el destino)
   const sistemasDisponibles = targetProyecto 
-    ? [...new Set(actividades.filter(a => a.proyectoId === targetProyecto).map(a => a.sistema))]
+    ? [...new Set(actividades.filter(a => a.proyectoId === targetProyecto).map(a => a.sistema || "Sin sistema"))]
+        .filter(sistema => sistema !== "")
     : [];
   
   // Subsistemas disponibles basados en el sistema y proyecto seleccionado (para el destino)
   const subsistemasDisponibles = targetProyecto && targetSistema
     ? [...new Set(actividades
         .filter(a => a.proyectoId === targetProyecto && a.sistema === targetSistema)
-        .map(a => a.subsistema))]
+        .map(a => a.subsistema || "Sin subsistema"))]
+        .filter(subsistema => subsistema !== "")
     : [];
   
   // Actividades filtradas para destino
@@ -66,10 +65,12 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
     : [];
   
   // Get all available systems for filtering
-  const allSistemas = [...new Set(actividades.map(a => a.sistema))];
+  const allSistemas = [...new Set(actividades.map(a => a.sistema || "Sin sistema"))]
+    .filter(sistema => sistema !== "");
   
   // Get all available subsystems for filtering
-  const allSubsistemas = [...new Set(actividades.map(a => a.subsistema))];
+  const allSubsistemas = [...new Set(actividades.map(a => a.subsistema || "Sin subsistema"))]
+    .filter(subsistema => subsistema !== "");
   
   // ITRs filtrados para selección
   const itrsFiltrados = itrbItems.filter(itr => {
@@ -79,14 +80,10 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
     if (filtroProyecto && actividad.proyectoId !== filtroProyecto) return false;
     
     // Apply sistema checkbox filters
-    if (selectedSistemas.length > 0 && !selectedSistemas.includes(actividad.sistema)) return false;
+    if (selectedSistemas.length > 0 && !selectedSistemas.includes(actividad.sistema || "Sin sistema")) return false;
     
     // Apply subsistema checkbox filters
-    if (selectedSubsistemas.length > 0 && !selectedSubsistemas.includes(actividad.subsistema)) return false;
-    
-    // Legacy filters
-    if (filtroSistema && actividad.sistema !== filtroSistema) return false;
-    if (filtroSubsistema && actividad.subsistema !== filtroSubsistema) return false;
+    if (selectedSubsistemas.length > 0 && !selectedSubsistemas.includes(actividad.subsistema || "Sin subsistema")) return false;
     
     // Search text filter
     if (busquedaITR && !itr.descripcion.toLowerCase().includes(busquedaITR.toLowerCase())) return false;
@@ -94,23 +91,6 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
     return true;
   });
   
-  // Proyectos para filtros
-  const proyectosDisponiblesFiltro = [...new Set(proyectos.map(p => p.id))];
-  
-  // Sistemas disponibles para filtros
-  const sistemasDisponiblesFiltro = filtroProyecto 
-    ? [...new Set(actividades.filter(a => a.proyectoId === filtroProyecto).map(a => a.sistema))]
-    : [...new Set(actividades.map(a => a.sistema))];
-  
-  // Subsistemas disponibles para filtros
-  const subsistemasDisponiblesFiltro = filtroSistema 
-    ? [...new Set(actividades
-        .filter(a => (!filtroProyecto || a.proyectoId === filtroProyecto) && a.sistema === filtroSistema)
-        .map(a => a.subsistema))]
-    : [...new Set(actividades
-        .filter(a => !filtroProyecto || a.proyectoId === filtroProyecto)
-        .map(a => a.subsistema))];
-
   // Toggle sistema selection
   const toggleSistema = (sistema: string) => {
     setSelectedSistemas(prev => 
@@ -341,14 +321,11 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Todos los proyectos</SelectItem>
-                {proyectosDisponiblesFiltro.map(id => {
-                  const proyecto = proyectos.find(p => p.id === id);
-                  return (
-                    <SelectItem key={id} value={id}>
-                      {proyecto?.titulo || id}
-                    </SelectItem>
-                  );
-                })}
+                {proyectos.map(proyecto => (
+                  <SelectItem key={proyecto.id} value={proyecto.id}>
+                    {proyecto.titulo || proyecto.id}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -381,17 +358,9 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
                 ))}
               </div>
             ) : (
-              <Select value={filtroSistema} onValueChange={setFiltroSistema} disabled={sistemasDisponiblesFiltro.length === 0}>
-                <SelectTrigger id="filtro-sistema">
-                  <SelectValue placeholder="Todos los sistemas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos los sistemas</SelectItem>
-                  {sistemasDisponiblesFiltro.map(sistema => (
-                    <SelectItem key={sistema} value={sistema}>{sistema}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="h-10 flex items-center text-sm text-muted-foreground">
+                Haga clic en "Filtrar" para seleccionar sistemas
+              </div>
             )}
           </div>
           
@@ -423,17 +392,9 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
                 ))}
               </div>
             ) : (
-              <Select value={filtroSubsistema} onValueChange={setFiltroSubsistema} disabled={subsistemasDisponiblesFiltro.length === 0}>
-                <SelectTrigger id="filtro-subsistema">
-                  <SelectValue placeholder="Todos los subsistemas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos los subsistemas</SelectItem>
-                  {subsistemasDisponiblesFiltro.map(subsistema => (
-                    <SelectItem key={subsistema} value={subsistema}>{subsistema}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="h-10 flex items-center text-sm text-muted-foreground">
+                Haga clic en "Filtrar" para seleccionar subsistemas
+              </div>
             )}
           </div>
           
@@ -498,7 +459,7 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
                           {itr.descripcion}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {proyecto?.titulo || 'Sin proyecto'} &bull; {actividad?.sistema || '-'} &bull; {actividad?.subsistema || '-'}
+                          {proyecto?.titulo || 'Sin proyecto'} • {actividad?.sistema || '-'} • {actividad?.subsistema || '-'}
                         </div>
                       </div>
                       <div className={`text-xs px-2 py-1 rounded-full ${
@@ -665,7 +626,7 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
                   <Checkbox
                     id="keep-original"
                     checked={keepOriginal}
-                    onCheckedChange={() => setKeepOriginal(!keepOriginal)}
+                    onCheckedChange={(checked) => setKeepOriginal(checked === true)}
                   />
                   <Label htmlFor="keep-original" className="font-medium">
                     Mantener ITRs originales (crear copias)
