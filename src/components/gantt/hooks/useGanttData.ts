@@ -3,13 +3,6 @@ import { useMemo } from "react";
 import { FiltrosDashboard } from "@/types";
 import { getColorByProgress } from "../utils/colorUtils";
 
-interface UseGanttDataParams {
-  actividades: any[];
-  itrbItems: any[];
-  proyectos: any[];
-  filtros: FiltrosDashboard;
-}
-
 export const useGanttData = (
   actividades: any[],
   itrbItems: any[],
@@ -61,28 +54,44 @@ export const useGanttData = (
         // Determinar el color basado en el progreso y si tiene vencidos
         const color = getColorByProgress(progreso, tieneVencidos);
         
-        // Formatear fechas como objetos Date
+        // Formatear fechas como objetos Date y asegurar que sean válidas
         const fechaInicio = new Date(actividad.fechaInicio);
         const fechaFin = new Date(actividad.fechaFin);
         
+        // Si alguna fecha es inválida, usar fechas por defecto
+        const validFechaInicio = !isNaN(fechaInicio.getTime()) ? fechaInicio : new Date();
+        const validFechaFin = !isNaN(fechaFin.getTime()) ? fechaFin : new Date(new Date().setDate(new Date().getDate() + 7));
+        
         // Calcular la duración en días (si no está definida)
         const duracion = actividad.duracion || 
-          Math.ceil((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24));
+          Math.ceil((validFechaFin.getTime() - validFechaInicio.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Asegurarse de que los ITRBs asociados tengan fechas válidas
+        const itrbsProcesados = itrbsAsociados.map(itrb => {
+          const itrbFechaInicio = new Date(itrb.fechaInicio || validFechaInicio);
+          const itrbFechaVencimiento = new Date(itrb.fechaVencimiento || itrb.fechaLimite || validFechaFin);
+          
+          return {
+            ...itrb,
+            fechaInicio: !isNaN(itrbFechaInicio.getTime()) ? itrbFechaInicio : validFechaInicio,
+            fechaVencimiento: !isNaN(itrbFechaVencimiento.getTime()) ? itrbFechaVencimiento : validFechaFin
+          };
+        });
         
         return {
           id: actividad.id,
           nombre: actividad.nombre,
           sistema: actividad.sistema,
           subsistema: actividad.subsistema,
-          fechaInicio,
-          fechaFin,
+          fechaInicio: validFechaInicio,
+          fechaFin: validFechaFin,
           duracion,
           progreso,
           tieneVencidos,
           tieneMCC,
           proyecto: proyecto?.titulo || "Sin proyecto",
           color,
-          itrbsAsociados
+          itrbsAsociados: itrbsProcesados
         };
       })
       // Ordenar por sistema, subsistema y nombre

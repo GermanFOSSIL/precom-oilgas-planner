@@ -1,16 +1,12 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { isWithinInterval } from "date-fns";
+import React, { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getAxisDates } from "./utils/dateUtils";
 import GanttTooltip from "./GanttTooltip";
 import GanttItrbTooltip from "./GanttItrbTooltip";
 import GanttDateHeaders from "./GanttDateHeaders";
-import GanttProjectHeader from "./GanttProjectHeader";
-import GanttSystemHeader from "./GanttSystemHeader";
-import GanttSubsystemHeader from "./GanttSubsystemHeader";
-import GanttActivityBar from "./GanttActivityBar";
-import GanttTodayIndicator from "./GanttTodayIndicator";
 import GanttLegend from "./GanttLegend";
+
+// Este componente se mantiene para compatibilidad con código existente
+// pero internamente ahora usa la nueva implementación basada en la librería
 
 interface GanttData {
   id: string;
