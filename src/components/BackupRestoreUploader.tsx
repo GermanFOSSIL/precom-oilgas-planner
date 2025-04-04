@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,7 @@ const BackupRestoreUploader = () => {
     
     try {
       let targetProyectoIdToUse = targetProyectoId;
+      let nuevoProyecto: Proyecto | null = null;
       
       // Si es un nuevo proyecto, crearlo
       if (targetProyectoId === "new") {
@@ -148,7 +150,7 @@ const BackupRestoreUploader = () => {
         }
         
         const now = new Date().toISOString();
-        const nuevoProyecto: Proyecto = {
+        nuevoProyecto = {
           id: `proyecto-${Date.now()}`,
           titulo: newProyectoNombre,
           descripcion: backupData.proyectos && backupData.proyectos.length > 0 
@@ -169,9 +171,18 @@ const BackupRestoreUploader = () => {
           // Keep existing projects and add new ones
           const existingProjectIds = new Set(proyectos.map(p => p.id));
           const newProjects = backupData.proyectos.filter(p => !existingProjectIds.has(p.id));
-          setProyectos([...proyectos, ...newProjects]);
+          
+          // Si estamos restaurando a un nuevo proyecto, usamos ese en lugar de los proyectos del backup
+          if (nuevoProyecto) {
+            setProyectos([...proyectos, nuevoProyecto]);
+          } else {
+            setProyectos([...proyectos, ...newProjects]);
+          }
         }
       }
+      
+      // Arreglo para almacenar las nuevas actividades (para mantener las existentes)
+      let nuevasActividades = [...actividades];
       
       if (backupData.actividades && Array.isArray(backupData.actividades)) {
         const actividadesModificadas = [...backupData.actividades];
@@ -192,13 +203,45 @@ const BackupRestoreUploader = () => {
         const newActivities = actividadesModificadas.filter(a => !existingActivityIds.has(a.id));
         
         // Merge with existing activities
-        setActividades([...actividades, ...newActivities]);
+        nuevasActividades = [...actividades, ...newActivities];
+        setActividades(nuevasActividades);
       }
+      
+      // Arreglo para almacenar los nuevos ITRBs (para mantener los existentes)
+      let nuevosITRBs = [...itrbItems];
       
       if (backupData.itrbItems && Array.isArray(backupData.itrbItems)) {
         // Process ITRBs properly
         const existingItrbIds = new Set(itrbItems.map(i => i.id));
         const newItrbs = backupData.itrbItems.filter(i => !existingItrbIds.has(i.id));
+        
+        // Asegurar que los ITRBs apunten a las actividades del nuevo proyecto si es necesario
+        if (backupData.proyectos && backupData.proyectos.length > 0 && targetProyectoId === "new") {
+          const originalProyectoId = backupData.proyectos[0].id;
+          
+          // Mapear actividades originales a nuevas
+          const actividadMapping = new Map();
+          backupData.actividades.forEach((origAct: any) => {
+            if (origAct.proyectoId === originalProyectoId) {
+              const newAct = nuevasActividades.find(
+                a => a.nombre === origAct.nombre && 
+                     a.sistema === origAct.sistema && 
+                     a.subsistema === origAct.subsistema && 
+                     a.proyectoId === targetProyectoIdToUse
+              );
+              if (newAct) {
+                actividadMapping.set(origAct.id, newAct.id);
+              }
+            }
+          });
+          
+          // Actualizar actividadId en ITRBs
+          newItrbs.forEach(itrb => {
+            if (actividadMapping.has(itrb.actividadId)) {
+              itrb.actividadId = actividadMapping.get(itrb.actividadId);
+            }
+          });
+        }
         
         // Ensure ITRBs have valid timestamps (convert numbers to strings if needed)
         const processedItrbs = newItrbs.map(itrb => ({
@@ -211,15 +254,20 @@ const BackupRestoreUploader = () => {
             : itrb.fechaLimite
         }));
         
-        setItrbItems([...itrbItems, ...processedItrbs]);
+        nuevosITRBs = [...itrbItems, ...processedItrbs];
+        setItrbItems(nuevosITRBs);
       }
       
       // Procesar alertas
       if (backupData.alertas && Array.isArray(backupData.alertas)) {
-        setAlertas([...backupData.alertas]);
+        // En lugar de reemplazar, agregamos las nuevas alertas
+        const existingAlertaIds = new Set(backupData.alertas.map((a: any) => a.id));
+        const newAlertas = backupData.alertas.filter((a: any) => !existingAlertaIds.has(a.id));
+        
+        setAlertas(prev => [...prev, ...newAlertas]);
       }
       
-      // Procesar configuración de KPIs
+      // Procesar configuración de KPIs sin sobrescribir todo
       if (backupData.kpiConfig && typeof backupData.kpiConfig === "object") {
         updateKPIConfig(backupData.kpiConfig);
       }
@@ -236,6 +284,11 @@ const BackupRestoreUploader = () => {
       }
       setShowRestoreDialog(false);
       setBackupData(null);
+      
+      // Guardar explícitamente en localStorage para asegurar la persistencia
+      localStorage.setItem("proyectos", JSON.stringify(nuevoProyecto ? [...proyectos, nuevoProyecto] : proyectos));
+      localStorage.setItem("actividades", JSON.stringify(nuevasActividades));
+      localStorage.setItem("itrbItems", JSON.stringify(nuevosITRBs));
       
       // Give more time for data to be processed before reloading (3 seconds instead of 2)
       setTimeout(() => {

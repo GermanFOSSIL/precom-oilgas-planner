@@ -1,47 +1,28 @@
 
-import React, { useState, useEffect, useMemo } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import GanttTooltip from "./GanttTooltip";
-import GanttItrbTooltip from "./GanttItrbTooltip";
+import React, { useState } from "react";
+import "./styles/EnhancedGantt.css";
+import { format, isWithinInterval } from "date-fns";
+import { es } from "date-fns/locale";
 import GanttDateHeaders from "./GanttDateHeaders";
-import GanttLegend from "./GanttLegend";
-import GanttTodayIndicator from "./GanttTodayIndicator";
 import GanttProjectHeader from "./GanttProjectHeader";
 import GanttSystemHeader from "./GanttSystemHeader";
 import GanttSubsystemHeader from "./GanttSubsystemHeader";
 import GanttActivityBar from "./GanttActivityBar";
-import { isWithinInterval } from "date-fns";
-import { getAxisDates } from "./utils/dateUtils";
-import "./styles/EnhancedGantt.css";
-
-// Este componente se mantiene para compatibilidad con código existente
-// pero internamente ahora usa la nueva implementación basada en la librería
-
-interface GanttData {
-  id: string;
-  nombre: string;
-  sistema: string;
-  subsistema: string;
-  fechaInicio: Date;
-  fechaFin: Date;
-  duracion: number;
-  progreso: number;
-  tieneVencidos: boolean;
-  tieneMCC: boolean;
-  proyecto: string;
-  color: string;
-  itrbsAsociados: any[];
-}
+import GanttTodayIndicator from "./GanttTodayIndicator";
+import GanttLegend from "./GanttLegend";
+import { GanttTooltip } from "./GanttTooltip";
+import { GanttItrbTooltip } from "./GanttItrbTooltip";
+import { useAppContext } from "@/context/AppContext";
 
 interface GanttBarChartProps {
-  data: GanttData[];
+  data: any[];
   currentStartDate: Date;
   currentEndDate: Date;
   zoomLevel: number;
   viewMode: "month" | "week" | "day";
   mostrarSubsistemas: boolean;
-  mostrarLeyenda?: boolean;
-  tamanoGrafico?: "pequeno" | "mediano" | "grande" | "completo";
+  mostrarLeyenda: boolean | undefined;
+  tamanoGrafico: "pequeno" | "mediano" | "grande" | "completo";
 }
 
 const GanttBarChart: React.FC<GanttBarChartProps> = ({
@@ -51,140 +32,303 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   zoomLevel,
   viewMode,
   mostrarSubsistemas,
-  mostrarLeyenda = true,
-  tamanoGrafico = "mediano"
+  mostrarLeyenda,
+  tamanoGrafico
 }) => {
-  const [hoveredItem, setHoveredItem] = useState<GanttData | null>(null);
-  const [hoveredItrb, setHoveredItrb] = useState<any | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { theme } = useAppContext();
+  const isDarkMode = theme.mode === "dark";
+  
+  // Calculate all dates to display on the axis
+  const axisDates: Date[] = [];
+  const currentDate = new Date(currentStartDate);
+  
+  while (currentDate <= currentEndDate) {
+    axisDates.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  // Handle tooltips
+  const [tooltipInfo, setTooltipInfo] = useState<{
+    visible: boolean;
+    type: "actividad" | "itrb" | null;
+    data: any;
+    position: { x: number; y: number };
+  }>({
+    visible: false,
+    type: null,
+    data: null,
+    position: { x: 0, y: 0 },
+  });
+  
+  const showTooltip = (
+    event: React.MouseEvent,
+    data: any,
+    type: "actividad" | "itrb"
+  ) => {
+    // Get mouse position relative to the viewport
+    const x = event.clientX;
+    const y = event.clientY;
+    
+    setTooltipInfo({
+      visible: true,
+      type,
+      data,
+      position: { x, y },
+    });
+  };
+  
+  const hideTooltip = () => {
+    setTooltipInfo({
+      ...tooltipInfo,
+      visible: false,
+    });
+  };
 
-  const getAlturaFila = (tamano: "pequeno" | "mediano" | "grande" | "completo") => {
-    switch (tamano) {
-      case "pequeno": return "h-6";
-      case "mediano": return "h-8";
-      case "grande": return "h-10";
-      case "completo": return "h-12";
-      default: return "h-8";
+  // Calculate position for bars
+  const getItemPosition = (startDate: string | Date, endDate: string | Date, width: number) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (start > currentEndDate || end < currentStartDate) {
+      return null;
+    }
+    
+    const startVisible = start < currentStartDate ? currentStartDate : start;
+    const endVisible = end > currentEndDate ? currentEndDate : end;
+    
+    const totalDays = axisDates.length;
+    
+    const startDayIndex = axisDates.findIndex(
+      (d) => d.toDateString() === startVisible.toDateString()
+    );
+    
+    let endDayIndex = axisDates.findIndex(
+      (d) => d.toDateString() === endVisible.toDateString()
+    );
+    
+    if (endDayIndex === -1) endDayIndex = totalDays - 1;
+    if (startDayIndex === -1) return null;
+    
+    const left = (startDayIndex * width) / zoomLevel;
+    const barWidth = ((endDayIndex - startDayIndex + 1) * width) / zoomLevel;
+    
+    return { left, width: barWidth };
+  };
+  
+  // Derived styles based on view mode
+  const getCellWidth = () => {
+    switch (viewMode) {
+      case "day": return 80 / zoomLevel;
+      case "week": return 40 / zoomLevel;
+      case "month": default: return 30 / zoomLevel;
     }
   };
-
-  useEffect(() => {
-    const isDark = document.documentElement.classList.contains("dark");
-    setIsDarkMode(isDark);
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === "class") {
-          setIsDarkMode(document.documentElement.classList.contains("dark"));
-        }
-      });
-    });
-    observer.observe(document.documentElement, { attributes: true });
-    return () => observer.disconnect();
-  }, []);
-
-  const groupedData = useMemo(() => {
-    const result: Record<string, Record<string, string[]>> = {};
-    data.forEach(item => {
-      if (!result[item.proyecto]) {
-        result[item.proyecto] = {};
-      }
-      if (!result[item.proyecto][item.sistema]) {
-        result[item.proyecto][item.sistema] = [];
-      }
-      if (!result[item.proyecto][item.sistema].includes(item.subsistema)) {
-        result[item.proyecto][item.sistema].push(item.subsistema);
-      }
-    });
-    return result;
-  }, [data]);
-
-  const axisDates = useMemo(() => {
-    return getAxisDates(currentStartDate, currentEndDate, viewMode);
-  }, [currentStartDate, currentEndDate, viewMode]);
-
-  const isDateInRange = (date: Date) => {
-    return isWithinInterval(date, { start: currentStartDate, end: currentEndDate });
+  
+  const cellWidth = getCellWidth();
+  
+  // Generate grid columns template
+  const getGridTemplateColumns = () => {
+    return `minmax(280px, auto) repeat(${axisDates.length}, ${cellWidth}px)`;
   };
-
-  const calculatePosition = (date: Date): number => {
-    const totalDuration = currentEndDate.getTime() - currentStartDate.getTime();
-    const timeFromStart = date.getTime() - currentStartDate.getTime();
-    return (timeFromStart / totalDuration) * 100;
-  };
-
-  const handleMouseOver = (event: React.MouseEvent, item: GanttData) => {
-    setHoveredItem(item);
-    setHoveredItrb(null);
-    setTooltipPosition({ x: event.clientX, y: event.clientY });
-  };
-
-  const handleItrbMouseOver = (event: React.MouseEvent, itrb: any) => {
-    setHoveredItrb(itrb);
-    setHoveredItem(null);
-    setTooltipPosition({ x: event.clientX, y: event.clientY });
-    event.stopPropagation();
-  };
-
-  const handleMouseOut = () => {
-    setHoveredItem(null);
-    setHoveredItrb(null);
-  };
-
-  const getSpacingClass = () => {
-    switch (tamanoGrafico) {
-      case "pequeno": return "space-y-1";
-      case "mediano": return "space-y-2";
-      case "grande": return "space-y-3";
-      case "completo": return "space-y-4";
-      default: return "space-y-2";
-    }
-  };
-
+  
   return (
-    <div className="w-full h-full flex flex-col gantt-chart">
-      <div className="w-full overflow-y-auto flex-1">
-        <ScrollArea className="w-full h-[calc(100vh-300px)]">
-          <div className="min-w-[800px] relative gantt-container">
-            <GanttDateHeaders axisDates={axisDates} viewMode={viewMode} isDarkMode={isDarkMode} />
-            <GanttTodayIndicator currentStartDate={currentStartDate} currentEndDate={currentEndDate} calculatePosition={calculatePosition} />
-            <div className={`w-full ${getSpacingClass()} gantt-content`}>
-              {Object.entries(groupedData).map(([proyecto, sistemas], proyectoIndex) => (
-                <React.Fragment key={`proyecto-${proyectoIndex}`}>
-                  <GanttProjectHeader proyecto={proyecto} axisDates={axisDates} isDarkMode={isDarkMode} />
-                  {Object.entries(sistemas).map(([sistema, subsistemas], sistemaIndex) => (
-                    <React.Fragment key={`sistema-${proyectoIndex}-${sistemaIndex}`}>
-                      <GanttSystemHeader sistema={sistema} axisDates={axisDates} isDarkMode={isDarkMode} />
-                      {mostrarSubsistemas && subsistemas.map((subsistema, subsistemaIndex) => (
-                        <React.Fragment key={`subsistema-${proyectoIndex}-${sistemaIndex}-${subsistemaIndex}`}>
-                          <GanttSubsystemHeader subsistema={subsistema} axisDates={axisDates} isDarkMode={isDarkMode} />
-                          {data
-                            .filter(item => item.proyecto === proyecto && item.sistema === sistema && item.subsistema === subsistema)
-                            .map((item, itemIndex) => (
-                              <GanttActivityBar key={`activity-${item.id}`} item={item} axisDates={axisDates} isDarkMode={isDarkMode} itemIndex={itemIndex} calculatePosition={calculatePosition} handleMouseOver={handleMouseOver} handleItrbMouseOver={handleItrbMouseOver} handleMouseOut={handleMouseOut} isDateInRange={isDateInRange} withSubsystem={true} tamanoGrafico={tamanoGrafico} />
-                            ))}
-                        </React.Fragment>
-                      ))}
-                      {!mostrarSubsistemas && (
-                        <>
-                          {data
-                            .filter(item => item.proyecto === proyecto && item.sistema === sistema)
-                            .map((item, itemIndex) => (
-                              <GanttActivityBar key={`activity-direct-${item.id}`} item={item} axisDates={axisDates} isDarkMode={isDarkMode} itemIndex={itemIndex} calculatePosition={calculatePosition} handleMouseOver={handleMouseOver} handleItrbMouseOver={handleItrbMouseOver} handleMouseOut={handleMouseOut} isDateInRange={isDateInRange} withSubsystem={false} tamanoGrafico={tamanoGrafico} />
-                            ))}
-                        </>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        </ScrollArea>
+    <div className="gantt-container">
+      <div className="gantt-grid" style={{ gridTemplateColumns: getGridTemplateColumns() }}>
+        {/* Header with dates */}
+        <GanttDateHeaders 
+          axisDates={axisDates} 
+          cellWidth={cellWidth} 
+          viewMode={viewMode}
+          isDarkMode={isDarkMode}
+        />
+        
+        {/* Today indicator */}
+        <GanttTodayIndicator 
+          axisDates={axisDates} 
+          cellWidth={cellWidth} 
+        />
+        
+        {/* Render projects, systems, subsystems and their activities */}
+        {data.map((proyecto) => (
+          <React.Fragment key={proyecto.id}>
+            <GanttProjectHeader 
+              proyecto={proyecto.nombre} 
+              axisDates={axisDates}
+              isDarkMode={isDarkMode}
+            />
+            
+            {proyecto.sistemas.map((sistema) => (
+              <React.Fragment key={`${proyecto.id}-${sistema.nombre}`}>
+                <GanttSystemHeader 
+                  sistema={sistema.nombre} 
+                  axisDates={axisDates}
+                  isDarkMode={isDarkMode}
+                />
+                
+                {/* Render subsystems if the option is enabled */}
+                {mostrarSubsistemas && sistema.subsistemas.map((subsistema) => (
+                  <React.Fragment key={`${proyecto.id}-${sistema.nombre}-${subsistema.nombre}`}>
+                    <GanttSubsystemHeader 
+                      subsistema={subsistema.nombre}
+                      axisDates={axisDates}
+                      isDarkMode={isDarkMode}
+                    />
+                    
+                    {/* Render activities for this subsystem */}
+                    {subsistema.actividades.map((actividad) => {
+                      const activityPosition = getItemPosition(
+                        actividad.fechaInicio,
+                        actividad.fechaFin,
+                        cellWidth
+                      );
+
+                      if (!activityPosition) return null;
+
+                      // Create a unique color based on the actividad's system and subsystem
+                      const getColorShade = (str: string) => {
+                        let hash = 0;
+                        for (let i = 0; i < str.length; i++) {
+                          hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                        }
+                        const hue = hash % 360;
+                        return `hsl(${hue}, 70%, ${isDarkMode ? '40%' : '65%'})`;
+                      };
+
+                      const activityColor = getColorShade(`${sistema.nombre}-${subsistema.nombre}`);
+                      const activityBorderColor = getColorShade(`${sistema.nombre}-${subsistema.nombre}-border`);
+
+                      return (
+                        <div 
+                          key={actividad.id} 
+                          className="gantt-row activity-row"
+                        >
+                          <div className="gantt-label activity-label">
+                            <span className="truncate">{actividad.nombre}</span>
+                          </div>
+                          
+                          <div 
+                            className="gantt-activity-bar"
+                            style={{
+                              left: `${activityPosition.left}px`,
+                              width: `${activityPosition.width}px`,
+                              backgroundColor: activityColor,
+                              borderColor: activityBorderColor,
+                            }}
+                            onMouseEnter={(e) => showTooltip(e, actividad, "actividad")}
+                            onMouseLeave={hideTooltip}
+                          >
+                            {activityPosition.width > 50 && (
+                              <span className="gantt-bar-label">{actividad.nombre}</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Render ITRBs for this subsystem */}
+                    {subsistema.itrbs?.map((itrb) => {
+                      // Find the associated actividad to get fechaInicio
+                      const actividad = subsistema.actividades.find(
+                        (act) => act.id === itrb.actividadId
+                      );
+                      
+                      if (!actividad) return null;
+                      
+                      const itrbPosition = getItemPosition(
+                        actividad.fechaInicio, // Use the actividad's fechaInicio
+                        itrb.fechaLimite,
+                        cellWidth
+                      );
+                      
+                      if (!itrbPosition) return null;
+                      
+                      // Get color based on ITR state
+                      const getItrColor = (estado: string) => {
+                        switch (estado) {
+                          case "Completado": return { bg: isDarkMode ? "#22c55e" : "#4ade80", border: "#16a34a" };
+                          case "En curso": return { bg: isDarkMode ? "#f59e0b" : "#fbbf24", border: "#d97706" };
+                          case "Vencido": return { bg: isDarkMode ? "#ef4444" : "#f87171", border: "#dc2626" };
+                          default: return { bg: isDarkMode ? "#94a3b8" : "#cbd5e1", border: "#64748b" };
+                        }
+                      };
+                      
+                      const colors = getItrColor(itrb.estado);
+
+                      return (
+                        <div 
+                          key={itrb.id} 
+                          className="gantt-row itrb-row"
+                        >
+                          <div className="gantt-label itrb-label">
+                            <span className="truncate">{itrb.descripcion}</span>
+                          </div>
+                          
+                          <div 
+                            className="gantt-itrb-bar"
+                            style={{
+                              left: `${itrbPosition.left}px`,
+                              width: `${itrbPosition.width}px`,
+                              backgroundColor: colors.bg,
+                              borderColor: colors.border,
+                            }}
+                            onMouseEnter={(e) => showTooltip(e, itrb, "itrb")}
+                            onMouseLeave={hideTooltip}
+                          >
+                            {itrbPosition.width > 50 && (
+                              <span className="gantt-bar-label">
+                                {itrb.descripcion} ({itrb.cantidadRealizada}/{itrb.cantidadTotal})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+                
+                {/* If subsystems are not shown, display activities directly under systems */}
+                {!mostrarSubsistemas && sistema.actividades?.map((actividad) => {
+                  const activityPosition = getItemPosition(
+                    actividad.fechaInicio,
+                    actividad.fechaFin,
+                    cellWidth
+                  );
+                  
+                  if (!activityPosition) return null;
+                  
+                  return (
+                    <GanttActivityBar 
+                      key={actividad.id}
+                      actividad={actividad}
+                      position={activityPosition}
+                      showTooltip={showTooltip}
+                      hideTooltip={hideTooltip}
+                    />
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </React.Fragment>
+        ))}
       </div>
-      {hoveredItem && <GanttTooltip item={hoveredItem} position={tooltipPosition} />}
-      {hoveredItrb && <GanttItrbTooltip hoveredItrb={hoveredItrb} tooltipPosition={tooltipPosition} />}
-      <GanttLegend mostrarLeyenda={mostrarLeyenda} />
+      
+      {/* Show legend if the option is enabled */}
+      {mostrarLeyenda && <GanttLegend />}
+      
+      {/* Tooltip */}
+      {tooltipInfo.visible && tooltipInfo.type === "actividad" && (
+        <GanttTooltip 
+          data={tooltipInfo.data} 
+          position={tooltipInfo.position}
+        />
+      )}
+      
+      {tooltipInfo.visible && tooltipInfo.type === "itrb" && (
+        <GanttItrbTooltip 
+          data={tooltipInfo.data} 
+          position={tooltipInfo.position}
+        />
+      )}
     </div>
   );
 };
