@@ -12,6 +12,7 @@ import ITRManagement from "./pages/ITRManagement";
 import LoginPage from "./pages/LoginPage";
 import AIAssistant from "./pages/AIAssistant";
 import TestGanttPage from "./pages/TestGanttPage";
+import ProyectoManager from "./pages/ProyectoManager";
 import ChatbotButton from "./components/ChatbotButton";
 
 // Create a client
@@ -36,9 +37,9 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/itr-management" element={<ITRManagement />} />
+              <Route path="/proyecto-manager" element={<ProyectoManager />} />
               <Route path="/ai-assistant" element={<AIAssistant />} />
               <Route path="/test-gantt" element={<TestGanttPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             <ChatbotButton />
