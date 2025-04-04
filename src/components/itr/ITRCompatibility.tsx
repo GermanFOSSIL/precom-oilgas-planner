@@ -2,6 +2,7 @@
 import React from 'react';
 import { ITR } from '@/types';
 import { useCompatibility } from '@/context/CompatibilityLayer';
+import { ITRB } from '@/types/compatibility';
 
 /**
  * Helper component for working with the new ITR structure
@@ -10,7 +11,7 @@ import { useCompatibility } from '@/context/CompatibilityLayer';
 
 interface ITRMapperProps {
   itr: ITR;
-  children: (mappedITR: any) => React.ReactNode;
+  children: (mappedITR: ITRB) => React.ReactNode;
 }
 
 export const ITRMapper: React.FC<ITRMapperProps> = ({ itr, children }) => {
@@ -22,7 +23,7 @@ export const ITRMapper: React.FC<ITRMapperProps> = ({ itr, children }) => {
     // Map new properties to old property names
     descripcion: itr.nombre || itr.descripcion,
     fechaLimite: getITRFechaLimite(itr)
-  };
+  } as ITRB;
   
   return <>{children(compatITR)}</>;
 };
@@ -33,12 +34,12 @@ export const ITRMapper: React.FC<ITRMapperProps> = ({ itr, children }) => {
 export const useITRCompatibility = () => {
   const { legacyITRBToITR, getITRFechaLimite } = useCompatibility();
   
-  const mapToLegacyITRB = (itr: ITR) => {
+  const mapToLegacyITRB = (itr: ITR): ITRB => {
     return {
       ...itr,
-      descripcion: itr.nombre || itr.descripcion,
+      descripcion: itr.nombre || itr.descripcion || "",
       fechaLimite: getITRFechaLimite(itr)
-    };
+    } as ITRB;
   };
   
   return {

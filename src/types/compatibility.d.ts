@@ -14,6 +14,7 @@ export interface ITRB {
   fechaLimite: string;
   mcc: boolean;
   observaciones?: string;
+  codigoITR?: string;
 }
 
 // Legacy EstadoITRB

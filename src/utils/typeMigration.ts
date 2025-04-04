@@ -1,12 +1,13 @@
 
 import { ITR, Proyecto } from '@/types';
+import { ITRB } from '@/types/compatibility';
 
 /**
  * Utility functions to handle migration from old ITRB to new ITR format
  */
 
 // Convert old ITRB properties to new ITR format
-export const convertToITR = (oldITRB: any): ITR => {
+export const convertToITR = (oldITRB: ITRB): ITR => {
   return {
     id: oldITRB.id,
     proyectoId: oldITRB.actividadId ? 

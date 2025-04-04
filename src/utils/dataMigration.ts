@@ -13,10 +13,15 @@ export const migrateLocalStorageData = () => {
     if (storedITRBs) {
       const parsedITRBs = JSON.parse(storedITRBs);
       if (Array.isArray(parsedITRBs)) {
-        // Convert each ITRB to ITR
-        const migratedITRs = parsedITRBs.map(convertToITR);
-        localStorage.setItem('itrbItems', JSON.stringify(migratedITRs));
-        console.log(`Migrated ${migratedITRs.length} ITRBs to ITRs`);
+        // Check if any item needs migration (missing fechaFin or has fechaLimite)
+        const needsMigration = parsedITRBs.some(p => !p.fechaFin || p.fechaLimite);
+        
+        if (needsMigration) {
+          // Convert each ITRB to ITR
+          const migratedITRs = parsedITRBs.map(convertToITR);
+          localStorage.setItem('itrbItems', JSON.stringify(migratedITRs));
+          console.log(`Migrated ${migratedITRs.length} ITRBs to ITRs`);
+        }
       }
     }
     

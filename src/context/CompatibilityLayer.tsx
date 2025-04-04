@@ -3,17 +3,18 @@ import React, { createContext, useContext } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { convertToITR, convertToProyecto, getITRFechaFin } from '@/utils/typeMigration';
 import { ITR, Proyecto } from '@/types';
+import { ITRB, LegacyProyecto } from '@/types/compatibility';
 
 // This context provides legacy support for components still using ITRB
 interface CompatibilityContextType {
   // Convert old ITRB references to new ITR
-  legacyITRBToITR: (itrb: any) => ITR;
+  legacyITRBToITR: (itrb: ITRB) => ITR;
   
   // Get fechaLimite (for backward compatibility)
   getITRFechaLimite: (itr: ITR) => string;
   
   // Convert old Proyecto format to new format
-  legacyProyectoToProyecto: (proyecto: any) => Proyecto;
+  legacyProyectoToProyecto: (proyecto: LegacyProyecto) => Proyecto;
   
   // Create a new proyecto with required fields
   createCompatibleProyecto: (data: Partial<Proyecto>) => Proyecto;
@@ -27,7 +28,7 @@ const CompatibilityContext = createContext<CompatibilityContextType | null>(null
 export const CompatibilityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const appContext = useAppContext();
   
-  const legacyITRBToITR = (itrb: any): ITR => {
+  const legacyITRBToITR = (itrb: ITRB): ITR => {
     return convertToITR(itrb);
   };
   
@@ -36,7 +37,7 @@ export const CompatibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     return itr.fechaFin;
   };
   
-  const legacyProyectoToProyecto = (proyecto: any): Proyecto => {
+  const legacyProyectoToProyecto = (proyecto: LegacyProyecto): Proyecto => {
     return convertToProyecto(proyecto);
   };
   

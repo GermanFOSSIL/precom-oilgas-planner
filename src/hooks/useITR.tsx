@@ -2,6 +2,7 @@
 import { useAppContext } from '@/context/AppContext';
 import { useCompatibility } from '@/context/CompatibilityLayer';
 import { ITR } from '@/types';
+import { ITRB } from '@/types/compatibility';
 
 /**
  * Hook to access ITR data with backward compatibility for components
@@ -16,7 +17,7 @@ const useITR = () => {
     ...itr,
     fechaLimite: getITRFechaLimite(itr),
     descripcion: itr.nombre || itr.descripcion
-  }));
+  })) as ITRB[];
   
   // Enhanced function to add an ITR with automatic conversion if needed
   const addCompatITR = (itr: any) => {
