@@ -156,7 +156,7 @@ class PersistentStorage {
       // Obtener estado actual
       const backupData = {
         timestamp: new Date().toISOString(),
-        data: {}
+        data: {} as Record<string, string | null>
       };
       
       // Excluir claves que comienzan con '_'
@@ -220,7 +220,7 @@ class PersistentStorage {
       
       // Limpiar datos actuales (excepto configuración)
       const configKeys = ['_theme', '_apiKeys', '_lastSession'];
-      const savedConfig = {};
+      const savedConfig: Record<string, string | null> = {};
       
       configKeys.forEach(key => {
         savedConfig[key] = localStorage.getItem(key);
@@ -238,8 +238,8 @@ class PersistentStorage {
       
       // Restaurar datos del respaldo
       Object.entries(backup.data).forEach(([key, value]) => {
-        if (value !== null) {
-          localStorage.setItem(key, value as string);
+        if (value !== null && typeof value === 'string') {
+          localStorage.setItem(key, value);
         }
       });
       

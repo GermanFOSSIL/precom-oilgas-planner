@@ -1,10 +1,11 @@
+
 import React, { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from "react";
 import { 
   User, 
   Actividad, 
-  ITR, 
+  ITRB, 
   KPIs, 
-  EstadoITR, 
+  EstadoITRB, 
   Proyecto, 
   Alerta, 
   AppTheme,
@@ -46,10 +47,10 @@ interface AppContextType {
   deleteActividad: (id: string) => void;
   
   // ITRs
-  itrbItems: ITR[];
-  setItrbItems: (items: ITR[]) => void;
-  addITRB: (itrb: ITR) => void;
-  updateITRB: (id: string, itrb: ITR) => void;
+  itrbItems: ITRB[];
+  setItrbItems: (items: ITRB[]) => void;
+  addITRB: (itrb: ITRB) => void;
+  updateITRB: (id: string, itrb: ITRB) => void;
   deleteITRB: (id: string) => void;
   completarTodosITRB: (proyectoId: string) => void;
   
@@ -88,7 +89,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [user, setUser] = useState<User | null>(null);
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
-  const [itrbItems, setItrbItems] = useState<ITR[]>([]);
+  const [itrbItems, setItrbItems] = useState<ITRB[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [proyectoActual, setProyectoActual] = useState<string | "todos">("todos");
   const [theme, setTheme] = useState<AppTheme>({ mode: "light" });
@@ -148,7 +149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActividades(storedActividades);
     }
 
-    const storedITRBs = persistentStorage.getItem<ITR[]>("itrbItems");
+    const storedITRBs = persistentStorage.getItem<ITRB[]>("itrbItems");
     if (storedITRBs) {
       setItrbItems(storedITRBs);
     }
@@ -202,9 +203,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Actualizar automáticamente los estados de los ITR
     const today = new Date();
     const updatedItems = itrbItems.map(item => {
-      const fechaLimite = new Date(item.fechaFin);
+      const fechaLimite = new Date(item.fechaLimite);
       
-      let estado: EstadoITR = "En curso";
+      let estado: EstadoITRB = "En curso";
       
       if (item.cantidadRealizada >= item.cantidadTotal) {
         estado = "Completado";
@@ -427,11 +428,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Funciones CRUD para ITRB
-  const addITRB = (itrb: ITR) => {
+  const addITRB = (itrb: ITRB) => {
     setItrbItems([...itrbItems, itrb]);
   };
 
-  const updateITRB = (id: string, itrb: ITR) => {
+  const updateITRB = (id: string, itrb: ITRB) => {
     setItrbItems(itrbItems.map(item => item.id === id ? itrb : item));
   };
 
@@ -452,7 +453,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           ...item,
           cantidadRealizada: item.cantidadTotal,
-          estado: "Completado" as EstadoITR
+          estado: "Completado" as EstadoITRB
         };
       }
       return item;
@@ -509,7 +510,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Contar actividades vencidas
     const hoy = new Date();
     const itrbsVencidos = itrbFiltrados.filter(item => {
-      const fechaLimite = new Date(item.fechaFin);
+      const fechaLimite = new Date(item.fechaLimite);
       return fechaLimite < hoy; // Es vencido si la fecha límite es anterior a hoy
     });
     
@@ -544,7 +545,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const storedActividades = persistentStorage.getItem<Actividad[]>("actividades");
       if (storedActividades) setActividades(storedActividades);
       
-      const storedITRBs = persistentStorage.getItem<ITR[]>("itrbItems");
+      const storedITRBs = persistentStorage.getItem<ITRB[]>("itrbItems");
       if (storedITRBs) setItrbItems(storedITRBs);
       
       const storedAlertas = persistentStorage.getItem<Alerta[]>("alertas");
