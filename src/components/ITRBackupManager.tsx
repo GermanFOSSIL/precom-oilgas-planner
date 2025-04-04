@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,9 @@ const ITRBackupManager: React.FC = () => {
     actividades, 
     proyectos, 
     filtros,
-    proyectoActual
+    proyectoActual,
+    addITRB, // Añadimos esta función para realmente crear ITRs
+    setItrbItems // Añadimos esta función para actualizar ITRBs si es necesario
   } = useAppContext();
   
   // State for filtering
@@ -50,6 +53,7 @@ const ITRBackupManager: React.FC = () => {
   const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [targetActividadId, setTargetActividadId] = useState<string>("");
   const [keepOriginal, setKeepOriginal] = useState(true);
+  const [cantidadNueva, setCantidadNueva] = useState<number>(1); // Nuevo estado para cantidad a asignar
 
   // Calculate available systems from activities
   const sistemas = useMemo(() => {
@@ -112,14 +116,32 @@ const ITRBackupManager: React.FC = () => {
         return (
           itr.descripcion.toLowerCase().includes(searchLower) ||
           actividad.nombre.toLowerCase().includes(searchLower) ||
-          actividad.sistema.toLowerCase().includes(searchLower) ||
-          actividad.subsistema.toLowerCase().includes(searchLower)
+          actividad.sistema?.toLowerCase().includes(searchLower) ||
+          actividad.subsistema?.toLowerCase().includes(searchLower)
         );
       }
       
       return true;
     });
   }, [itrbItems, actividades, proyectoActual, selectedSistema, selectedSubsistema, searchTerm]);
+
+  // Agrupar ITRs por tipo (para asegurar que solo haya uno de cada tipo)
+  const groupedITRs = useMemo(() => {
+    const groups = new Map<string, ITRB>();
+    
+    filteredITRs.forEach(itr => {
+      // Detectamos el tipo de ITR (por ejemplo I01A, I02A, etc.) de la descripción
+      const match = itr.descripcion.match(/\b([A-Z][0-9]{2}[A-Z])\b/);
+      const type = match ? match[1] : itr.descripcion;
+      
+      // Solo agregamos si no existe ya ese tipo o si ya tenemos este ITR seleccionado
+      if (!groups.has(type) || selectedITRs.has(itr.id)) {
+        groups.set(type, itr);
+      }
+    });
+    
+    return Array.from(groups.values());
+  }, [filteredITRs, selectedITRs]);
 
   // Get available target activities for copying
   const availableActividades = useMemo(() => {
@@ -141,7 +163,7 @@ const ITRBackupManager: React.FC = () => {
 
   // Select all visible ITRs
   const selectAllVisible = () => {
-    const allIds = filteredITRs.map(itr => itr.id);
+    const allIds = groupedITRs.map(itr => itr.id);
     setSelectedITRs(new Set(allIds));
   };
   
@@ -167,10 +189,73 @@ const ITRBackupManager: React.FC = () => {
       return;
     }
 
+    if (cantidadNueva <= 0) {
+      toast.error("La cantidad a asignar debe ser mayor que cero");
+      return;
+    }
+
     try {
-      // Implementation would go here
-      // For now just show success message
-      toast.success(`${selectedITRs.size} ITRs ${keepOriginal ? "copiados" : "movidos"} exitosamente`);
+      // Implementamos la copia real de ITRs
+      const targetActividad = actividades.find(a => a.id === targetActividadId);
+      if (!targetActividad) {
+        toast.error("La actividad destino no existe");
+        return;
+      }
+
+      // Obtenemos los ITRs seleccionados
+      const selectedITRBs = itrbItems.filter(itr => selectedITRs.has(itr.id));
+      
+      // Creamos nuevos ITRs basados en los seleccionados pero asignados a la nueva actividad
+      const newITRBs: ITRB[] = [];
+      const updatedITRBs: ITRB[] = [];
+      
+      selectedITRBs.forEach(itr => {
+        // Crear una copia del ITR con un nuevo ID
+        const newITR: ITRB = {
+          id: `itrb-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          actividadId: targetActividadId,
+          descripcion: itr.descripcion,
+          cantidadTotal: cantidadNueva, // Usamos la cantidad especificada por el usuario
+          cantidadRealizada: 0, // Comienza con 0 realizadas
+          fechaLimite: itr.fechaLimite,
+          observaciones: itr.observaciones,
+          mcc: itr.mcc,
+          estado: "En curso"
+        };
+        
+        // Añadir a la lista de nuevos ITRs
+        newITRBs.push(newITR);
+        
+        // Si no estamos manteniendo el original, actualizar el original para eliminarlo
+        if (!keepOriginal) {
+          updatedITRBs.push({
+            ...itr,
+            estado: "Completado",
+            cantidadRealizada: itr.cantidadTotal // Marcarlo como completado
+          });
+        }
+      });
+      
+      // Actualizar el estado global con los nuevos ITRs
+      newITRBs.forEach(itr => {
+        addITRB(itr);
+      });
+      
+      // Si no mantenemos originales, actualizamos el estado
+      if (!keepOriginal && updatedITRBs.length > 0) {
+        const allUpdatedITRBs = [...itrbItems];
+        
+        updatedITRBs.forEach(updatedItr => {
+          const index = allUpdatedITRBs.findIndex(i => i.id === updatedItr.id);
+          if (index !== -1) {
+            allUpdatedITRBs[index] = updatedItr;
+          }
+        });
+        
+        setItrbItems(allUpdatedITRBs);
+      }
+      
+      toast.success(`${selectedITRs.size} ITRs ${keepOriginal ? "copiados" : "movidos"} exitosamente a ${targetActividad.nombre}`);
       setShowCopyDialog(false);
       
       // Clear selection if not keeping original (meaning we moved them)
@@ -329,7 +414,8 @@ const ITRBackupManager: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredITRs.map((itr) => {
+            {/* Mostramos ITRs agrupados, un solo tipo de cada */}
+            {groupedITRs.map((itr) => {
               const actividad = actividades.find(a => a.id === itr.actividadId);
               return (
                 <TableRow key={itr.id}>
@@ -387,11 +473,23 @@ const ITRBackupManager: React.FC = () => {
                 <SelectContent>
                   {availableActividades.map((act) => (
                     <SelectItem key={act.id} value={act.id}>
-                      {act.nombre} ({act.sistema}: {act.subsistema})
+                      {act.nombre} ({act.sistema || 'Sin sistema'}: {act.subsistema || 'Sin subsistema'})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            
+            {/* Agregamos input para cantidad a asignar */}
+            <div className="space-y-2">
+              <Label htmlFor="cantidadNueva">Cantidad a asignar</Label>
+              <Input
+                id="cantidadNueva"
+                type="number"
+                min="1"
+                value={cantidadNueva}
+                onChange={(e) => setCantidadNueva(parseInt(e.target.value) || 1)}
+              />
             </div>
             
             <div className="flex items-center space-x-2 pt-2">
