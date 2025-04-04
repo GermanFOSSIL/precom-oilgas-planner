@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import { Upload, FileSpreadsheet, Check, AlertTriangle, FileUp } from "lucide-react";
 import { ITRB } from "@/types";
 import * as XLSX from 'xlsx';
+import { Badge } from "@/components/ui/badge";
 
 const ITRExcelImporter: React.FC = () => {
   const { addITRB, actividades, proyectoActual } = useAppContext();
@@ -140,6 +142,8 @@ const ITRExcelImporter: React.FC = () => {
 
         // Asignar a la primera actividad disponible (esto podría mejorarse)
         const actividadAsignada = actividadesDelProyecto[0];
+        const fechaActual = new Date().toISOString().split('T')[0];
+        const fechaLimite = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         // Crear nuevo ITR B
         const nuevoITRB: ITRB = {
@@ -148,8 +152,9 @@ const ITRExcelImporter: React.FC = () => {
           descripcion: `${codigo} - ${descripcion}`,
           cantidadTotal: 1,
           cantidadRealizada: 0,
+          fechaInicio: fechaActual,
+          fechaLimite: fechaLimite,
           estado: "En curso",
-          fechaLimite: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 días en el futuro
           mcc: false
         };
 
@@ -270,7 +275,5 @@ const ITRExcelImporter: React.FC = () => {
     </Card>
   );
 };
-
-import { Badge } from "@/components/ui/badge";
 
 export default ITRExcelImporter;

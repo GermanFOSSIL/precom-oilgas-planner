@@ -51,6 +51,7 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     descripcion: editingITRB?.descripcion || "",
     cantidadTotal: editingITRB?.cantidadTotal || 1,
     cantidadRealizada: editingITRB?.cantidadRealizada || 0,
+    fechaInicio: editingITRB?.fechaInicio || new Date().toISOString().split('T')[0],
     fechaLimite: editingITRB?.fechaLimite || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     mcc: editingITRB?.mcc || false,
     observaciones: editingITRB?.observaciones || ""
@@ -64,6 +65,7 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
   const [selectedSubsistema, setSelectedSubsistema] = useState<string>("");
   const [busquedaActividad, setBusquedaActividad] = useState<string>("");
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarInicioOpen, setCalendarInicioOpen] = useState(false);
 
   const proyectosDisponibles = useMemo(() => {
     return proyectos.map(p => ({
@@ -158,6 +160,16 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     }
   };
 
+  const handleFechaInicioSelect = (date: Date | undefined) => {
+    if (date) {
+      setFormData(prev => ({ 
+        ...prev, 
+        fechaInicio: date.toISOString().split('T')[0] 
+      }));
+      setCalendarInicioOpen(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.actividadId) {
       toast.error("Debe seleccionar una actividad");
@@ -176,6 +188,24 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     
     if (formData.cantidadRealizada > formData.cantidadTotal) {
       toast.error("La cantidad realizada no puede ser mayor a la cantidad total");
+      return;
+    }
+
+    const fechaInicio = new Date(formData.fechaInicio);
+    const fechaLimite = new Date(formData.fechaLimite);
+    
+    if (isNaN(fechaInicio.getTime())) {
+      toast.error("La fecha de inicio no es válida");
+      return;
+    }
+    
+    if (isNaN(fechaLimite.getTime())) {
+      toast.error("La fecha límite no es válida");
+      return;
+    }
+    
+    if (fechaLimite < fechaInicio) {
+      toast.error("La fecha límite debe ser posterior a la fecha de inicio");
       return;
     }
 
@@ -380,32 +410,62 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
           </div>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="fechaLimite">Fecha Límite *</Label>
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-between text-left font-normal"
-              >
-                {formData.fechaLimite ? (
-                  format(new Date(formData.fechaLimite), "PPP", { locale: es })
-                ) : (
-                  <span>Seleccionar fecha</span>
-                )}
-                <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                locale={es}
-                selected={formData.fechaLimite ? new Date(formData.fechaLimite) : undefined}
-                onSelect={handleDateSelect}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="fechaInicio">Fecha Inicio *</Label>
+            <Popover open={calendarInicioOpen} onOpenChange={setCalendarInicioOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between text-left font-normal"
+                >
+                  {formData.fechaInicio ? (
+                    format(new Date(formData.fechaInicio), "PPP", { locale: es })
+                  ) : (
+                    <span>Seleccionar fecha</span>
+                  )}
+                  <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  locale={es}
+                  selected={formData.fechaInicio ? new Date(formData.fechaInicio) : undefined}
+                  onSelect={handleFechaInicioSelect}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="fechaLimite">Fecha Límite *</Label>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between text-left font-normal"
+                >
+                  {formData.fechaLimite ? (
+                    format(new Date(formData.fechaLimite), "PPP", { locale: es })
+                  ) : (
+                    <span>Seleccionar fecha</span>
+                  )}
+                  <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  locale={es}
+                  selected={formData.fechaLimite ? new Date(formData.fechaLimite) : undefined}
+                  onSelect={handleDateSelect}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
         
         <div className="flex items-center space-x-2 mt-4">
