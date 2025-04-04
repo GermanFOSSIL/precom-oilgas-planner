@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +18,7 @@ interface Message {
 }
 
 const AIAssistant: React.FC = () => {
-  const { user, isAdmin, apiKeys, proyectos, actividades } = useAppContext();
+  const { user, isAdmin, apiKeys, proyectos, actividades, itrbItems } = useAppContext();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -78,15 +79,45 @@ const AIAssistant: React.FC = () => {
     }
     
     try {
-      // Prepare context data for the AI
+      // Extract relevant systems and subsystems from activities
+      const systems = [...new Set(actividades.map(a => a.sistema))];
+      const subsystems = [...new Set(actividades.map(a => `${a.sistema}-${a.subsistema}`))];
+      
+      // Extract ITR data
+      const itrData = itrbItems.slice(0, 10).map(itr => {
+        const relatedActivity = actividades.find(a => a.id === itr.actividadId);
+        return {
+          id: itr.id,
+          descripcion: itr.descripcion,
+          estado: itr.estado,
+          fechaLimite: itr.fechaLimite,
+          cantidadRealizada: itr.cantidadRealizada,
+          cantidadTotal: itr.cantidadTotal,
+          sistema: relatedActivity ? relatedActivity.sistema : 'No encontrado',
+          subsistema: relatedActivity ? relatedActivity.subsistema : 'No encontrado'
+        };
+      });
+      
+      // Prepare context data for the AI with expanded information
       const contextData = {
         proyectos: proyectos.slice(0, 5).map(p => ({
           id: p.id,
           titulo: p.titulo,
           descripcion: p.descripcion
         })),
+        usuarios: user ? [{ nombre: user.nombre, role: user.role }] : [],
+        sistemas: systems,
+        subsistemas: subsystems.slice(0, 10), // Limit to avoid token overload
+        itrResumen: {
+          total: itrbItems.length,
+          completados: itrbItems.filter(i => i.estado === "Completado").length,
+          enCurso: itrbItems.filter(i => i.estado === "En curso").length,
+          vencidos: itrbItems.filter(i => i.estado === "Vencido").length
+        },
+        itrEjemplos: itrData,
         actividadesCount: actividades.length,
-        sistemasCount: new Set(actividades.map(a => a.sistema)).size,
+        sistemasCount: systems.length,
+        fechaActual: new Date().toISOString()
       };
       
       // Prepare conversation history for the API
@@ -101,10 +132,21 @@ const AIAssistant: React.FC = () => {
         content: input
       });
       
-      // System message with instructions
+      // System message with enhanced instructions and context
       const systemMessage = {
         role: "system",
-        content: `Eres un asistente AI especializado en planes de precomisionado y gestión de ITRs (Inspection and Test Records). Ayudas a analizar datos de proyectos y a responder preguntas técnicas. Contexto actual del proyecto: ${JSON.stringify(contextData)}`
+        content: `Eres un asistente AI especializado en planes de precomisionado y gestión de ITRs (Inspection and Test Records). 
+        
+Tienes acceso a información sobre los proyectos, sistemas, subsistemas y estado de ITRs. Utiliza esta información para dar respuestas más precisas y contextualizadas.
+
+Puedes responder preguntas como:
+- Estado general de los proyectos
+- Información sobre sistemas y subsistemas
+- Estado de los ITRs (completados, en curso, vencidos)
+- Fechas límite de ITRs
+- Información sobre avances y pendientes
+
+Contexto actual del proyecto: ${JSON.stringify(contextData)}`
       };
       
       // Call OpenAI API
