@@ -75,11 +75,12 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
   };
 
   // Get ITR bar vertical spacing
-  const getItrbVerticalSpacing = (index: number) => {
-    const baseSpacing = tamanoGrafico === "pequeno" ? 6 : 
-                        tamanoGrafico === "grande" ? 10 : 8;
-    return baseSpacing + (index * 4);
-  };
+ const getItrbVerticalSpacing = (index: number) => {
+  const baseSpacing = tamanoGrafico === "pequeno" ? 10 : 
+                      tamanoGrafico === "grande" ? 14 : 
+                      tamanoGrafico === "completo" ? 16 : 12;
+  return baseSpacing + (index * 6); // aumenta el multiplicador
+};
 
   return (
     <div 
