@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -110,12 +109,42 @@ const Dashboard: React.FC = () => {
     }
   }, [configuracionGrafico.tamano]);
 
-  // Fix: Change the type to match what getKPIs actually returns
+  const getKPIsForExport = useCallback((proyectoId?: string): any[] => {
+    const kpiData = getKPIs(proyectoId);
+    return [
+      {
+        titulo: "Avance Físico",
+        valor: `${kpiData.avanceFisico.toFixed(1)}%`,
+        descripcion: "Porcentaje de avance del proyecto"
+      },
+      {
+        titulo: "ITRs Totales",
+        valor: kpiData.totalITRB,
+        descripcion: "Cantidad total de ITRs"
+      },
+      {
+        titulo: "ITRs Realizados",
+        valor: kpiData.realizadosITRB,
+        descripcion: "Cantidad de ITRs realizados"
+      },
+      {
+        titulo: "Subsistemas con MCC",
+        valor: `${kpiData.subsistemasMCC} de ${kpiData.totalSubsistemas}`,
+        descripcion: "Subsistemas que contienen MCC"
+      },
+      {
+        titulo: "Actividades Vencidas",
+        valor: kpiData.actividadesVencidas,
+        descripcion: "Cantidad de actividades vencidas"
+      }
+    ];
+  }, [getKPIs]);
+
   const { generarPDF, generarExcel } = useExportUtils({
     proyectos,
     actividades,
     itrbItems,
-    getKPIs: getKPIs as (proyectoId?: string) => any[]
+    getKPIs: getKPIsForExport
   });
 
   const handleExportPDF = useCallback(async () => {
@@ -212,7 +241,6 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Camino Crítico */}
             <div className="mt-6">
               <Card className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
                 <CardContent className="p-0">
