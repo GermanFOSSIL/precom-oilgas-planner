@@ -13,7 +13,7 @@ import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
 import FilterControls from "@/components/dashboard/FilterControls";
 import CriticalPathView from "@/components/CriticalPathView";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const Dashboard: React.FC = () => {
   const {
@@ -77,6 +77,7 @@ const Dashboard: React.FC = () => {
       proyecto: "todos",
       timestamp: ensureStringTimestamp(Date.now())
     });
+    toast.success("Filtros restablecidos");
   }, [setFiltros, ensureStringTimestamp]);
 
   const handleResetSession = useCallback(() => {
@@ -88,13 +89,15 @@ const Dashboard: React.FC = () => {
     setConfiguracionGrafico(prev => ({ ...prev, tamano }));
   }, []);
 
-  const handleSubsistemaToggle = useCallback(() => {
-    setMostrarSubsistemas(prev => !prev);
-    setConfiguracionGrafico(prev => ({
-      ...prev,
-      mostrarSubsistemas: !mostrarSubsistemas
-    }));
-  }, [mostrarSubsistemas]);
+  const handleSubsistemaToggle = useCallback((checked: boolean | "indeterminate") => {
+    if (typeof checked === "boolean") {
+      setMostrarSubsistemas(checked);
+      setConfiguracionGrafico(prev => ({
+        ...prev,
+        mostrarSubsistemas: checked
+      }));
+    }
+  }, []);
 
   const getGanttHeight = useCallback(() => {
     switch (configuracionGrafico.tamano) {
@@ -115,14 +118,28 @@ const Dashboard: React.FC = () => {
 
   const handleExportPDF = useCallback(async () => {
     setExportingChart(true);
-    await generarPDF(filtros);
-    setExportingChart(false);
+    try {
+      await generarPDF(filtros);
+      toast.success("Documento PDF generado correctamente");
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      toast.error("Error al generar el documento PDF");
+    } finally {
+      setExportingChart(false);
+    }
   }, [filtros, generarPDF]);
 
   const handleExportExcel = useCallback(async () => {
     setExportingChart(true);
-    await generarExcel(filtros);
-    setExportingChart(false);
+    try {
+      await generarExcel(filtros);
+      toast.success("Documento Excel generado correctamente");
+    } catch (error) {
+      console.error("Error al generar Excel:", error);
+      toast.error("Error al generar el documento Excel");
+    } finally {
+      setExportingChart(false);
+    }
   }, [filtros, generarExcel]);
 
   const currentFilterTimestamp = ensureStringTimestamp(Date.now());
@@ -140,22 +157,14 @@ const Dashboard: React.FC = () => {
           exportingChart={exportingChart}
         />
 
-        <div className="flex justify-between mb-4">
+        <div className="flex justify-between mb-4 flex-wrap gap-2">
           <FilterControls 
             filtros={filtros}
             onFiltroChange={handleFiltroChange}
             onSubsistemaToggle={handleSubsistemaToggle}
             mostrarSubsistemas={mostrarSubsistemas}
+            onClearAllFilters={handleResetFilters}
           />
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleResetFilters}
-            className="ml-2"
-          >
-            Limpiar filtros
-          </Button>
         </div>
 
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
@@ -187,7 +196,7 @@ const Dashboard: React.FC = () => {
           
           <TabsContent value="gantt" className="mt-0">
             <Card className="dark:bg-slate-800 dark:border-slate-700">
-              <CardContent className="p-0 h-[calc(100vh-280px)] overflow-y-auto">
+              <CardContent className="p-0 h-[calc(100vh-280px)] overflow-y-auto gantt-chart-container">
                 <EnhancedGanttChart 
                   filtros={{
                     ...filtros,
@@ -201,7 +210,7 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Movido: Camino Crítico aparece ahora DEBAJO del Gantt */}
+            {/* Camino Crítico */}
             <div className="mt-6">
               <Card className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
                 <CardContent className="p-0">

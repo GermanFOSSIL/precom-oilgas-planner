@@ -15,7 +15,7 @@ import AIAssistant from "./pages/AIAssistant";
 import TestGanttPage from "./pages/TestGanttPage";
 import ChatbotButton from "./components/ChatbotButton";
 import UserProfilePage from "./pages/UserProfilePage";
-import ITRSidebar from "./components/sidebar/ITRSidebar";
+import ITRSidebarButton from "./components/sidebar/ITRSidebarButton";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -69,16 +69,16 @@ const ProtectedRouteWithSidebar = ({ children }: { children: JSX.Element }) => {
   );
 };
 
-// Componente para renderizar el ITR Sidebar solo cuando sea necesario
-const WithITRSidebar = () => {
+// Componente para renderizar el ITR Sidebar Button cuando sea necesario
+const WithITRSidebarButton = () => {
   const { user } = useAppContext();
-  return user ? <ITRSidebar /> : null;
+  return user ? <ITRSidebarButton /> : null;
 };
 
 const AppRoutes = () => {
   return (
     <>
-      <WithITRSidebar />
+      <WithITRSidebarButton />
       <Routes>
         <Route path="/login" element={
           <PublicRoute>

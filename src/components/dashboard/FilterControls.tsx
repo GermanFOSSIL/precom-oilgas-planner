@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { FiltrosDashboard } from "@/types";
 import {
@@ -28,12 +28,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { debounce } from "lodash";
 
 interface FilterControlsProps {
   filtros: FiltrosDashboard;
   onFiltroChange: (key: keyof FiltrosDashboard, value: any) => void;
   onSubsistemaToggle: (checked: boolean | "indeterminate") => void;
   mostrarSubsistemas: boolean;
+  onClearAllFilters: () => void;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -41,22 +43,23 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   onFiltroChange,
   onSubsistemaToggle,
   mostrarSubsistemas,
+  onClearAllFilters
 }) => {
   const { actividades } = useAppContext();
   const [codigoITRFilter, setCodigoITRFilter] = React.useState("");
   const [modoFiltroAvanzado, setModoFiltroAvanzado] = React.useState(false);
 
-  const sistemasDisponibles = Array.from(
+  const sistemasDisponibles = React.useMemo(() => Array.from(
     new Set(actividades.map((act) => act.sistema))
-  );
+  ), [actividades]);
 
-  const subsistemasFiltrados = Array.from(
+  const subsistemasFiltrados = React.useMemo(() => Array.from(
     new Set(
       actividades
         .filter((act) => !filtros.sistema || act.sistema === filtros.sistema)
         .map((act) => act.subsistema)
     )
-  );
+  ), [actividades, filtros.sistema]);
 
   // Verificar si hay filtros activos
   const hayFiltrosActivos = !!(
@@ -68,16 +71,27 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     filtros.itrFilter
   );
   
-  // Nueva función para limpiar todos los filtros
-  const limpiarTodosFiltros = () => {
-    onFiltroChange("sistema", undefined);
-    onFiltroChange("subsistema", undefined);
-    onFiltroChange("estadoITRB", undefined);
-    onFiltroChange("tareaVencida", false);
-    onFiltroChange("busquedaActividad", "");
-    onFiltroChange("itrFilter", "");
+  // Utilizar debounce para mejorar rendimiento en los cambios de filtro de texto
+  const debouncedFilterChange = useCallback(
+    debounce((key: keyof FiltrosDashboard, value: any) => {
+      onFiltroChange(key, value);
+    }, 300),
+    [onFiltroChange]
+  );
+  
+  // Manejar cambio en búsqueda de código ITR con debounce
+  const handleITRCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCodigoITRFilter(value);
+    setModoFiltroAvanzado(!!value);
+    debouncedFilterChange("busquedaActividad", value);
+  };
+  
+  // Limpiar todos los filtros
+  const handleClearAllFilters = () => {
     setCodigoITRFilter("");
     setModoFiltroAvanzado(false);
+    onClearAllFilters();
     toast.success("Todos los filtros han sido restablecidos");
   };
 
@@ -88,7 +102,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         <Button
           variant="outline"
           size="sm"
-          onClick={limpiarTodosFiltros}
+          onClick={handleClearAllFilters}
           className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
         >
           <X className="h-4 w-4 mr-1" /> Limpiar filtros
@@ -197,7 +211,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
               variant="outline" 
               size="sm" 
               className="w-full"
-              onClick={limpiarTodosFiltros}
+              onClick={handleClearAllFilters}
             >
               <X className="h-4 w-4 mr-1" /> Limpiar todos los filtros
             </Button>
@@ -225,11 +239,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                 id="codigo-itr"
                 placeholder="Ej: I01A"
                 value={codigoITRFilter}
-                onChange={(e) => {
-                  setCodigoITRFilter(e.target.value);
-                  setModoFiltroAvanzado(!!e.target.value);
-                  onFiltroChange("busquedaActividad", e.target.value);
-                }}
+                onChange={handleITRCodeChange}
               />
               <p className="text-xs text-muted-foreground">
                 Buscar por código o parte del nombre del ITR
