@@ -144,21 +144,6 @@ const Dashboard: React.FC = () => {
 
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
 
-        {/* Agregar CriticalPathView antes de las pestañas */}
-        <div className="mb-6">
-          <Card className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
-            <CardContent className="p-0">
-              <div className="p-4">
-                <h2 className="text-xl font-bold flex items-center mb-4">
-                  <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
-                  Camino Crítico
-                </h2>
-                <CriticalPathView />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         <Tabs
           defaultValue="alertas"
           className="w-full"
@@ -176,17 +161,6 @@ const Dashboard: React.FC = () => {
                 <span className="hidden sm:inline">Gráfico Gantt</span>
               </TabsTrigger>
             </TabsList>
-            
-            {tabActual === "gantt" && (
-              <GanttControls
-                configuracionGrafico={configuracionGrafico}
-                mostrarSubsistemas={mostrarSubsistemas}
-                onTamanoGraficoChange={handleTamanoGrafico}
-                onSubsistemasToggle={handleSubsistemaToggle}
-                onExportPDF={handleExportPDF}
-                onExportExcel={handleExportExcel}
-              />
-            )}
           </div>
           
           <TabsContent value="alertas" className="mt-0">
@@ -210,6 +184,21 @@ const Dashboard: React.FC = () => {
                 />
               </CardContent>
             </Card>
+
+            {/* Movido: Camino Crítico aparece ahora DEBAJO del Gantt */}
+            <div className="mt-6">
+              <Card className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="p-4">
+                    <h2 className="text-xl font-bold flex items-center mb-4">
+                      <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                      Camino Crítico
+                    </h2>
+                    <CriticalPathView />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
         

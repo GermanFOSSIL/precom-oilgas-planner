@@ -14,6 +14,7 @@ import LoginPage from "./pages/LoginPage";
 import AIAssistant from "./pages/AIAssistant";
 import TestGanttPage from "./pages/TestGanttPage";
 import ChatbotButton from "./components/ChatbotButton";
+import UserProfilePage from "./pages/UserProfilePage"; // Nuevo componente que crearemos
 
 // Create a client
 const queryClient = new QueryClient({
@@ -82,6 +83,13 @@ const AppRoutes = () => {
       <Route path="/test-gantt" element={
         <ProtectedRoute>
           <TestGanttPage />
+        </ProtectedRoute>
+      } />
+      
+      {/* Nueva ruta para perfil de usuario */}
+      <Route path="/user-profile" element={
+        <ProtectedRoute>
+          <UserProfilePage />
         </ProtectedRoute>
       } />
       

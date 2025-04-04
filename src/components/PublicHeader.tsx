@@ -1,102 +1,114 @@
 
 import React from "react";
-import { useAppContext } from "@/context/AppContext";
-import { Button } from "@/components/ui/button";
-import { CalendarIcon, LogIn, Bot, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useAppContext } from "@/context/AppContext";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  User, 
+  LogOut, 
+  Settings,
+  Moon, 
+  Sun, 
+  Menu,
+  X,
+  Users
+} from "lucide-react";
 
 interface PublicHeaderProps {
   onLoginClick?: () => void;
 }
 
 const PublicHeader: React.FC<PublicHeaderProps> = ({ onLoginClick }) => {
+  const { user, logout, isAdmin, toggleTheme, theme } = useAppContext();
   const navigate = useNavigate();
-  const { user, logout } = useAppContext();
-
-  const handleLoginClick = () => {
-    if (onLoginClick) {
-      onLoginClick();
-    } else {
-      navigate("/login");
-    }
-  };
-
-  const handleLogoutClick = () => {
-    if (logout) {
-      logout();
-      navigate("/login");
-    }
+  
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
 
   return (
-    <header className="border-b sticky top-0 z-50 bg-white dark:bg-slate-800 dark:border-slate-700 shadow-sm">
-      <div className="container mx-auto flex justify-between items-center h-16 px-4">
-        <div className="flex items-center space-x-2">
-          <CalendarIcon className="h-6 w-6 text-oilgas-primary" />
-          <h1 className="text-xl font-bold text-oilgas-primary dark:text-white">
+    <header className="bg-white dark:bg-slate-800 shadow-sm border-b dark:border-slate-700">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center">
+          <h1 
+            className="text-xl font-semibold cursor-pointer"
+            onClick={() => navigate("/")}
+          >
             Plan de Precomisionado
           </h1>
         </div>
         
-        <div className="flex items-center space-x-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" asChild className="mr-2">
-                  <Link to="/ai-assistant">
-                    <Bot className="h-4 w-4 mr-2" />
-                    Asistente IA
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Consulta nuestro asistente de IA</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
+        <div className="flex items-center space-x-2">
           {user ? (
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
-                {user.nombre || user.email || 'Usuario'}
-              </Badge>
+            <>
+              <Button 
+                variant="ghost" 
+                onClick={toggleTheme}
+                className="px-2 mr-2"
+              >
+                {theme.mode === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
               
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={handleLogoutClick} className="border-red-200 text-red-700 hover:bg-red-50">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Cerrar sesión
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Cerrar tu sesión actual</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          ) : (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" onClick={handleLoginClick}>
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Iniciar sesión
+              {/* Menú desplegable para todos los usuarios */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    {user.nombre || user.email}
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Acceder como administrador o técnico</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem onClick={() => navigate("/user-profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
+                  </DropdownMenuItem>
+                  
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/itr-management")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Administración</span>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/itr-management?tab=users")}>
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Gestión de Usuarios</span>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-500">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Cerrar sesión</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button onClick={onLoginClick} className="bg-blue-600 hover:bg-blue-700">
+              Iniciar sesión
+            </Button>
           )}
         </div>
       </div>
