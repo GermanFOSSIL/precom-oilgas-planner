@@ -114,8 +114,9 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
 
         {item.itrbsAsociados.map((itrb, itrbIndex) => {
           const itrbStatus = itrb.estado || "En curso";
-          const itrbStart = itrb.fechaInicio ? new Date(itrb.fechaInicio) : new Date(item.fechaInicio);
-          const itrbEnd = itrb.fechaVencimiento ? new Date(itrb.fechaVencimiento) : new Date(item.fechaFin);
+          // Usar fecha de la actividad como fallback si no existe fechaInicio en ITRB
+          const itrbStart = new Date(item.fechaInicio);
+          const itrbEnd = itrb.fechaLimite ? new Date(itrb.fechaLimite) : new Date(item.fechaFin);
 
           if (!isDateInRange(itrbStart) && !isDateInRange(itrbEnd)) return null;
 
