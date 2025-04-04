@@ -22,7 +22,7 @@ const GanttTodayIndicator: React.FC<GanttTodayIndicatorProps> = ({
     <div 
       className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
       style={{ 
-        left: `calc(200px + ${calculatePosition(new Date())}% * (100% - 200px) / 100)`,
+        left: `calc(280px + ${calculatePosition(today)}% * (100% - 280px) / 100)`,
       }}
     >
       <div className="absolute -top-1.5 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-1 py-0.5 rounded">

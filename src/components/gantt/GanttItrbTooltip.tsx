@@ -39,12 +39,12 @@ const GanttItrbTooltip: React.FC<GanttItrbTooltipProps> = ({
         
         <div className="text-gray-500 dark:text-gray-400">Fecha inicio:</div>
         <div className="font-medium">
-          {format(hoveredItrb.fechaInicio, "dd/MM/yyyy", { locale: es })}
+          {format(new Date(hoveredItrb.fechaInicio || new Date()), "dd/MM/yyyy", { locale: es })}
         </div>
         
         <div className="text-gray-500 dark:text-gray-400">Fecha límite:</div>
         <div className="font-medium">
-          {format(hoveredItrb.fechaFin, "dd/MM/yyyy", { locale: es })}
+          {format(new Date(hoveredItrb.fechaLimite), "dd/MM/yyyy", { locale: es })}
         </div>
         
         <div className="text-gray-500 dark:text-gray-400">Estado:</div>
@@ -63,7 +63,8 @@ const GanttItrbTooltip: React.FC<GanttItrbTooltipProps> = ({
           <>
             <div className="text-gray-500 dark:text-gray-400">Progreso:</div>
             <div className="font-medium">
-              {hoveredItrb.cantidadRealizada}/{hoveredItrb.cantidadTotal} ({hoveredItrb.progreso}%)
+              {hoveredItrb.cantidadRealizada}/{hoveredItrb.cantidadTotal} 
+              {hoveredItrb.cantidadTotal > 0 ? ` (${Math.round(hoveredItrb.cantidadRealizada * 100 / hoveredItrb.cantidadTotal)}%)` : ""}
             </div>
           </>
         )}

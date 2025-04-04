@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, FileUp, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { BackupOptions, Proyecto } from "@/types";
+import { BackupOptions, Proyecto, Alerta } from "@/types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,7 +46,6 @@ const BackupRestoreUploader = () => {
       setProgress(0);
       setError(null);
       
-      // Simular progreso de carga
       const progressInterval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 90) {
@@ -58,7 +56,6 @@ const BackupRestoreUploader = () => {
         });
       }, 100);
       
-      // Leer el archivo
       const fileContent = await readFileAsText(file);
       let parsedData;
       
@@ -72,7 +69,6 @@ const BackupRestoreUploader = () => {
         return;
       }
       
-      // Verify backup data structure more thoroughly
       if (!isValidBackupData(parsedData)) {
         setError("El formato del backup es inválido o no contiene los datos necesarios");
         clearInterval(progressInterval);
@@ -81,15 +77,12 @@ const BackupRestoreUploader = () => {
         return;
       }
       
-      // Set backup data
       setBackupData(parsedData);
       
-      // Si hay proyectos en el backup, proponemos el nombre del primero
       if (parsedData.proyectos && Array.isArray(parsedData.proyectos) && parsedData.proyectos.length > 0) {
         setNewProyectoNombre(parsedData.proyectos[0].titulo);
       }
       
-      // Mostrar diálogo para seleccionar proyecto
       setTimeout(() => {
         setIsUploading(false);
         setShowRestoreDialog(true);
@@ -106,7 +99,6 @@ const BackupRestoreUploader = () => {
   const isValidBackupData = (data: any): boolean => {
     if (!data || typeof data !== "object") return false;
     
-    // Check for basic structure, at least one of these should exist
     const hasProyectos = Array.isArray(data.proyectos);
     const hasActividades = Array.isArray(data.actividades);
     const hasItrbItems = Array.isArray(data.itrbItems);
@@ -142,7 +134,6 @@ const BackupRestoreUploader = () => {
       let targetProyectoIdToUse = targetProyectoId;
       let nuevoProyecto: Proyecto | null = null;
       
-      // Si es un nuevo proyecto, crearlo
       if (targetProyectoId === "new") {
         if (!newProyectoNombre.trim()) {
           toast.error("Debe ingresar un nombre para el nuevo proyecto");
@@ -164,15 +155,11 @@ const BackupRestoreUploader = () => {
         targetProyectoIdToUse = nuevoProyecto.id;
       }
       
-      // Safely restore data in the correct order - first projects, then activities, then ITRBs
       if (backupData.proyectos && Array.isArray(backupData.proyectos)) {
-        // Only update projects if we're creating a new one
         if (targetProyectoId === "new") {
-          // Keep existing projects and add new ones
           const existingProjectIds = new Set(proyectos.map(p => p.id));
           const newProjects = backupData.proyectos.filter(p => !existingProjectIds.has(p.id));
           
-          // Si estamos restaurando a un nuevo proyecto, usamos ese en lugar de los proyectos del backup
           if (nuevoProyecto) {
             setProyectos([...proyectos, nuevoProyecto]);
           } else {
@@ -181,7 +168,6 @@ const BackupRestoreUploader = () => {
         }
       }
       
-      // Arreglo para almacenar las nuevas actividades (para mantener las existentes)
       let nuevasActividades = [...actividades];
       
       if (backupData.actividades && Array.isArray(backupData.actividades)) {
@@ -190,7 +176,6 @@ const BackupRestoreUploader = () => {
         if (backupData.proyectos && backupData.proyectos.length > 0) {
           const proyectoOriginalId = backupData.proyectos[0].id;
           
-          // Actualizar proyectoId de las actividades para que apunten al proyecto seleccionado
           actividadesModificadas.forEach(act => {
             if (act.proyectoId === proyectoOriginalId) {
               act.proyectoId = targetProyectoIdToUse;
@@ -198,28 +183,22 @@ const BackupRestoreUploader = () => {
           });
         }
         
-        // Make sure we're not adding duplicate activities
         const existingActivityIds = new Set(actividades.map(a => a.id));
         const newActivities = actividadesModificadas.filter(a => !existingActivityIds.has(a.id));
         
-        // Merge with existing activities
         nuevasActividades = [...actividades, ...newActivities];
         setActividades(nuevasActividades);
       }
       
-      // Arreglo para almacenar los nuevos ITRBs (para mantener los existentes)
       let nuevosITRBs = [...itrbItems];
       
       if (backupData.itrbItems && Array.isArray(backupData.itrbItems)) {
-        // Process ITRBs properly
         const existingItrbIds = new Set(itrbItems.map(i => i.id));
         const newItrbs = backupData.itrbItems.filter(i => !existingItrbIds.has(i.id));
         
-        // Asegurar que los ITRBs apunten a las actividades del nuevo proyecto si es necesario
         if (backupData.proyectos && backupData.proyectos.length > 0 && targetProyectoId === "new") {
           const originalProyectoId = backupData.proyectos[0].id;
           
-          // Mapear actividades originales a nuevas
           const actividadMapping = new Map();
           backupData.actividades.forEach((origAct: any) => {
             if (origAct.proyectoId === originalProyectoId) {
@@ -235,7 +214,6 @@ const BackupRestoreUploader = () => {
             }
           });
           
-          // Actualizar actividadId en ITRBs
           newItrbs.forEach(itrb => {
             if (actividadMapping.has(itrb.actividadId)) {
               itrb.actividadId = actividadMapping.get(itrb.actividadId);
@@ -243,7 +221,6 @@ const BackupRestoreUploader = () => {
           });
         }
         
-        // Ensure ITRBs have valid timestamps (convert numbers to strings if needed)
         const processedItrbs = newItrbs.map(itrb => ({
           ...itrb,
           fechaCreacion: typeof itrb.fechaCreacion === 'number' 
@@ -258,16 +235,13 @@ const BackupRestoreUploader = () => {
         setItrbItems(nuevosITRBs);
       }
       
-      // Procesar alertas
       if (backupData.alertas && Array.isArray(backupData.alertas)) {
-        // En lugar de reemplazar, agregamos las nuevas alertas
         const existingAlertaIds = new Set(backupData.alertas.map((a: any) => a.id));
         const newAlertas = backupData.alertas.filter((a: any) => !existingAlertaIds.has(a.id));
         
-        setAlertas(prev => [...prev, ...newAlertas]);
+        setAlertas((prev: Alerta[]) => [...prev, ...newAlertas] as Alerta[]);
       }
       
-      // Procesar configuración de KPIs sin sobrescribir todo
       if (backupData.kpiConfig && typeof backupData.kpiConfig === "object") {
         updateKPIConfig(backupData.kpiConfig);
       }
@@ -278,21 +252,17 @@ const BackupRestoreUploader = () => {
           : "Los datos han sido cargados en el proyecto seleccionado"
       });
       
-      // Limpiar el input de archivo y cerrar el diálogo
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
       setShowRestoreDialog(false);
       setBackupData(null);
       
-      // Guardar explícitamente en localStorage para asegurar la persistencia
       localStorage.setItem("proyectos", JSON.stringify(nuevoProyecto ? [...proyectos, nuevoProyecto] : proyectos));
       localStorage.setItem("actividades", JSON.stringify(nuevasActividades));
       localStorage.setItem("itrbItems", JSON.stringify(nuevosITRBs));
       
-      // Give more time for data to be processed before reloading (3 seconds instead of 2)
       setTimeout(() => {
-        // Force update the timestamp in localStorage to ensure fresh state
         localStorage.setItem("timestamp", Date.now().toString());
         window.location.reload();
       }, 3000);

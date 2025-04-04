@@ -10,8 +10,8 @@ import GanttSubsystemHeader from "./GanttSubsystemHeader";
 import GanttActivityBar from "./GanttActivityBar";
 import GanttTodayIndicator from "./GanttTodayIndicator";
 import GanttLegend from "./GanttLegend";
-import { GanttTooltip } from "./GanttTooltip";
-import { GanttItrbTooltip } from "./GanttItrbTooltip";
+import GanttTooltip from "./GanttTooltip";
+import GanttItrbTooltip from "./GanttItrbTooltip";
 import { useAppContext } from "@/context/AppContext";
 
 interface GanttBarChartProps {
@@ -137,15 +137,20 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
         {/* Header with dates */}
         <GanttDateHeaders 
           axisDates={axisDates} 
-          cellWidth={cellWidth} 
           viewMode={viewMode}
           isDarkMode={isDarkMode}
         />
         
         {/* Today indicator */}
         <GanttTodayIndicator 
-          axisDates={axisDates} 
-          cellWidth={cellWidth} 
+          currentStartDate={currentStartDate}
+          currentEndDate={currentEndDate}
+          calculatePosition={(date) => {
+            const totalDays = axisDates.length;
+            const dayIndex = axisDates.findIndex(d => d.toDateString() === date.toDateString());
+            if (dayIndex === -1) return 0;
+            return (dayIndex * 100) / totalDays;
+          }}
         />
         
         {/* Render projects, systems, subsystems and their activities */}
@@ -296,14 +301,31 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                   
                   if (!activityPosition) return null;
                   
+                  // Since we're not using GanttActivityBar component directly anymore,
+                  // we'll implement the rendering here
                   return (
-                    <GanttActivityBar 
-                      key={actividad.id}
-                      actividad={actividad}
-                      position={activityPosition}
-                      showTooltip={showTooltip}
-                      hideTooltip={hideTooltip}
-                    />
+                    <div 
+                      key={actividad.id} 
+                      className="gantt-row activity-row"
+                    >
+                      <div className="gantt-label activity-label">
+                        <span className="truncate">{actividad.nombre}</span>
+                      </div>
+                      
+                      <div 
+                        className="gantt-activity-bar"
+                        style={{
+                          left: `${activityPosition.left}px`,
+                          width: `${activityPosition.width}px`,
+                        }}
+                        onMouseEnter={(e) => showTooltip(e, actividad, "actividad")}
+                        onMouseLeave={hideTooltip}
+                      >
+                        {activityPosition.width > 50 && (
+                          <span className="gantt-bar-label">{actividad.nombre}</span>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
               </React.Fragment>
@@ -313,20 +335,20 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
       </div>
       
       {/* Show legend if the option is enabled */}
-      {mostrarLeyenda && <GanttLegend />}
+      {mostrarLeyenda && <GanttLegend mostrarLeyenda={mostrarLeyenda} />}
       
       {/* Tooltip */}
       {tooltipInfo.visible && tooltipInfo.type === "actividad" && (
         <GanttTooltip 
-          data={tooltipInfo.data} 
+          item={tooltipInfo.data} 
           position={tooltipInfo.position}
         />
       )}
       
       {tooltipInfo.visible && tooltipInfo.type === "itrb" && (
         <GanttItrbTooltip 
-          data={tooltipInfo.data} 
-          position={tooltipInfo.position}
+          hoveredItrb={tooltipInfo.data} 
+          tooltipPosition={tooltipInfo.position}
         />
       )}
     </div>

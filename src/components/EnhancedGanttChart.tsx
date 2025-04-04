@@ -414,7 +414,8 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
                               
                               {/* Agrupar ITRs por rango de fechas si aplica */}
                               {activityItrbs.map((itrb, itrbIndex) => {
-                                const fechaInicio = new Date(itrb.fechaInicio || actividad.fechaInicio);
+                                // Use the actividad's fechaInicio since ITRB doesn't have that property
+                                const fechaInicio = new Date(actividad.fechaInicio);
                                 const fechaLimite = new Date(itrb.fechaLimite);
                                 const { left, width } = getItemPosition(fechaInicio, fechaLimite);
                                 const colors = getColorByEstado(itrb.estado);
