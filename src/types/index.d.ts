@@ -1,4 +1,3 @@
-
 export interface Proyecto {
   id: string;
   titulo: string;
@@ -35,11 +34,13 @@ export interface FiltrosDashboard {
   proyecto: string;
   sistema?: string;
   subsistema?: string;
-  timestamp?: string;
-  busquedaActividad?: string;
   estadoITRB?: string;
   tareaVencida?: boolean;
-  mcc?: boolean;
+  busquedaActividad?: string;
+  timestamp: string;
+  fechaInicioFilter?: string;
+  fechaFinFilter?: string;
+  itrFilter?: string;
 }
 
 export interface ConfiguracionGrafico {

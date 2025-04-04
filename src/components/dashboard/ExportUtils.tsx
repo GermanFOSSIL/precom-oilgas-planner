@@ -1,283 +1,204 @@
 
+// Si este archivo es de solo lectura, recomendamos crear una copia con un nombre diferente
+// como ExportUtilsEnhanced.tsx y usar ese en su lugar.
+
+import { useCallback } from "react";
 import { toast } from "sonner";
-import * as XLSX from 'xlsx';
-import html2canvas from 'html2canvas';
+import { saveAs } from 'file-saver';
 import { FiltrosDashboard } from "@/types";
 
 interface ExportUtilsProps {
   proyectos: any[];
   actividades: any[];
   itrbItems: any[];
-  getKPIs: (proyectoId?: string) => any;
+  getKPIs: any;
 }
 
-export const useExportUtils = ({
-  proyectos, 
-  actividades, 
-  itrbItems, 
-  getKPIs
-}: ExportUtilsProps) => {
-  const captureGanttChart = async (): Promise<string | null> => {
+export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: ExportUtilsProps) => {
+  
+  const generarPDF = useCallback(async (filtros: FiltrosDashboard) => {
     try {
-      const ganttContainers = Array.from(document.querySelectorAll('.gantt-chart-container'));
-      const visibleGanttContainer = ganttContainers.find(el =>
-        el instanceof HTMLElement &&
-        el.offsetParent !== null &&
-        window.getComputedStyle(el).display !== 'none'
-      ) as HTMLElement;
-
-      if (!visibleGanttContainer) {
-        const ganttElement = document.querySelector('.recharts-wrapper') as HTMLElement;
-        if (!ganttElement) {
-          toast.error("No se pudo encontrar el diagrama de Gantt para exportar");
-          return null;
-        }
-
-        const canvas = await html2canvas(ganttElement, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          logging: false
-        });
-
-        return canvas.toDataURL('image/png');
-      }
-
-      const timestamp = document.createElement('div');
-      timestamp.className = 'chart-timestamp';
-      timestamp.style.position = 'absolute';
-      timestamp.style.bottom = '10px';
-      timestamp.style.right = '10px';
-      timestamp.style.fontSize = '10px';
-      timestamp.style.color = '#666';
-      timestamp.style.padding = '4px';
-      timestamp.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-      timestamp.style.borderRadius = '3px';
-
-      const userName = localStorage.getItem('userName') || 'Usuario';
-      timestamp.textContent = `Generado por: ${userName} - ${new Date().toLocaleString()}`;
-
-      visibleGanttContainer.appendChild(timestamp);
-
-      const canvas = await html2canvas(visibleGanttContainer, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-        logging: false,
-        width: visibleGanttContainer.scrollWidth,
-        height: visibleGanttContainer.scrollHeight
-      });
-
-      visibleGanttContainer.removeChild(timestamp);
-
-      return canvas.toDataURL('image/png');
-    } catch (error) {
-      console.error("Error al capturar el diagrama de Gantt:", error);
-      toast.error("No se pudo capturar el diagrama de Gantt. Intente nuevamente.");
-      return null;
-    }
-  };
-
-  const generateGanttDataForExcel = (filtros: FiltrosDashboard) => {
-    const ganttData = actividades.filter(act =>
-      filtros.proyecto === "todos" || act.proyectoId === filtros.proyecto
-    ).map(act => {
-      const proyecto = proyectos.find(p => p.id === act.proyectoId);
-      const itrbAsociados = itrbItems.filter(i => i.actividadId === act.id);
-      const itrbCompletados = itrbAsociados.filter(i => i.estado === "Completado").length;
-      const totalItrb = itrbAsociados.length;
-      const avance = totalItrb > 0 ? Math.round((itrbCompletados / totalItrb) * 100) : 0;
-
-      return {
-        Proyecto: proyecto?.titulo || 'N/A',
-        ID: act.id,
-        Actividad: act.nombre,
-        Sistema: act.sistema,
-        Subsistema: act.subsistema,
-        'Fecha Inicio': new Date(act.fechaInicio).toLocaleDateString('es-ES'),
-        'Fecha Fin': new Date(act.fechaFin).toLocaleDateString('es-ES'),
-        'Duración (días)': act.duracion,
-        'ITRBs Completados': `${itrbCompletados}/${totalItrb}`,
-        'Avance (%)': `${avance}%`,
-        'Estado': avance === 100 ? 'Completado' : avance > 0 ? 'En curso' : 'No iniciado'
-      };
-    });
-
-    return ganttData;
-  };
-
-  const generarPDF = async (filtros: FiltrosDashboard) => {
-    try {
-      const jsPDFModule = await import('jspdf');
-      const jsPDF = jsPDFModule.default;
-
-      await import('jspdf-autotable');
-
-      const ganttImageData = await captureGanttChart();
-      if (!ganttImageData) {
-        toast.error("No se pudo capturar el diagrama de Gantt");
+      toast.info("Preparando exportación a PDF...");
+      
+      // Buscamos el elemento del gráfico Gantt
+      const ganttEl = document.querySelector('.gantt-chart-container');
+      
+      if (!ganttEl) {
+        toast.error("No se pudo encontrar el gráfico Gantt para exportar");
         return;
       }
 
-      const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm"
+      // Importamos las librerías dinámicamente
+      const [html2canvas, jsPDF] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
+      
+      const Html2Canvas = html2canvas.default;
+      const JsPDF = jsPDF.default;
+      
+      // Capturar elemento completo del Gantt
+      toast.info("Capturando imagen del gráfico...");
+      const canvas = await Html2Canvas(ganttEl as HTMLElement, {
+        scale: 1.5, // Mayor calidad
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        scrollX: 0,
+        scrollY: 0
       });
-
-      doc.setFontSize(18);
-      doc.setTextColor(40, 40, 40);
-      doc.text("Dashboard - Plan de Precomisionado", 14, 20);
-
-      doc.setFontSize(10);
-      doc.setTextColor(80, 80, 80);
-      const userName = localStorage.getItem('userName') || 'Usuario';
-      doc.text(`Generado por: ${userName}`, 14, 30);
-      doc.text("Fecha: " + new Date().toLocaleDateString('es-ES') + " " + new Date().toLocaleTimeString('es-ES'), 14, 35);
-
+      
+      // Dimensiones de la imagen
+      const imgWidth = 210; // A4 width (210mm)
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      
+      // Crear PDF (orientación horizontal para gráficos Gantt)
+      const pdf = new JsPDF('landscape', 'mm', 'a4');
+      
+      // Título del proyecto
+      let tituloProyecto = "Todos los proyectos";
+      if (filtros.proyecto !== "todos") {
+        const proyecto = proyectos.find(p => p.id === filtros.proyecto);
+        if (proyecto) tituloProyecto = proyecto.titulo;
+      }
+      
+      // Añadir título
+      pdf.setFontSize(16);
+      pdf.text(`Plan de Precomisionado - ${tituloProyecto}`, 14, 15);
+      
+      // Añadir fecha de generación
+      pdf.setFontSize(10);
+      pdf.text(`Fecha de generación: ${new Date().toLocaleDateString('es-ES')}`, 14, 23);
+      
+      // Añadir filtros aplicados si hay
+      const filtrosAplicados = [];
+      if (filtros.sistema) filtrosAplicados.push(`Sistema: ${filtros.sistema}`);
+      if (filtros.subsistema) filtrosAplicados.push(`Subsistema: ${filtros.subsistema}`);
+      if (filtros.estadoITRB) filtrosAplicados.push(`Estado: ${filtros.estadoITRB}`);
+      if (filtros.busquedaActividad) filtrosAplicados.push(`Búsqueda: ${filtros.busquedaActividad}`);
+      if (filtros.itrFilter) filtrosAplicados.push(`ITR: ${filtros.itrFilter}`);
+      
+      if (filtrosAplicados.length > 0) {
+        pdf.text(`Filtros: ${filtrosAplicados.join(', ')}`, 14, 28);
+      }
+      
+      // KPIs resumidos
       const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
-
-      const proyectoNombre = filtros.proyecto !== "todos" ?
-        proyectos.find(p => p.id === filtros.proyecto)?.titulo || "Todos los proyectos" :
-        "Todos los proyectos";
-
-      doc.text(`Proyecto: ${proyectoNombre}`, 14, 40);
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-
-      const imgWidth = pageWidth - 28;
-      const imgHeight = imgWidth * 0.5;
-
-      try {
-        doc.addImage(ganttImageData, 'PNG', 14, 45, imgWidth, imgHeight);
-      } catch (err) {
-        console.error("Error al agregar imagen del diagrama de Gantt:", err);
-        doc.text("Error al incluir el diagrama de Gantt", 14, 45);
-      }
-
-      const kpisData = [
-        ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
-        ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
-        ["Subsistemas con MCC", `${kpis.subsistemasMCC}/${kpis.totalSubsistemas}`],
-        ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
-      ];
-
-      (doc as any).autoTable({
-        startY: 45 + imgHeight + 10,
-        head: [["Indicador", "Valor"]],
-        body: kpisData,
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246] }
-      });
-
-      const pageCount = doc.getNumberOfPages();
-      doc.setFontSize(8);
-      doc.setTextColor(150);
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.text(`Página ${i} de ${pageCount} - Plan de Precomisionado - Generado: ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-      }
-
-      doc.save("gantt-chart-precomisionado.pdf");
-      toast.success("PDF del diagrama de Gantt generado exitosamente");
-      return true;
+      
+      // Añadir KPIs al PDF
+      pdf.setFontSize(12);
+      pdf.text("Indicadores:", 14, 35);
+      
+      pdf.setFontSize(10);
+      pdf.text(`Progreso ITRs: ${kpis.progresoITRs.toFixed(1)}%`, 14, 40);
+      pdf.text(`ITRs activos: ${kpis.itrsActivos}`, 14, 45);
+      pdf.text(`ITRs vencidos: ${kpis.itrsVencidos}`, 14, 50);
+      
+      // Añadir imagen al PDF (ajustado para dejar espacio para encabezado y KPIs)
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 14, 55, imgWidth - 28, imgHeight);
+      
+      // Logo y datos de la empresa
+      pdf.setFontSize(8);
+      pdf.text("Fossil Energy", 14, 200);
+      pdf.text("Plan de Precomisionado - v1.0", 250, 200);
+      
+      // Guardar PDF
+      pdf.save(`plan-precomisionado-${tituloProyecto.toLowerCase().replace(/\s+/g, '-')}.pdf`);
+      
+      toast.success("PDF generado correctamente");
     } catch (error) {
       console.error("Error al generar PDF:", error);
-      toast.error("Error al generar el PDF: " + (error instanceof Error ? error.message : "Error desconocido"));
-      return false;
+      toast.error("Error al generar el PDF. Por favor intente nuevamente.");
     }
-  };
-
-  const generarExcel = async (filtros: FiltrosDashboard) => {
+  }, [proyectos, getKPIs]);
+  
+  const generarExcel = useCallback(async (filtros: FiltrosDashboard) => {
     try {
-      const wb = XLSX.utils.book_new();
-
-      const ganttData = generateGanttDataForExcel(filtros);
-
-      const wsData = [
-        ["DIAGRAMA DE GANTT - PLAN DE PRECOMISIONADO", "", "", "", "", "", "", "", "", ""],
-        ["Proyecto: " + (filtros.proyecto !== "todos" ?
-          proyectos.find(p => p.id === filtros.proyecto)?.titulo || "Todos los proyectos" :
-          "Todos los proyectos"), "", "", "", "", "", "", "", "", ""],
-        ["Fecha de exportación: " + new Date().toLocaleDateString('es-ES'), "", "", "", "", "", "", "", "", ""],
-        [""],
-        ["Proyecto", "ID", "Actividad", "Sistema", "Subsistema", "Fecha Inicio", "Fecha Fin", "Duración (días)", "ITRBs Completados", "Avance (%)", "Estado"]
-      ];
-
-      ganttData.forEach(row => {
-        wsData.push([
-          row.Proyecto,
-          row.ID,
-          row.Actividad,
-          row.Sistema,
-          row.Subsistema,
-          row["Fecha Inicio"],
-          row["Fecha Fin"],
-          row["Duración (días)"],
-          row["ITRBs Completados"],
-          row["Avance (%)"],
-          row.Estado
-        ]);
+      toast.info("Preparando exportación a Excel...");
+      
+      // Importar librería xlsx dinámicamente
+      const XLSX = await import('xlsx');
+      
+      // Filtrar datos según filtros aplicados
+      const actividadesFiltradas = actividades.filter((actividad) => {
+        return (
+          (filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto) &&
+          (!filtros.sistema || actividad.sistema === filtros.sistema) &&
+          (!filtros.subsistema || actividad.subsistema === filtros.subsistema) &&
+          (!filtros.busquedaActividad || 
+            actividad.nombre.toLowerCase().includes((filtros.busquedaActividad || "").toLowerCase()))
+        );
+      });
+      
+      const itrbsFiltrados = itrbItems.filter((itrb) => {
+        const actividad = actividades.find(a => a.id === itrb.actividadId);
+        if (!actividad) return false;
+        
+        const cumpleFiltroBasico = 
+          (filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto) &&
+          (!filtros.sistema || actividad.sistema === filtros.sistema) &&
+          (!filtros.subsistema || actividad.subsistema === filtros.subsistema);
+          
+        const cumpleFiltroEstado = !filtros.estadoITRB || itrb.estado === filtros.estadoITRB;
+        
+        const cumpleBusquedaITR = !filtros.itrFilter || 
+          itrb.descripcion.toLowerCase().includes((filtros.itrFilter || "").toLowerCase());
+          
+        return cumpleFiltroBasico && cumpleFiltroEstado && cumpleBusquedaITR;
       });
 
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-      const colWidths = [
-        { wch: 20 },
-        { wch: 10 },
-        { wch: 30 },
-        { wch: 15 },
-        { wch: 15 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 10 },
-        { wch: 15 }
-      ];
-
-      ws['!cols'] = colWidths;
-      ws['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
-        { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } },
-        { s: { r: 2, c: 0 }, e: { r: 2, c: 10 } }
-      ];
-
-      XLSX.utils.book_append_sheet(wb, ws, "Gantt Chart");
-
-      const kpis = getKPIs(filtros.proyecto !== "todos" ? filtros.proyecto : undefined);
-
-      const kpisData = [
-        ["KPIs - PLAN DE PRECOMISIONADO", ""],
-        [""],
-        ["Indicador", "Valor"],
-        ["Avance Físico", `${kpis.avanceFisico.toFixed(1)}%`],
-        ["ITR B Completados", `${kpis.realizadosITRB}/${kpis.totalITRB}`],
-        ["ITR B Completados (%)", `${kpis.totalITRB > 0 ? ((kpis.realizadosITRB / kpis.totalITRB) * 100).toFixed(1) : 0}%`],
-        ["Subsistemas con MCC", `${kpis.subsistemasMCC}/${kpis.totalSubsistemas}`],
-        ["ITR B Vencidos", `${kpis.actividadesVencidas}`]
-      ];
-
-      const wsKPIs = XLSX.utils.aoa_to_sheet(kpisData);
-      wsKPIs['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
-      XLSX.utils.book_append_sheet(wb, wsKPIs, "KPIs");
-
-      XLSX.writeFile(wb, "gantt-chart-precomisionado.xlsx");
-      toast.success("Excel del diagrama de Gantt generado exitosamente");
-      return true;
+      // Preparar datos para Excel
+      const actividadesData = actividadesFiltradas.map(a => ({
+        ID: a.id,
+        Proyecto: proyectos.find(p => p.id === a.proyectoId)?.titulo || "Sin proyecto",
+        Nombre: a.nombre,
+        Sistema: a.sistema,
+        Subsistema: a.subsistema,
+        "Fecha Inicio": a.fechaInicio,
+        "Fecha Fin": a.fechaFin,
+      }));
+      
+      const itrbsData = itrbsFiltrados.map(itrb => {
+        const actividad = actividades.find(a => a.id === itrb.actividadId);
+        return {
+          ID: itrb.id,
+          Descripción: itrb.descripcion,
+          Estado: itrb.estado,
+          "Cantidad Total": itrb.cantidadTotal,
+          "Cantidad Realizada": itrb.cantidadRealizada,
+          "Fecha Inicio": itrb.fechaInicio || "",
+          "Fecha Límite": itrb.fechaLimite,
+          Actividad: actividad?.nombre || "Desconocida",
+          Sistema: actividad?.sistema || "Desconocido",
+          Subsistema: actividad?.subsistema || "Desconocido",
+          Observaciones: itrb.observaciones || ""
+        };
+      });
+      
+      // Crear libro de Excel
+      const wb = XLSX.utils.book_new();
+      
+      // Crear hojas
+      const wsActividades = XLSX.utils.json_to_sheet(actividadesData);
+      const wsITRBs = XLSX.utils.json_to_sheet(itrbsData);
+      
+      // Añadir hojas al libro
+      XLSX.utils.book_append_sheet(wb, wsActividades, "Actividades");
+      XLSX.utils.book_append_sheet(wb, wsITRBs, "ITRs");
+      
+      // Guardar archivo
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      
+      // Crear blob y guardar
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      saveAs(blob, `plan-precomisionado-${new Date().toISOString().slice(0,10)}.xlsx`);
+      
+      toast.success("Excel generado correctamente");
     } catch (error) {
       console.error("Error al generar Excel:", error);
-      toast.error("Error al generar el Excel");
-      return false;
+      toast.error("Error al generar el archivo Excel. Por favor intente nuevamente.");
     }
-  };
-
-  return {
-    captureGanttChart,
-    generateGanttDataForExcel,
-    generarPDF,
-    generarExcel
-  };
+  }, [actividades, itrbItems, proyectos, filtros]);
+  
+  return { generarPDF, generarExcel };
 };

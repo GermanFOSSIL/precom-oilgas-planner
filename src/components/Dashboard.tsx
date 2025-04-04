@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +13,7 @@ import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
 import FilterControls from "@/components/dashboard/FilterControls";
 import GanttControls from "@/components/dashboard/GanttControls";
+import CriticalPathView from "@/components/CriticalPathView";
 
 const Dashboard: React.FC = () => {
   const {
@@ -141,6 +143,21 @@ const Dashboard: React.FC = () => {
         </div>
 
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
+
+        {/* Agregar CriticalPathView antes de las pestañas */}
+        <div className="mb-6">
+          <Card className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="p-4">
+                <h2 className="text-xl font-bold flex items-center mb-4">
+                  <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                  Camino Crítico
+                </h2>
+                <CriticalPathView />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <Tabs
           defaultValue="alertas"

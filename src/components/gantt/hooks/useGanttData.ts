@@ -1,158 +1,163 @@
 
-import { useMemo } from "react";
-import { FiltrosDashboard } from "@/types";
-import { getColorByProgress } from "../utils/colorUtils";
+import { useState, useEffect } from "react";
+import { Actividad, ITRB, Proyecto, FiltrosDashboard } from "@/types";
+
+interface ExtendedFiltrosDashboard extends FiltrosDashboard {
+  itrFilter?: string;
+  fechaInicioFilter?: string;
+  fechaFinFilter?: string;
+}
 
 export const useGanttData = (
-  actividades: any[],
-  itrbItems: any[],
-  proyectos: any[],
-  filtros: FiltrosDashboard
+  actividades: Actividad[],
+  itrbItems: ITRB[],
+  proyectos: Proyecto[],
+  filtros: ExtendedFiltrosDashboard
 ) => {
-  const ganttData = useMemo(() => {
-    // Filtrar actividades según los filtros seleccionados
-    return actividades
-      .filter(actividad => {
-        // Filtrar por proyecto si está definido
-        if (filtros.proyecto && filtros.proyecto !== "todos" && actividad.proyectoId !== filtros.proyecto) {
-          return false;
+  const [ganttData, setGanttData] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Aquí procesamos y filtramos los datos para el gráfico de Gantt
+    const filteredActividadesMap = new Map();
+    const filteredItrbs = new Map();
+
+    // Filtramos las actividades según los criterios
+    actividades.forEach((actividad) => {
+      if (
+        (filtros.proyecto === "todos" || actividad.proyectoId === filtros.proyecto) &&
+        (!filtros.sistema || actividad.sistema === filtros.sistema) &&
+        (!filtros.subsistema || actividad.subsistema === filtros.subsistema) &&
+        (!filtros.busquedaActividad || 
+          actividad.nombre.toLowerCase().includes(filtros.busquedaActividad.toLowerCase()))
+      ) {
+        filteredActividadesMap.set(actividad.id, actividad);
+      }
+    });
+
+    // Filtramos los ITRs según los criterios específicos de ITR
+    itrbItems.forEach((itrb) => {
+      // Sólo incluimos ITRBs cuya actividad pasó el filtro anterior
+      if (filteredActividadesMap.has(itrb.actividadId)) {
+        // Aplicamos filtros adicionales específicos para ITRBs
+        const descripcionCoincide = !filtros.itrFilter || 
+          itrb.descripcion.toLowerCase().includes(filtros.itrFilter.toLowerCase());
+        
+        const estadoCoincide = !filtros.estadoITRB || itrb.estado === filtros.estadoITRB;
+
+        // Filtrado por fechas
+        let fechasCoinciden = true;
+        
+        if (filtros.fechaInicioFilter) {
+          const fechaInicioFiltro = new Date(filtros.fechaInicioFilter);
+          const fechaInicioItrb = new Date(itrb.fechaInicio || "");
+          fechasCoinciden = fechasCoinciden && !isNaN(fechaInicioFiltro.getTime()) && 
+            !isNaN(fechaInicioItrb.getTime()) && fechaInicioItrb >= fechaInicioFiltro;
         }
         
-        // Filtrar por sistema si está definido
-        if (filtros.sistema && filtros.sistema !== "todos" && actividad.sistema !== filtros.sistema) {
-          return false;
+        if (filtros.fechaFinFilter && fechasCoinciden) {
+          const fechaFinFiltro = new Date(filtros.fechaFinFilter);
+          const fechaFinItrb = new Date(itrb.fechaLimite || "");
+          fechasCoinciden = fechasCoinciden && !isNaN(fechaFinFiltro.getTime()) && 
+            !isNaN(fechaFinItrb.getTime()) && fechaFinItrb <= fechaFinFiltro;
         }
-        
-        // Filtrar por subsistema si está definido
-        if (filtros.subsistema && filtros.subsistema !== "todos" && actividad.subsistema !== filtros.subsistema) {
-          return false;
+
+        // Si todos los filtros coinciden, incluimos el ITRB
+        if (descripcionCoincide && estadoCoincide && fechasCoinciden) {
+          filteredItrbs.set(itrb.id, itrb);
         }
-        
-        return true;
-      })
-      .map(actividad => {
-        // Buscar el proyecto relacionado
-        const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
-        
-        // Obtener los ITRBs asociados a esta actividad
-        const itrbsAsociados = itrbItems.filter(i => i.actividadId === actividad.id);
-        
-        // Calcular el progreso basado en los ITRBs completados
-        const itrbsCompletados = itrbsAsociados.filter(i => i.estado === "Completado").length;
-        const totalItrbs = itrbsAsociados.length;
-        const progreso = totalItrbs > 0 ? Math.round((itrbsCompletados / totalItrbs) * 100) : 0;
-        
-        // Verificar si hay ITRBs vencidos
-        const hoy = new Date();
-        const tieneVencidos = itrbsAsociados.some(i => {
-          if (i.estado !== "Completado") {
-            try {
-              const fechaLimite = new Date(i.fechaLimite);
-              return !isNaN(fechaLimite.getTime()) && fechaLimite < hoy;
-            } catch (e) {
-              return false;
-            }
+      }
+    });
+
+    // Determinar si debemos filtrar por ITRs
+    const filtrarPorItrs = filtros.itrFilter || filtros.estadoITRB || 
+                          filtros.fechaInicioFilter || filtros.fechaFinFilter;
+
+    // Construimos la estructura jerárquica para el gráfico de Gantt
+    const proyectosData: any[] = proyectos
+      .filter((proyecto) => filtros.proyecto === "todos" || proyecto.id === filtros.proyecto)
+      .map((proyecto) => {
+        const proyectoActividades = Array.from(filteredActividadesMap.values())
+          .filter((act) => act.proyectoId === proyecto.id);
+
+        // Agrupar por sistema
+        const sistemaMap = new Map();
+        proyectoActividades.forEach((act) => {
+          if (!sistemaMap.has(act.sistema)) {
+            sistemaMap.set(act.sistema, []);
           }
-          return false;
+          sistemaMap.get(act.sistema).push(act);
         });
-        
-        // Verificar si tiene MCC (Manufacturing Completion Certificate)
-        const tieneMCC = actividad.tieneMCC || false;
-        
-        // Determinar el color basado en el progreso y si tiene vencidos
-        const color = getColorByProgress(progreso, tieneVencidos);
-        
-        // Formatear fechas como objetos Date y asegurar que sean válidas
-        let fechaInicio, fechaFin;
-        
-        try {
-          fechaInicio = new Date(actividad.fechaInicio);
-          if (isNaN(fechaInicio.getTime())) {
-            fechaInicio = new Date();
-          }
-        } catch (e) {
-          fechaInicio = new Date();
-        }
-        
-        try {
-          fechaFin = new Date(actividad.fechaFin);
-          if (isNaN(fechaFin.getTime())) {
-            fechaFin = new Date();
-            fechaFin.setDate(fechaFin.getDate() + 7);
-          }
-        } catch (e) {
-          fechaFin = new Date();
-          fechaFin.setDate(fechaFin.getDate() + 7);
-        }
-        
-        // Calcular la duración en días (si no está definida)
-        const duracion = actividad.duracion || 
-          Math.ceil((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24));
-        
-        // Asegurarse de que los ITRBs asociados tengan fechas válidas
-        const itrbsProcesados = itrbsAsociados.map(itrb => {
-          // Procesar fechas de ITRB
-          let itrbFechaInicio, itrbFechaLimite;
-          
-          try {
-            // Usar fecha inicio del ITRB si existe, si no, usar la de la actividad
-            itrbFechaInicio = itrb.fechaInicio 
-              ? new Date(itrb.fechaInicio) 
-              : fechaInicio;
-              
-            if (isNaN(itrbFechaInicio.getTime())) {
-              itrbFechaInicio = fechaInicio;
+
+        // Construir los sistemas
+        const sistemas = Array.from(sistemaMap.entries()).map(([nombreSistema, sistemaActividades]) => {
+          // Agrupar por subsistema
+          const subsistemaMap = new Map();
+          (sistemaActividades as Actividad[]).forEach((act) => {
+            if (!subsistemaMap.has(act.subsistema)) {
+              subsistemaMap.set(act.subsistema, []);
             }
-          } catch (e) {
-            itrbFechaInicio = fechaInicio;
+            subsistemaMap.get(act.subsistema).push(act);
+          });
+
+          // Construir subsistemas
+          const subsistemas = Array.from(subsistemaMap.entries())
+            .map(([nombreSubsistema, subsistemaActividades]) => {
+              const actividadesArray = (subsistemaActividades as Actividad[]).map((act) => {
+                // Filtrar ITRBs para esta actividad
+                const actItrbs = Array.from(filteredItrbs.values())
+                  .filter((itrb: ITRB) => itrb.actividadId === act.id);
+                
+                // Si estamos filtrando por ITRs y esta actividad no tiene ITRs que coincidan,
+                // no la incluimos, a menos que no haya filtros de ITR
+                if (filtrarPorItrs && actItrbs.length === 0) {
+                  return null;
+                }
+                
+                return {
+                  ...act,
+                  id: act.id,
+                  nombre: act.nombre,
+                  fechaInicio: act.fechaInicio,
+                  fechaFin: act.fechaFin || act.fechaInicio
+                };
+              }).filter(Boolean); // Eliminar los nulls
+
+              if (actividadesArray.length === 0) {
+                return null;
+              }
+
+              return {
+                nombre: nombreSubsistema,
+                actividades: actividadesArray,
+                itrbs: Array.from(filteredItrbs.values())
+                  .filter((itrb: ITRB) => {
+                    const actividad = filteredActividadesMap.get(itrb.actividadId);
+                    return actividad && actividad.sistema === nombreSistema && 
+                           actividad.subsistema === nombreSubsistema;
+                  })
+              };
+            }).filter(Boolean); // Eliminar los nulls
+
+          // Si no hay subsistemas después de filtrar, no incluimos el sistema
+          if (subsistemas.length === 0) {
+            return null;
           }
-          
-          try {
-            itrbFechaLimite = new Date(itrb.fechaLimite);
-            if (isNaN(itrbFechaLimite.getTime())) {
-              itrbFechaLimite = new Date(fechaInicio);
-              itrbFechaLimite.setDate(itrbFechaLimite.getDate() + 7);
-            }
-          } catch (e) {
-            itrbFechaLimite = new Date(fechaInicio);
-            itrbFechaLimite.setDate(itrbFechaLimite.getDate() + 7);
-          }
-          
+
           return {
-            ...itrb,
-            fechaInicio: itrbFechaInicio,
-            fechaLimite: itrbFechaLimite
+            nombre: nombreSistema,
+            subsistemas: subsistemas,
+            actividades: []
           };
-        });
-        
+        }).filter(Boolean); // Eliminar los nulls
+
         return {
-          id: actividad.id,
-          nombre: actividad.nombre,
-          sistema: actividad.sistema,
-          subsistema: actividad.subsistema,
-          fechaInicio: fechaInicio,
-          fechaFin: fechaFin,
-          duracion,
-          progreso,
-          tieneVencidos,
-          tieneMCC,
-          proyecto: proyecto?.titulo || "Sin proyecto",
-          color,
-          itrbsAsociados: itrbsProcesados
+          id: proyecto.id,
+          nombre: proyecto.titulo,
+          sistemas: sistemas
         };
-      })
-      // Ordenar por sistema, subsistema y nombre
-      .sort((a, b) => {
-        const sistemasCompare = a.sistema.localeCompare(b.sistema);
-        if (sistemasCompare !== 0) return sistemasCompare;
-        
-        const subsistemCompare = a.subsistema.localeCompare(b.subsistema);
-        if (subsistemCompare !== 0) return subsistemCompare;
-        
-        return a.nombre.localeCompare(b.nombre);
-      });
-      
-    return ganttData;
+      }).filter((p) => p.sistemas.length > 0); // Solo incluir proyectos con sistemas
+
+    setGanttData(proyectosData);
   }, [actividades, itrbItems, proyectos, filtros]);
 
   return { ganttData };
