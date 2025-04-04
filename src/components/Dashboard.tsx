@@ -25,7 +25,8 @@ const Dashboard: React.FC = () => {
     actividades,
     itrbItems,
     logout,
-    getKPIs
+    getKPIs,
+    user
   } = useAppContext();
 
   const defaultConfiguracionGrafico: ConfiguracionGrafico = {
@@ -109,11 +110,12 @@ const Dashboard: React.FC = () => {
     }
   }, [configuracionGrafico.tamano]);
 
+  // Fix: Change the type to match what getKPIs actually returns
   const { generarPDF, generarExcel } = useExportUtils({
     proyectos,
     actividades,
     itrbItems,
-    getKPIs
+    getKPIs: getKPIs as (proyectoId?: string) => any[]
   });
 
   const handleExportPDF = useCallback(async () => {

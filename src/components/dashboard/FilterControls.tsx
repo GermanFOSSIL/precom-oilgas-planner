@@ -62,18 +62,22 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   ), [actividades, filtros.sistema]);
 
   // Verificar si hay filtros activos
-  const hayFiltrosActivos = !!(
+  const hayFiltrosActivos = React.useMemo(() => !!(
     filtros.sistema ||
     filtros.subsistema ||
     filtros.estadoITRB ||
     filtros.tareaVencida ||
     filtros.busquedaActividad ||
     filtros.itrFilter
-  );
+  ), [filtros]);
   
   // Utilizar debounce para mejorar rendimiento en los cambios de filtro de texto
   const debouncedFilterChange = useCallback(
     debounce((key: keyof FiltrosDashboard, value: any) => {
+      // Siempre convertir a minúsculas para búsquedas insensibles a mayúsculas/minúsculas
+      if (typeof value === 'string' && key === 'busquedaActividad') {
+        value = value.toLowerCase();
+      }
       onFiltroChange(key, value);
     }, 300),
     [onFiltroChange]

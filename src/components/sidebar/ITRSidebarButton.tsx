@@ -2,14 +2,14 @@
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Clipboard } from "lucide-react";
+import { Clipboard as ClipboardIcon } from "lucide-react";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import ITRSidebarContent from "./ITRSidebarContent";
 
 const ITRSidebarButton: React.FC = () => {
   const { user } = useAppContext();
   
-  // Verificar si el usuario tiene permiso para gestionar ITRs
+  // Check if user has permission to manage ITRs (admin or technician role)
   const hasPermission = user && (user.role === "admin" || user.role === "tecnico");
   
   if (!hasPermission) return null;
@@ -23,7 +23,7 @@ const ITRSidebarButton: React.FC = () => {
           className="fixed left-0 top-1/2 -translate-y-1/2 p-2 rounded-r-md border-l-0 bg-white dark:bg-slate-800 shadow-md z-30"
           title="Gestionar ITRs"
         >
-          <Clipboard className="h-5 w-5 text-blue-600" />
+          <ClipboardIcon className="h-5 w-5 text-blue-600" />
           <span className="sr-only">Gestionar ITRs</span>
         </Button>
       </SheetTrigger>

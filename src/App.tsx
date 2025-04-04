@@ -69,16 +69,13 @@ const ProtectedRouteWithSidebar = ({ children }: { children: JSX.Element }) => {
   );
 };
 
-// Componente para renderizar el ITR Sidebar Button cuando sea necesario
-const WithITRSidebarButton = () => {
-  const { user } = useAppContext();
-  return user ? <ITRSidebarButton /> : null;
-};
-
+// Componente para manejar las rutas de la aplicación
 const AppRoutes = () => {
+  const { user } = useAppContext();
+  
   return (
     <>
-      <WithITRSidebarButton />
+      {user && <ITRSidebarButton />}
       <Routes>
         <Route path="/login" element={
           <PublicRoute>
@@ -128,21 +125,24 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-            <ChatbotButton />
-          </BrowserRouter>
-        </TooltipProvider>
-      </AppProvider>
-    </QueryClientProvider>
-  </React.StrictMode>
-);
+// Componente principal de la aplicación
+const App = () => {
+  return (
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <AppProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+              <ChatbotButton />
+            </BrowserRouter>
+          </TooltipProvider>
+        </AppProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+};
 
 export default App;

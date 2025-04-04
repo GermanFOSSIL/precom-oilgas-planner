@@ -8,13 +8,13 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import html2canvas from "html2canvas";
-import { Actividad, ITRB, Proyecto, FiltrosDashboard, KPI } from "@/types";
+import { Actividad, ITRB, Proyecto, FiltrosDashboard, KPIs } from "@/types";
 
 interface ExportUtilsProps {
   proyectos: Proyecto[];
   actividades: Actividad[];
   itrbItems: ITRB[];
-  getKPIs?: (proyectoId?: string) => KPI[];
+  getKPIs?: (proyectoId?: string) => any[];
 }
 
 export const useExportUtils = ({
@@ -31,6 +31,11 @@ export const useExportUtils = ({
     if (!ganttElement) {
       console.error("No se encontró el elemento del gráfico Gantt");
       throw new Error("No se encontró el gráfico Gantt para exportar");
+    }
+    
+    if (!(ganttElement instanceof HTMLElement)) {
+      console.error("El elemento del gráfico Gantt no es un HTMLElement válido");
+      throw new Error("Elemento de gráfico Gantt no válido");
     }
     
     // Scroll interno para asegurar que se captura todo el contenido
@@ -71,7 +76,7 @@ export const useExportUtils = ({
           orientation: "landscape",
           unit: "mm",
           format: "a4",
-        });
+        }) as any; // Using any to avoid TypeScript errors with jsPDF extensions
 
         // Título
         const proyectoSeleccionado =
@@ -134,7 +139,7 @@ export const useExportUtils = ({
             return false;
           }
 
-          // Aplicar búsqueda
+          // Aplicar búsqueda (case insensitive)
           if (filtros.busquedaActividad) {
             const searchTerm = filtros.busquedaActividad.toLowerCase();
             const descripcion = itrb.descripcion.toLowerCase();
@@ -167,7 +172,7 @@ export const useExportUtils = ({
           ];
         });
 
-        // @ts-ignore (jsPDF tiene una extensión autotable que TypeScript no reconoce correctamente)
+        // Create table with autoTable plugin
         doc.autoTable({
           head: [tableColumn],
           body: tableRows,
@@ -177,11 +182,11 @@ export const useExportUtils = ({
           alternateRowStyles: { fillColor: [245, 245, 245] },
         });
 
-        // Añadir información del pie de página
-        const pageCount = doc.internal.getNumberOfPages();
+        // Add footer information
+        const pageCount = doc.internal.pages.length - 1;
         for (let i = 1; i <= pageCount; i++) {
           doc.setPage(i);
-          // Pie de página
+          // Page footer
           doc.setFontSize(10);
           doc.text(
             `Página ${i} de ${pageCount} - Generado por Fossil Energy`,
@@ -191,7 +196,7 @@ export const useExportUtils = ({
           );
         }
 
-        // Guardar el archivo
+        // Save the file
         const fileName = `plan_precomisionado_${format(new Date(), "yyyy-MM-dd_HHmmss")}.pdf`;
         doc.save(fileName);
 

@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Check, Filter, ChevronRight, Search } from "lucide-react";
+import { Check, Filter, ChevronRight, Clipboard, Search } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -20,12 +20,28 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { debounce } from "lodash";
 
 const ITRSidebarContent: React.FC = () => {
-  const { actividades, itrbItems, updateITRBStatus } = useAppContext();
+  const { actividades, itrbItems, user, updateITRBStatus } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSistema, setSelectedSistema] = useState<string | null>(null);
   const [selectedSubsistema, setSelectedSubsistema] = useState<string | null>(null);
+  
+  // Check if user has permission to mark ITRs as completed
+  const hasPermission = user && (user.role === "admin" || user.role === "tecnico");
+  
+  // Debounce search to improve performance
+  const debouncedSearch = React.useMemo(
+    () => debounce((value: string) => {
+      setSearchTerm(value.toLowerCase());
+    }, 300),
+    []
+  );
+  
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    debouncedSearch(e.target.value);
+  };
   
   // Group activities by system and subsystem
   const sistemasMap = new Map();
@@ -44,7 +60,7 @@ const ITRSidebarContent: React.FC = () => {
     subsistemas.get(actividad.subsistema).push(actividad);
   });
   
-  // Filter ITRs by search term or selection (case insensitive)
+  // Filter ITRs by search term or selection
   const filteredITRs = itrbItems.filter(itrb => {
     if (searchTerm && !itrb.descripcion.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
@@ -91,6 +107,8 @@ const ITRSidebarContent: React.FC = () => {
   // Process the data for display
   const sistemasArray = Array.from(sistemasMap.keys()).sort();
   
+  if (!hasPermission) return null;
+  
   return (
     <SheetContent side="left" className="w-80 sm:w-96">
       <SheetHeader>
@@ -109,8 +127,7 @@ const ITRSidebarContent: React.FC = () => {
         <Input
           placeholder="Buscar ITR..."
           className="pl-8"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearch}
         />
       </div>
       
@@ -130,7 +147,7 @@ const ITRSidebarContent: React.FC = () => {
                   const actividad = actividades.find(a => a.id === itrb.actividadId);
                   
                   return (
-                    <div key={itrb.id} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-md">
+                    <div key={itrb.id} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-md mb-2">
                       <div className="flex justify-between items-start mb-1">
                         <span className="font-medium text-sm">{itrb.descripcion}</span>
                         {getITRBadge(itrb.estado)}
@@ -142,7 +159,7 @@ const ITRSidebarContent: React.FC = () => {
                         </div>
                       )}
                       
-                      {canITRBeMarkedComplete(itrb) && (
+                      {canITRBeMarkedComplete(itrb) && hasPermission && (
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -167,11 +184,11 @@ const ITRSidebarContent: React.FC = () => {
                     }}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800 px-2 rounded-md"
                   >
-                    {sistema as React.ReactNode}
+                    {sistema as string}
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="pl-4 border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-2">
-                      {Array.from(sistemasMap.get(sistema).keys()).map((subsistema) => {
+                      {sistemasMap.get(sistema) && Array.from(sistemasMap.get(sistema).keys()).map((subsistema) => {
                         // Filter ITRs for this subsystem
                         const subsistemaITRs = itrbItems.filter(itrb => {
                           const actividad = actividades.find(a => a.id === itrb.actividadId);
@@ -183,13 +200,10 @@ const ITRSidebarContent: React.FC = () => {
                         return (
                           <div key={`${sistema}-${subsistema}`} className="py-1">
                             <button 
-                              type="button"
                               className={`flex items-center justify-between w-full text-left py-2 px-2 text-sm rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
                                 selectedSubsistema === subsistema ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                               }`}
-                              onClick={() => {
-                                setSelectedSubsistema(selectedSubsistema === subsistema ? null : String(subsistema));
-                              }}
+                              onClick={() => setSelectedSubsistema(selectedSubsistema === subsistema ? null : subsistema as string)}
                             >
                               <span>{subsistema ? String(subsistema) : 'Sin subsistema'}</span>
                               <div className="flex items-center">
@@ -202,6 +216,7 @@ const ITRSidebarContent: React.FC = () => {
                               </div>
                             </button>
                             
+                            {/* Display ITRs if subsystem is selected */}
                             {selectedSubsistema === subsistema && (
                               <div className="mt-2 pl-2 space-y-2">
                                 {subsistemaITRs.length === 0 ? (
@@ -213,7 +228,7 @@ const ITRSidebarContent: React.FC = () => {
                                         <span className="text-sm">{itrb.descripcion}</span>
                                         {getITRBadge(itrb.estado)}
                                       </div>
-                                      {canITRBeMarkedComplete(itrb) && (
+                                      {canITRBeMarkedComplete(itrb) && hasPermission && (
                                         <Button 
                                           variant="ghost" 
                                           size="sm" 
