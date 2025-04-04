@@ -53,7 +53,7 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-// Componente para mostrar el ITR Sidebar en rutas protegidas
+// Componente que muestra el contenido principal con el ITR Sidebar para usuarios autenticados
 const ProtectedRouteWithSidebar = ({ children }: { children: JSX.Element }) => {
   const { user } = useAppContext();
   const location = useLocation();
@@ -64,60 +64,67 @@ const ProtectedRouteWithSidebar = ({ children }: { children: JSX.Element }) => {
 
   return (
     <>
-      {/* El sidebar de ITR solo visible para usuarios autenticados con roles apropiados */}
-      <ITRSidebar />
       {children}
     </>
   );
 };
 
+// Componente para renderizar el ITR Sidebar solo cuando sea necesario
+const WithITRSidebar = () => {
+  const { user } = useAppContext();
+  return user ? <ITRSidebar /> : null;
+};
+
 const AppRoutes = () => {
   return (
-    <Routes>
-      <Route path="/login" element={
-        <PublicRoute>
-          <LoginPage />
-        </PublicRoute>
-      } />
+    <>
+      <WithITRSidebar />
+      <Routes>
+        <Route path="/login" element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        } />
 
-      {/* Rutas protegidas */}
-      <Route path="/" element={
-        <ProtectedRouteWithSidebar>
-          <Index />
-        </ProtectedRouteWithSidebar>
-      } />
-      
-      <Route path="/itr-management" element={
-        <ProtectedRouteWithSidebar>
-          <ITRManagement />
-        </ProtectedRouteWithSidebar>
-      } />
-      
-      <Route path="/ai-assistant" element={
-        <ProtectedRouteWithSidebar>
-          <AIAssistant />
-        </ProtectedRouteWithSidebar>
-      } />
-      
-      <Route path="/test-gantt" element={
-        <ProtectedRouteWithSidebar>
-          <TestGanttPage />
-        </ProtectedRouteWithSidebar>
-      } />
-      
-      <Route path="/user-profile" element={
-        <ProtectedRoute>
-          <UserProfilePage />
-        </ProtectedRoute>
-      } />
-      
-      {/* Ruta para NotFound también protegida */}
-      <Route path="*" element={
-        <ProtectedRoute>
-          <NotFound />
-        </ProtectedRoute>
-      } />
-    </Routes>
+        {/* Rutas protegidas */}
+        <Route path="/" element={
+          <ProtectedRouteWithSidebar>
+            <Index />
+          </ProtectedRouteWithSidebar>
+        } />
+        
+        <Route path="/itr-management" element={
+          <ProtectedRouteWithSidebar>
+            <ITRManagement />
+          </ProtectedRouteWithSidebar>
+        } />
+        
+        <Route path="/ai-assistant" element={
+          <ProtectedRouteWithSidebar>
+            <AIAssistant />
+          </ProtectedRouteWithSidebar>
+        } />
+        
+        <Route path="/test-gantt" element={
+          <ProtectedRouteWithSidebar>
+            <TestGanttPage />
+          </ProtectedRouteWithSidebar>
+        } />
+        
+        <Route path="/user-profile" element={
+          <ProtectedRoute>
+            <UserProfilePage />
+          </ProtectedRoute>
+        } />
+        
+        {/* Ruta para NotFound también protegida */}
+        <Route path="*" element={
+          <ProtectedRoute>
+            <NotFound />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </>
   );
 };
 

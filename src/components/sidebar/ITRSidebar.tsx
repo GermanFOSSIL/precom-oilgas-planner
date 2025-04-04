@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
 import {
   Sheet,
@@ -36,7 +36,7 @@ const ITRSidebar: React.FC<ITRSidebarProps> = ({ isVisible = true }) => {
   // Check if user has permission to mark ITRs as completed
   const hasPermission = user && (user.role === "admin" || user.role === "tecnico");
   
-  if (!hasPermission || !isVisible) return null;
+  if (!hasPermission) return null;
   
   // Group activities by system and subsystem
   const sistemasMap = new Map();

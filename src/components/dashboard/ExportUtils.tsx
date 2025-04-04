@@ -17,14 +17,26 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
     try {
       toast.info("Preparando exportación a PDF...");
       
-      // Buscamos el elemento del gráfico Gantt
+      // Esperar a que el DOM esté completamente cargado
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Buscamos el elemento del gráfico Gantt con un selector más específico
       const ganttEl = document.querySelector('.gantt-chart-container');
       
       if (!ganttEl) {
         toast.error("No se pudo encontrar el gráfico Gantt para exportar");
-        return;
+        console.error("Elemento no encontrado: .gantt-chart-container");
+        
+        // Intentar con otro selector como alternativa
+        const alternativeEl = document.querySelector('[data-gantt-container="true"]') || 
+                            document.querySelector('.gantt-container');
+        
+        if (!alternativeEl) {
+          console.error("No se encontró ningún contenedor de Gantt alternativo");
+          return;
+        }
       }
-
+      
       // Importamos las librerías dinámicamente
       const [html2canvas, jsPDF] = await Promise.all([
         import('html2canvas'),
@@ -40,26 +52,50 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
       // Notificación de progreso
       toast.info("Capturando imagen del gráfico...");
       
+      // Elegimos el elemento a exportar (el principal o la alternativa)
+      const elementToExport = ganttEl || document.querySelector('.gantt-container');
+      
+      if (!elementToExport) {
+        toast.error("No se encontró ningún gráfico para exportar");
+        return;
+      }
+      
+      // Guardamos las dimensiones originales
+      const originalWidth = (elementToExport as HTMLElement).style.width;
+      const originalHeight = (elementToExport as HTMLElement).style.height;
+      const originalOverflow = (elementToExport as HTMLElement).style.overflow;
+      
+      // Establecemos dimensiones explícitas para la captura
+      (elementToExport as HTMLElement).style.width = `${elementToExport.scrollWidth}px`;
+      (elementToExport as HTMLElement).style.height = `${elementToExport.scrollHeight}px`;
+      (elementToExport as HTMLElement).style.overflow = 'visible';
+      
       // Mejorado: Capturar elemento completo del Gantt con mejor calidad y configuración
-      const canvas = await Html2Canvas(ganttEl as HTMLElement, {
+      const canvas = await Html2Canvas(elementToExport as HTMLElement, {
         scale: 2, // Mayor calidad (aumentado de 1.5 a 2)
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
         scrollX: 0,
         scrollY: 0,
-        windowWidth: ganttEl.scrollWidth || window.innerWidth,
-        windowHeight: ganttEl.scrollHeight || window.innerHeight,
+        windowWidth: elementToExport.scrollWidth || window.innerWidth,
+        windowHeight: elementToExport.scrollHeight || window.innerHeight,
         logging: false,
         onclone: (clonedDoc) => {
           // Aseguramos que el elemento clonado tenga el tamaño correcto
-          const clonedGantt = clonedDoc.querySelector('.gantt-chart-container');
+          const clonedGantt = clonedDoc.querySelector('.gantt-chart-container') || 
+                             clonedDoc.querySelector('.gantt-container');
           if (clonedGantt) {
-            (clonedGantt as HTMLElement).style.width = `${ganttEl.scrollWidth}px`;
-            (clonedGantt as HTMLElement).style.height = `${ganttEl.scrollHeight}px`;
+            (clonedGantt as HTMLElement).style.width = `${elementToExport.scrollWidth}px`;
+            (clonedGantt as HTMLElement).style.height = `${elementToExport.scrollHeight}px`;
           }
         }
       });
+      
+      // Restaurar dimensiones originales
+      (elementToExport as HTMLElement).style.width = originalWidth;
+      (elementToExport as HTMLElement).style.height = originalHeight;
+      (elementToExport as HTMLElement).style.overflow = originalOverflow;
       
       // Dimensiones de la imagen
       const imgWidth = 270; // A4 landscape width (297mm) con margen

@@ -12,8 +12,8 @@ import PublicHeader from "@/components/PublicHeader";
 import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
 import FilterControls from "@/components/dashboard/FilterControls";
-import GanttControls from "@/components/dashboard/GanttControls";
 import CriticalPathView from "@/components/CriticalPathView";
+import { Button } from "@/components/ui/button";
 
 const Dashboard: React.FC = () => {
   const {
@@ -71,6 +71,13 @@ const Dashboard: React.FC = () => {
       });
     }
   }, [ensureStringTimestamp, setFiltros, filtros]);
+
+  const handleResetFilters = useCallback(() => {
+    setFiltros({
+      proyecto: "todos",
+      timestamp: ensureStringTimestamp(Date.now())
+    });
+  }, [setFiltros, ensureStringTimestamp]);
 
   const handleResetSession = useCallback(() => {
     logout();
@@ -133,13 +140,22 @@ const Dashboard: React.FC = () => {
           exportingChart={exportingChart}
         />
 
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-between mb-4">
           <FilterControls 
             filtros={filtros}
             onFiltroChange={handleFiltroChange}
             onSubsistemaToggle={handleSubsistemaToggle}
             mostrarSubsistemas={mostrarSubsistemas}
           />
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleResetFilters}
+            className="ml-2"
+          >
+            Limpiar filtros
+          </Button>
         </div>
 
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />

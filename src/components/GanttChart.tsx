@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
@@ -94,6 +95,19 @@ const GanttChart: React.FC<GanttChartProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
+  // Escuchar eventos para exportar Gantt
+  useEffect(() => {
+    const handleExportPDFEvent = () => {
+      exportToPDF();
+    };
+    
+    window.addEventListener('export-gantt-pdf', handleExportPDFEvent);
+    
+    return () => {
+      window.removeEventListener('export-gantt-pdf', handleExportPDFEvent);
+    };
+  }, []);
+
   const changeZoom = (direction: "in" | "out") => {
     if (direction === "in" && zoomLevel < 2) {
       setZoomLevel(zoomLevel + 0.25);
@@ -131,6 +145,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const exportToPDF = async () => {
     if (!ganttRef.current) {
       toast.error("No se pudo encontrar el gráfico para exportar");
+      console.error("Error: ganttRef.current es null");
       return;
     }
 
@@ -141,11 +156,13 @@ const GanttChart: React.FC<GanttChartProps> = ({
       const originalHeight = ganttRef.current.style.height;
       const originalOverflow = ganttRef.current.style.overflow;
       
+      // Establecer dimensiones explícitas para captura
       ganttRef.current.style.width = `${ganttRef.current.scrollWidth}px`;
       ganttRef.current.style.height = `${ganttRef.current.scrollHeight}px`;
       ganttRef.current.style.overflow = 'visible';
       
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Dar tiempo al navegador para aplicar los cambios de estilo
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const [html2canvas, jsPDF] = await Promise.all([
         import('html2canvas'),
@@ -164,9 +181,17 @@ const GanttChart: React.FC<GanttChartProps> = ({
         scrollX: 0,
         scrollY: 0,
         windowWidth: ganttRef.current.scrollWidth,
-        windowHeight: ganttRef.current.scrollHeight
+        windowHeight: ganttRef.current.scrollHeight,
+        onclone: (clonedDoc) => {
+          const clonedGantt = clonedDoc.querySelector('[ref="gantt-container"]');
+          if (clonedGantt) {
+            (clonedGantt as HTMLElement).style.width = `${ganttRef.current!.scrollWidth}px`;
+            (clonedGantt as HTMLElement).style.height = `${ganttRef.current!.scrollHeight}px`;
+          }
+        }
       });
       
+      // Restaurar estilos originales
       ganttRef.current.style.width = originalWidth;
       ganttRef.current.style.height = originalHeight;
       ganttRef.current.style.overflow = originalOverflow;
@@ -223,7 +248,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   }
 
   return (
-    <div className="w-full h-full flex flex-col gantt-chart-container">
+    <div className="w-full h-full flex flex-col gantt-chart-container" data-gantt-container="true">
       <div className="flex flex-col md:flex-row gap-2 mb-4 justify-between">
         <GanttNavigationControls
           currentStartDate={currentStartDate}
@@ -321,7 +346,10 @@ const GanttChart: React.FC<GanttChartProps> = ({
         </div>
       </div>
       
-      <div className="overflow-y-auto min-h-0 flex-1" ref={ganttRef}>
+      <div 
+        className="overflow-y-auto min-h-0 flex-1 gantt-container" 
+        ref={ganttRef}
+      >
         <GanttBarChart
           data={ganttData}
           currentStartDate={currentStartDate}
