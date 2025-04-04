@@ -1,4 +1,3 @@
-
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -156,4 +155,10 @@ export interface PublicHeaderProps {
 export interface APIKeys {
   openAI?: string;
   aiModel?: string;
+}
+
+export interface Message {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
 }
