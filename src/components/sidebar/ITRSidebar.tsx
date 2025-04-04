@@ -182,12 +182,12 @@ const ITRSidebar: React.FC<ITRSidebarProps> = ({ isVisible = true }) => {
             ) : (
               <Accordion type="single" collapsible className="w-full">
                 {sistemasArray.map(sistema => (
-                  <AccordionItem key={sistema} value={sistema}>
+                  <AccordionItem key={sistema as string} value={sistema as string}>
                     <AccordionTrigger 
-                      onClick={() => setSelectedSistema(selectedSistema === sistema ? null : sistema)}
+                      onClick={() => setSelectedSistema(selectedSistema === sistema ? null : sistema as string)}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800 px-2 rounded-md"
                     >
-                      {sistema}
+                      {sistema as React.ReactNode}
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="pl-4 border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-2">
@@ -206,9 +206,9 @@ const ITRSidebar: React.FC<ITRSidebarProps> = ({ isVisible = true }) => {
                                 className={`flex items-center justify-between w-full text-left py-2 px-2 text-sm rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
                                   selectedSubsistema === subsistema ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                                 }`}
-                                onClick={() => setSelectedSubsistema(selectedSubsistema === subsistema ? null : subsistema)}
+                                onClick={() => setSelectedSubsistema(selectedSubsistema === subsistema ? null : String(subsistema))}
                               >
-                                <span>{subsistema || 'Sin subsistema'}</span>
+                                <span>{subsistema ? String(subsistema) : 'Sin subsistema'}</span>
                                 <div className="flex items-center">
                                   {pendingCount > 0 && (
                                     <Badge variant="outline" className="mr-1 bg-amber-50 text-amber-700 border-amber-200">

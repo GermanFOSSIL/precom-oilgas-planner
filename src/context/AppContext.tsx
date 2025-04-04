@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from "react";
 import { 
   User, 
@@ -53,6 +52,7 @@ interface AppContextType {
   updateITRB: (id: string, itrb: ITRB) => void;
   deleteITRB: (id: string) => void;
   completarTodosITRB: (proyectoId: string) => void;
+  updateITRBStatus: (id: string, estado: EstadoITRB) => Promise<void>;
   
   // Alertas
   alertas: Alerta[];
@@ -473,6 +473,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAlertas(alertas.filter(a => a.id !== id));
   };
 
+  // Actualizar el estado de un ITR
+  const updateITRBStatus = async (id: string, estado: EstadoITRB): Promise<void> => {
+    try {
+      const itrToUpdate = itrbItems.find(item => item.id === id);
+      
+      if (!itrToUpdate) {
+        throw new Error("ITR no encontrado");
+      }
+      
+      const updatedITR = {
+        ...itrToUpdate,
+        estado,
+        // Si está completado, establecer cantidadRealizada al total
+        cantidadRealizada: estado === "Completado" ? itrToUpdate.cantidadTotal : itrToUpdate.cantidadRealizada
+      };
+      
+      // Actualizar el ITR
+      updateITRB(id, updatedITR);
+      
+      // Si se completó, crear una alerta informativa
+      if (estado === "Completado") {
+        // Encontrar la actividad relacionada para obtener el proyecto
+        const actividad = actividades.find(act => act.id === updatedITR.actividadId);
+        
+        if (actividad) {
+          addAlerta({
+            id: `alerta-completion-${Date.now()}-${id}`,
+            tipo: "Información",
+            mensaje: `El ITR "${updatedITR.descripcion}" ha sido marcado como completado.`,
+            fechaCreacion: new Date().toISOString(),
+            leida: false,
+            itemsRelacionados: [id],
+            proyectoId: actividad.proyectoId
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error("Error al actualizar el estado del ITR:", error);
+      throw error;
+    }
+  };
+
   // Calcular KPIs
   const getKPIs = (proyectoId?: string): KPIs => {
     // Código de KPIs sin cambios
@@ -596,6 +639,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateITRB,
         deleteITRB,
         completarTodosITRB,
+        updateITRBStatus,
         alertas,
         addAlerta,
         markAlertaAsRead,
