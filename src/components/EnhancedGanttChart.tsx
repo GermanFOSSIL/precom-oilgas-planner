@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
-import { addDays, subDays, startOfMonth, endOfMonth } from "date-fns";
-import { Gantt, Task, ViewMode, DisplayOption, StylingOption } from "gantt-task-react";
-import "gantt-task-react/dist/index.css";
+import { addDays, subDays, startOfMonth, endOfMonth, addMonths, format, isWithinInterval, isSameDay } from "date-fns";
+import { es } from "date-fns/locale";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Importación de componentes y hooks existentes
 import GanttLoadingState from "./gantt/GanttLoadingState";
@@ -15,13 +15,6 @@ import { generateSampleData } from "./gantt/utils/sampleData";
 
 // Import custom styles for enhanced Gantt
 import "./gantt/styles/EnhancedGantt.css";
-
-// Extend the Task interface to include our custom properties
-interface ExtendedTask extends Task {
-  sistema?: string;
-  subsistema?: string;
-  proyecto?: string;
-}
 
 interface EnhancedGanttChartProps {
   filtros: FiltrosDashboard;
@@ -41,7 +34,9 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
   const [currentEndDate, setCurrentEndDate] = useState<Date>(endOfMonth(today));
   const [loading, setLoading] = useState(true);
   const [usingSampleData, setUsingSampleData] = useState<boolean>(false);
-  const [ganttTasks, setGanttTasks] = useState<ExtendedTask[]>([]);
+  const [hoveredItem, setHoveredItem] = useState<any | null>(null);
+  const [hoveredITRB, setHoveredITRB] = useState<any | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   const [sampleData, setSampleData] = useState<{
     actividades: any[];
@@ -63,67 +58,25 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
 
   const { ganttData } = useGanttData(actividades, itrbItems, proyectos, filtros);
 
-  // Transformar datos al formato requerido por la librería gantt-task-react
-  useEffect(() => {
-    if (ganttData.length > 0) {
-      const transformedTasks: ExtendedTask[] = [];
+  // Calculate dates for timeline based on current view and zoom level
+  const axisDatesMemo = useMemo(() => {
+    const result: Date[] = [];
+    let currentDate = new Date(currentStartDate);
+    
+    while (currentDate <= currentEndDate) {
+      result.push(new Date(currentDate));
       
-      ganttData.forEach((item, index) => {
-        // Agregar la tarea principal (actividad)
-        const actividadId = `actividad-${item.id}`;
-        transformedTasks.push({
-          id: actividadId,
-          name: item.nombre,
-          start: new Date(item.fechaInicio),
-          end: new Date(item.fechaFin),
-          progress: item.progreso / 100,
-          type: 'project',
-          hideChildren: false,
-          displayOrder: index * 10,
-          styles: {
-            progressColor: item.color,
-            progressSelectedColor: item.color,
-            backgroundColor: `${item.color}50`, // Semi-transparente
-            backgroundSelectedColor: `${item.color}90`,
-          },
-          proyecto: item.proyecto,
-          sistema: item.sistema,
-          subsistema: item.subsistema,
-        });
-        
-        // Agregar los ITRBs asociados como sub-tareas
-        item.itrbsAsociados.forEach((itrb, itrbIndex) => {
-          const estado = itrb.estado || 'En curso';
-          const progress = estado === 'Completado' ? 100 : 
-                           estado === 'Vencido' ? 0 : 50;
-          
-          let itrbColor = '#4299e1'; // Azul por defecto
-          if (estado === 'Completado') itrbColor = '#48bb78'; // Verde
-          if (estado === 'Vencido') itrbColor = '#f56565'; // Rojo
-          
-          transformedTasks.push({
-            id: `itrb-${itrb.id}`,
-            name: itrb.descripcion || `ITRB ${itrbIndex + 1}`,
-            start: new Date(itrb.fechaInicio || item.fechaInicio),
-            end: new Date(itrb.fechaVencimiento || itrb.fechaLimite || item.fechaFin),
-            progress: progress / 100,
-            type: 'task',
-            project: actividadId,
-            displayOrder: index * 10 + itrbIndex + 1,
-            styles: {
-              progressColor: itrbColor,
-              progressSelectedColor: itrbColor,
-              backgroundColor: `${itrbColor}50`,
-              backgroundSelectedColor: `${itrbColor}90`,
-            },
-            isDisabled: false,
-          });
-        });
-      });
-      
-      setGanttTasks(transformedTasks);
+      if (viewMode === "day") {
+        currentDate = addDays(currentDate, 1);
+      } else if (viewMode === "week") {
+        currentDate = addDays(currentDate, 1);
+      } else {
+        currentDate = addDays(currentDate, 1);
+      }
     }
-  }, [ganttData]);
+    
+    return result;
+  }, [currentStartDate, currentEndDate, viewMode]);
 
   const toggleSampleData = useCallback(() => {
     setUsingSampleData(prev => !prev);
@@ -144,13 +97,27 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
       newStartDate = subDays(startOfMonth(today), 7);
       newEndDate = endOfMonth(today);
     } else if (direction === "prev") {
-      const prevMonth = subDays(startOfMonth(addDays(currentStartDate, -1)), 7);
-      newStartDate = prevMonth;
-      newEndDate = endOfMonth(prevMonth);
+      if (viewMode === "month") {
+        newStartDate = addMonths(currentStartDate, -1);
+        newEndDate = endOfMonth(newStartDate);
+      } else if (viewMode === "week") {
+        newStartDate = addDays(currentStartDate, -7);
+        newEndDate = addDays(newStartDate, 14);
+      } else {
+        newStartDate = addDays(currentStartDate, -1);
+        newEndDate = addDays(newStartDate, 2);
+      }
     } else if (direction === "next") {
-      const nextMonth = subDays(startOfMonth(addDays(currentEndDate, 1)), 7);
-      newStartDate = nextMonth;
-      newEndDate = endOfMonth(nextMonth);
+      if (viewMode === "month") {
+        newStartDate = addMonths(currentStartDate, 1);
+        newEndDate = endOfMonth(newStartDate);
+      } else if (viewMode === "week") {
+        newStartDate = addDays(currentStartDate, 7);
+        newEndDate = addDays(newStartDate, 14);
+      } else {
+        newStartDate = addDays(currentStartDate, 1);
+        newEndDate = addDays(newStartDate, 2);
+      }
     }
 
     setCurrentStartDate(newStartDate);
@@ -159,24 +126,20 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
 
   const handleViewModeChange = (newMode: "month" | "week" | "day") => {
     setViewMode(newMode);
-    let newStartDate = new Date(currentStartDate);
-    let duration;
-
-    switch (newMode) {
-      case "day":
-        duration = 1;
-        break;
-      case "week":
-        duration = 7;
-        break;
-      case "month":
-      default:
-        duration = 30;
-        break;
+    
+    // Adjust date range based on view mode
+    const today = new Date();
+    
+    if (newMode === "month") {
+      setCurrentStartDate(subDays(startOfMonth(today), 7));
+      setCurrentEndDate(endOfMonth(today));
+    } else if (newMode === "week") {
+      setCurrentStartDate(today);
+      setCurrentEndDate(addDays(today, 14));
+    } else if (newMode === "day") {
+      setCurrentStartDate(today);
+      setCurrentEndDate(addDays(today, 2));
     }
-
-    const newEndDate = addDays(newStartDate, duration);
-    setCurrentEndDate(newEndDate);
   };
 
   const changeZoom = (direction: "in" | "out") => {
@@ -187,37 +150,20 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     }
   };
 
-  // Convertir viewMode interno a formato de la librería
-  const getLibraryViewMode = (): ViewMode => {
-    switch (viewMode) {
-      case "day": return ViewMode.Day;
-      case "week": return ViewMode.Week;
-      case "month": return ViewMode.Month;
-      default: return ViewMode.Month;
+  // Calculate position on the timeline
+  const calculatePosition = (date: Date): number => {
+    if (!isWithinInterval(date, { start: currentStartDate, end: currentEndDate })) {
+      if (date < currentStartDate) return 0;
+      if (date > currentEndDate) return 100;
     }
-  };
-
-  // Calculate the height based on configuration
-  const ganttHeight = configuracion.tamano === "pequeno" ? 400 : 
-                      configuracion.tamano === "mediano" ? 600 : 
-                      configuracion.tamano === "grande" ? 800 : 1000;
-
-  // Opciones de visualización para el componente Gantt
-  const displayOptions: DisplayOption = {
-    viewMode: getLibraryViewMode(),
-    viewDate: new Date((currentStartDate.getTime() + currentEndDate.getTime()) / 2),
-    locale: 'es',
-    preStepsCount: 1,
-  };
-
-  const columnWidth = zoomLevel * (
-    viewMode === "day" ? 60 : 
-    viewMode === "week" ? 50 : 40
-  );
-
-  const handleExpanderClick = (task: Task) => {
-    console.log('Expander clicked for task:', task);
-    // Si necesitamos manejar la expansión/contracción manualmente
+    
+    const timelineStart = currentStartDate.getTime();
+    const timelineEnd = currentEndDate.getTime();
+    const dateTime = date.getTime();
+    
+    // Calculate percentage position
+    const position = ((dateTime - timelineStart) / (timelineEnd - timelineStart)) * 100;
+    return Math.max(0, Math.min(100, position));
   };
 
   useEffect(() => {
@@ -246,6 +192,63 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     };
   }, [toggleSampleData]);
 
+  // Handle tooltip display
+  const handleMouseOver = (e: React.MouseEvent, item: any) => {
+    setHoveredItem(item);
+    setHoveredITRB(null);
+    setTooltipPosition({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleITRBMouseOver = (e: React.MouseEvent, itrb: any, item: any) => {
+    setHoveredITRB({ ...itrb, actividad: item });
+    setHoveredItem(null);
+    setTooltipPosition({ x: e.clientX, y: e.clientY });
+    e.stopPropagation();
+  };
+
+  const handleMouseOut = () => {
+    setHoveredItem(null);
+    setHoveredITRB(null);
+  };
+
+  // Get gantt chart height based on configuration
+  const getGanttHeight = () => {
+    switch (configuracion.tamano) {
+      case "pequeno": return "h-[400px]";
+      case "mediano": return "h-[600px]";
+      case "grande": return "h-[800px]";
+      case "completo": return "h-screen";
+      default: return "h-[600px]";
+    }
+  };
+
+  // Group data by project, system and subsystem for hierarchical display
+  const groupedData = useMemo(() => {
+    const result: Record<string, Record<string, Record<string, any[]>>> = {};
+    
+    ganttData.forEach(item => {
+      const proyecto = item.proyecto;
+      const sistema = item.sistema;
+      const subsistema = item.subsistema;
+      
+      if (!result[proyecto]) {
+        result[proyecto] = {};
+      }
+      
+      if (!result[proyecto][sistema]) {
+        result[proyecto][sistema] = {};
+      }
+      
+      if (!result[proyecto][sistema][subsistema]) {
+        result[proyecto][sistema][subsistema] = [];
+      }
+      
+      result[proyecto][sistema][subsistema].push(item);
+    });
+    
+    return result;
+  }, [ganttData]);
+
   if (loading) {
     return <GanttLoadingState />;
   }
@@ -256,7 +259,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="sticky top-0 z-10 bg-background mb-2">
+      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm mb-2 p-2">
         <div className="flex justify-between items-center">
           <GanttNavigationControls
             currentStartDate={currentStartDate}
@@ -290,58 +293,316 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto w-full">
-        {ganttTasks.length > 0 && (
-          <div className={`gantt-container ${viewMode === 'month' ? 'month-view' : viewMode === 'week' ? 'week-view' : 'day-view'}`}>
-            <Gantt
-              tasks={ganttTasks}
-              viewMode={getLibraryViewMode()}
-              onDateChange={(task) => console.log("Date changed", task)}
-              onProgressChange={(task) => console.log("Progress changed", task)}
-              onDoubleClick={(task) => console.log("Double clicked", task)}
-              onClick={(task) => console.log("Clicked", task)}
-              onSelect={(task) => console.log("Selected", task)}
-              onExpanderClick={handleExpanderClick}
-              listCellWidth={mostrarSubsistemas ? "240px" : "180px"}
-              columnWidth={columnWidth}
-              ganttHeight={ganttHeight}
-              locale="es"
-              viewDate={displayOptions.viewDate}
-              TooltipContent={({ task }) => {
-                // Cast to our extended task type to access custom properties
-                const extendedTask = task as ExtendedTask;
-                return (
-                  <div className="gantt-tooltip p-2 rounded shadow-lg bg-background border">
-                    <div className="font-bold">{task.name}</div>
-                    <div className="text-sm">
-                      Progreso: {Math.round(task.progress * 100)}%
+      <div className={`flex-1 min-h-0 w-full overflow-hidden ${getGanttHeight()}`}>
+        <ScrollArea className="h-full">
+          <div className="relative gantt-chart min-w-[800px]">
+            {/* Timeline header */}
+            <div className="grid gantt-header sticky top-0 z-10"
+                 style={{ gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))" }}>
+              <div className="px-2 py-3 font-semibold border-b border-r">Actividad</div>
+              {axisDatesMemo.map((date, i) => (
+                <div key={`date-${i}`} 
+                     className={`text-center text-xs py-2 border-b border-r
+                       ${isSameDay(date, today) ? 'bg-blue-50 dark:bg-blue-900/30 font-semibold' : ''}`}>
+                  {viewMode === "day" 
+                    ? format(date, "HH:mm", { locale: es }) 
+                    : viewMode === "week" 
+                      ? format(date, "EEE d", { locale: es })
+                      : format(date, "d", { locale: es })}
+                </div>
+              ))}
+            </div>
+
+            {/* Today indicator */}
+            {isWithinInterval(today, { start: currentStartDate, end: currentEndDate }) && (
+              <div className="absolute h-full border-l-2 border-red-500 z-[5] pointer-events-none" 
+                   style={{ left: `calc(220px + ${calculatePosition(today)}% * (100% - 220px) / 100)` }}>
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="gantt-body">
+              {Object.entries(groupedData).map(([proyecto, sistemas], proyectoIndex) => (
+                <React.Fragment key={`proyecto-${proyectoIndex}`}>
+                  {/* Proyecto header */}
+                  <div className="grid gantt-row gantt-proyecto"
+                       style={{ gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))" }}>
+                    <div className="px-3 py-2 font-bold border-b border-r bg-indigo-800 text-white">
+                      {proyecto}
                     </div>
-                    <div className="text-sm">
-                      {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
-                    </div>
-                    {task.project && task.type === 'task' && (
-                      <div className="text-sm text-muted-foreground">
-                        ITRB de actividad
-                      </div>
-                    )}
-                    {extendedTask.sistema && (
-                      <div className="text-sm">
-                        Sistema: {extendedTask.sistema}
-                      </div>
-                    )}
-                    {extendedTask.subsistema && mostrarSubsistemas && (
-                      <div className="text-sm">
-                        Subsistema: {extendedTask.subsistema}
-                      </div>
-                    )}
+                    <div className="col-span-full"></div>
                   </div>
-                );
-              }}
-            />
+                  
+                  {Object.entries(sistemas).map(([sistema, subsistemas], sistemaIndex) => (
+                    <React.Fragment key={`sistema-${proyectoIndex}-${sistemaIndex}`}>
+                      {/* Sistema header */}
+                      <div className="grid gantt-row gantt-sistema" 
+                           style={{ gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))" }}>
+                        <div className="px-3 py-1.5 font-semibold border-b border-r bg-indigo-600 text-white">
+                          {sistema}
+                        </div>
+                        <div className="col-span-full"></div>
+                      </div>
+                      
+                      {mostrarSubsistemas && Object.entries(subsistemas).map(([subsistema, actividades], subsistemaIndex) => (
+                        <React.Fragment key={`subsistema-${proyectoIndex}-${sistemaIndex}-${subsistemaIndex}`}>
+                          {/* Subsistema header */}
+                          <div className="grid gantt-row gantt-subsistema"
+                               style={{ gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))" }}>
+                            <div className="pl-6 py-1 font-medium text-sm border-b border-r bg-indigo-400 text-white">
+                              {subsistema}
+                            </div>
+                            <div className="col-span-full"></div>
+                          </div>
+                          
+                          {/* Actividades del subsistema */}
+                          {actividades.map((actividad, actividadIndex) => (
+                            <div key={`actividad-${actividad.id}`} 
+                                 className={`grid gantt-row gantt-actividad relative ${actividadIndex % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/20' : ''}`}
+                                 style={{ 
+                                   gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))",
+                                   height: `${40 + (actividad.itrbsAsociados.length * 24)}px` 
+                                 }}>
+                              <div className="pl-8 py-2 border-b border-r flex items-center">
+                                <span className="text-sm font-medium truncate">{actividad.nombre}</span>
+                                {actividad.itrbsAsociados.length > 0 && (
+                                  <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                                    {actividad.itrbsAsociados.length}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Barra de la actividad */}
+                              <div className="col-span-full h-full relative">
+                                <div 
+                                  className="absolute h-6 rounded-sm cursor-pointer top-2"
+                                  style={{
+                                    left: `${calculatePosition(new Date(actividad.fechaInicio))}%`,
+                                    width: `${calculatePosition(new Date(actividad.fechaFin)) - calculatePosition(new Date(actividad.fechaInicio))}%`,
+                                    backgroundColor: actividad.color || '#64748b',
+                                    opacity: 0.9
+                                  }}
+                                  onMouseOver={(e) => handleMouseOver(e, actividad)}
+                                  onMouseOut={handleMouseOut}
+                                >
+                                  <div 
+                                    className="h-full rounded-sm flex items-center px-2 overflow-hidden"
+                                    style={{ 
+                                      width: `${actividad.progreso}%`,
+                                      backgroundColor: actividad.tieneVencidos ? '#ef4444' : (actividad.progreso === 100 ? '#22c55e' : '#eab308')
+                                    }}
+                                  >
+                                    <span className="text-xs text-white font-medium whitespace-nowrap">
+                                      {actividad.progreso}%
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                {/* ITRBs asociados */}
+                                {actividad.itrbsAsociados.map((itrb, itrbIndex) => {
+                                  const itrbStartDate = new Date(itrb.fechaInicio || actividad.fechaInicio);
+                                  const itrbEndDate = new Date(itrb.fechaVencimiento || itrb.fechaLimite || actividad.fechaFin);
+                                  const itrbProgress = itrb.estado === 'Completado' ? 100 : itrb.estado === 'Vencido' ? 0 : 50;
+                                  const itrbColor = itrb.estado === 'Completado' ? '#22c55e' : 
+                                                   itrb.estado === 'Vencido' ? '#ef4444' : '#3b82f6';
+                                  
+                                  return (
+                                    <div 
+                                      key={`itrb-${itrb.id}`}
+                                      className="absolute h-4 rounded-sm cursor-pointer hover:h-5 transition-all"
+                                      style={{
+                                        left: `${calculatePosition(itrbStartDate)}%`,
+                                        width: `${calculatePosition(itrbEndDate) - calculatePosition(itrbStartDate)}%`,
+                                        top: `${38 + (itrbIndex * 24)}px`,
+                                        backgroundColor: '#94a3b8',
+                                        opacity: 0.9
+                                      }}
+                                      onMouseOver={(e) => handleITRBMouseOver(e, itrb, actividad)}
+                                      onMouseOut={handleMouseOut}
+                                    >
+                                      <div 
+                                        className="h-full rounded-sm"
+                                        style={{ 
+                                          width: `${itrbProgress}%`, 
+                                          backgroundColor: itrbColor,
+                                          transition: 'width 0.3s ease-in-out'
+                                        }}
+                                      >
+                                        <div className="px-1 text-[10px] text-white truncate">
+                                          {itrb.descripcion || `ITRB ${itrbIndex + 1}`}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                      
+                      {/* Si no se muestran subsistemas, mostrar las actividades directamente bajo el sistema */}
+                      {!mostrarSubsistemas && Object.values(subsistemas).flat().map((actividad, actividadIndex) => (
+                        <div key={`actividad-dir-${actividad.id}`} 
+                             className={`grid gantt-row gantt-actividad relative ${actividadIndex % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/20' : ''}`}
+                             style={{ 
+                               gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))",
+                               height: `${40 + (actividad.itrbsAsociados.length * 24)}px` 
+                             }}>
+                          <div className="pl-6 py-2 border-b border-r flex items-center">
+                            <span className="text-sm font-medium truncate">{actividad.nombre}</span>
+                            {actividad.itrbsAsociados.length > 0 && (
+                              <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                                {actividad.itrbsAsociados.length}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Barra de la actividad */}
+                          <div className="col-span-full h-full relative">
+                            <div 
+                              className="absolute h-6 rounded-sm cursor-pointer top-2"
+                              style={{
+                                left: `${calculatePosition(new Date(actividad.fechaInicio))}%`,
+                                width: `${calculatePosition(new Date(actividad.fechaFin)) - calculatePosition(new Date(actividad.fechaInicio))}%`,
+                                backgroundColor: actividad.color || '#64748b',
+                                opacity: 0.9
+                              }}
+                              onMouseOver={(e) => handleMouseOver(e, actividad)}
+                              onMouseOut={handleMouseOut}
+                            >
+                              <div 
+                                className="h-full rounded-sm flex items-center px-2 overflow-hidden"
+                                style={{ 
+                                  width: `${actividad.progreso}%`,
+                                  backgroundColor: actividad.tieneVencidos ? '#ef4444' : (actividad.progreso === 100 ? '#22c55e' : '#eab308')
+                                }}
+                              >
+                                <span className="text-xs text-white font-medium whitespace-nowrap">
+                                  {actividad.progreso}%
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* ITRBs asociados */}
+                            {actividad.itrbsAsociados.map((itrb, itrbIndex) => {
+                              const itrbStartDate = new Date(itrb.fechaInicio || actividad.fechaInicio);
+                              const itrbEndDate = new Date(itrb.fechaVencimiento || itrb.fechaLimite || actividad.fechaFin);
+                              const itrbProgress = itrb.estado === 'Completado' ? 100 : itrb.estado === 'Vencido' ? 0 : 50;
+                              const itrbColor = itrb.estado === 'Completado' ? '#22c55e' : 
+                                              itrb.estado === 'Vencido' ? '#ef4444' : '#3b82f6';
+                              
+                              return (
+                                <div 
+                                  key={`itrb-${itrb.id}`}
+                                  className="absolute h-4 rounded-sm cursor-pointer hover:h-5 transition-all"
+                                  style={{
+                                    left: `${calculatePosition(itrbStartDate)}%`,
+                                    width: `${calculatePosition(itrbEndDate) - calculatePosition(itrbStartDate)}%`,
+                                    top: `${38 + (itrbIndex * 24)}px`,
+                                    backgroundColor: '#94a3b8',
+                                    opacity: 0.9
+                                  }}
+                                  onMouseOver={(e) => handleITRBMouseOver(e, itrb, actividad)}
+                                  onMouseOut={handleMouseOut}
+                                >
+                                  <div 
+                                    className="h-full rounded-sm"
+                                    style={{ 
+                                      width: `${itrbProgress}%`, 
+                                      backgroundColor: itrbColor,
+                                      transition: 'width 0.3s ease-in-out'
+                                    }}
+                                  >
+                                    <div className="px-1 text-[10px] text-white truncate">
+                                      {itrb.descripcion || `ITRB ${itrbIndex + 1}`}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
-        )}
+        </ScrollArea>
       </div>
 
+      {/* Tooltip para actividades */}
+      {hoveredItem && (
+        <div 
+          className="fixed z-50 p-3 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm min-w-[200px] max-w-[300px]"
+          style={{ 
+            left: tooltipPosition.x + 10, 
+            top: tooltipPosition.y + 10,
+            transform: tooltipPosition.x > window.innerWidth - 320 ? 'translateX(-100%)' : 'none'
+          }}
+        >
+          <div className="font-bold text-indigo-700 dark:text-indigo-400 mb-1">{hoveredItem.nombre}</div>
+          <div className="grid grid-cols-2 gap-1">
+            <div className="text-gray-500 dark:text-gray-400">Progreso:</div>
+            <div className="font-medium">{hoveredItem.progreso}%</div>
+            <div className="text-gray-500 dark:text-gray-400">Inicio:</div>
+            <div>{new Date(hoveredItem.fechaInicio).toLocaleDateString()}</div>
+            <div className="text-gray-500 dark:text-gray-400">Fin:</div>
+            <div>{new Date(hoveredItem.fechaFin).toLocaleDateString()}</div>
+            <div className="text-gray-500 dark:text-gray-400">Sistema:</div>
+            <div>{hoveredItem.sistema}</div>
+            {mostrarSubsistemas && (
+              <>
+                <div className="text-gray-500 dark:text-gray-400">Subsistema:</div>
+                <div>{hoveredItem.subsistema}</div>
+              </>
+            )}
+            <div className="text-gray-500 dark:text-gray-400">ITRBs:</div>
+            <div>{hoveredItem.itrbsAsociados.length}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Tooltip para ITRBs */}
+      {hoveredITRB && (
+        <div 
+          className="fixed z-50 p-3 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm min-w-[200px] max-w-[300px]"
+          style={{ 
+            left: tooltipPosition.x + 10, 
+            top: tooltipPosition.y + 10,
+            transform: tooltipPosition.x > window.innerWidth - 320 ? 'translateX(-100%)' : 'none'
+          }}
+        >
+          <div className="font-bold text-indigo-700 dark:text-indigo-400 mb-1">
+            {hoveredITRB.descripcion || "ITRB sin descripción"}
+          </div>
+          <div className="text-xs font-medium text-gray-500 mb-2">
+            Parte de: {hoveredITRB.actividad.nombre}
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            <div className="text-gray-500 dark:text-gray-400">Estado:</div>
+            <div className={`font-medium ${
+              hoveredITRB.estado === 'Completado' ? 'text-green-600 dark:text-green-400' : 
+              hoveredITRB.estado === 'Vencido' ? 'text-red-600 dark:text-red-400' : 
+              'text-blue-600 dark:text-blue-400'
+            }`}>
+              {hoveredITRB.estado || "En curso"}
+            </div>
+            <div className="text-gray-500 dark:text-gray-400">Fecha límite:</div>
+            <div>{new Date(hoveredITRB.fechaVencimiento || hoveredITRB.fechaLimite).toLocaleDateString()}</div>
+            {hoveredITRB.cantidadRealizada !== undefined && hoveredITRB.cantidadTotal !== undefined && (
+              <>
+                <div className="text-gray-500 dark:text-gray-400">Progreso:</div>
+                <div>{hoveredITRB.cantidadRealizada}/{hoveredITRB.cantidadTotal}</div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Leyenda */}
       {configuracion.mostrarLeyenda && (
         <div className="mt-4 p-2 bg-muted rounded-md">
           <div className="text-sm font-medium mb-2">Leyenda</div>
@@ -351,7 +612,7 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
               <span className="text-xs">Completado</span>
             </div>
             <div className="flex items-center">
-              <div className="w-4 h-4 mr-2 rounded bg-blue-500"></div>
+              <div className="w-4 h-4 mr-2 rounded bg-yellow-500"></div>
               <span className="text-xs">En progreso</span>
             </div>
             <div className="flex items-center">
@@ -359,8 +620,8 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
               <span className="text-xs">Vencido</span>
             </div>
             <div className="flex items-center">
-              <div className="w-4 h-4 mr-2 rounded bg-gray-500"></div>
-              <span className="text-xs">No iniciado</span>
+              <div className="w-4 h-4 mr-2 rounded bg-blue-500"></div>
+              <span className="text-xs">ITRB</span>
             </div>
           </div>
         </div>

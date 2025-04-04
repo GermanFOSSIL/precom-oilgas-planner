@@ -1,94 +1,80 @@
 
 /* Estilos personalizados para el Gantt Chart */
-.gantt-container {
+.gantt-chart {
   width: 100%;
   height: 100%;
   font-family: inherit;
 }
 
-/* Ajustes para cada modo de vista */
-.month-view .gantt-table-header-cell,
-.month-view .gantt-table-data-cell {
-  height: 48px;
+/* Filas básicas */
+.gantt-row {
+  position: relative;
 }
 
-.week-view .gantt-table-header-cell,
-.week-view .gantt-table-data-cell {
-  height: 40px;
-}
-
-.day-view .gantt-table-header-cell,
-.day-view .gantt-table-data-cell {
-  height: 36px;
-}
-
-/* Aumentar contraste de textos */
-.gantt-task-content {
-  color: white;
-  font-weight: 500;
-  text-shadow: 0px 0px 2px rgba(0, 0, 0, 0.7);
-}
-
-/* Estilos para barras de proyecto vs tareas */
-.project .gantt-task-main-area {
-  border-radius: 4px;
-  height: 16px;
-  margin-top: 4px;
-}
-
-.task .gantt-task-main-area {
-  border-radius: 3px;
-  height: 12px;
-  margin-top: 6px;
-}
-
-/* Mejorar tooltip */
-.gantt-tooltip {
-  max-width: 240px;
-  z-index: 1000;
-}
-
-/* Mejorar cabeceras */
-.gantt-table-header {
-  background-color: var(--background);
-  font-weight: 600;
+/* Estilos para los encabezados jerárquicos */
+.gantt-proyecto {
   border-bottom: 1px solid var(--border);
+  background-color: rgba(79, 70, 229, 0.05);
 }
 
-/* Filas alternadas para mejor legibilidad */
-.gantt-table-row:nth-child(odd) {
-  background-color: var(--muted);
+.gantt-sistema {
+  border-bottom: 1px solid var(--border);
+  background-color: rgba(99, 102, 241, 0.03);
 }
 
-/* Resaltar la fila seleccionada */
-.gantt-table-row.selected {
-  background-color: var(--accent);
+.gantt-subsistema {
+  border-bottom: 1px solid var(--border);
+  background-color: rgba(129, 140, 248, 0.02);
 }
 
-/* Personalizar scrollbar para mejorar la experiencia */
-.gantt-container ::-webkit-scrollbar {
+.gantt-actividad {
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s;
+}
+
+.gantt-actividad:hover {
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Encabezado del gráfico */
+.gantt-header {
+  background-color: var(--background);
+  border-bottom: 2px solid var(--border);
+  z-index: 10;
+}
+
+/* Estilos para tema oscuro */
+.dark .gantt-proyecto {
+  background-color: rgba(79, 70, 229, 0.15);
+}
+
+.dark .gantt-sistema {
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.dark .gantt-subsistema {
+  background-color: rgba(129, 140, 248, 0.08);
+}
+
+.dark .gantt-actividad:hover {
+  background-color: rgba(99, 102, 241, 0.15);
+}
+
+.dark .gantt-header {
+  background-color: hsl(224 71% 4%);
+}
+
+/* Barras de desplazamiento personalizadas */
+.gantt-chart ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.gantt-container ::-webkit-scrollbar-track {
+.gantt-chart ::-webkit-scrollbar-track {
   background: var(--background);
 }
 
-.gantt-container ::-webkit-scrollbar-thumb {
+.gantt-chart ::-webkit-scrollbar-thumb {
   background-color: var(--muted-foreground);
   border-radius: 20px;
-}
-
-/* Ajustes para tema oscuro */
-.dark .gantt-table-header {
-  background-color: hsl(224 71% 4%);
-}
-
-.dark .gantt-table-row:nth-child(odd) {
-  background-color: hsl(224 71% 6%);
-}
-
-.dark .gantt-table-row.selected {
-  background-color: hsl(215 27.9% 16.9%);
 }
