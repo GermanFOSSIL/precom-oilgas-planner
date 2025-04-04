@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { useAppContext } from "@/context/AppContext";
+import { useCompatibility } from "@/context/CompatibilityLayer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PublicHeader from "@/components/PublicHeader";
@@ -17,6 +18,7 @@ import ITRForm from "@/components/itr/ITRForm";
 
 const ProyectoManager: React.FC = () => {
   const { proyectoActual } = useAppContext();
+  const { getEmptyProyecto } = useCompatibility();
   
   const [isCreateActividadOpen, setIsCreateActividadOpen] = useState(false);
   const [isCreateITROpen, setIsCreateITROpen] = useState(false);

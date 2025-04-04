@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from "react";
 import { 
   User, 
@@ -11,9 +10,15 @@ import {
   AppTheme,
   FiltrosDashboard,
   KPIConfig,
-  APIKeys
+  APIKeys,
+  ITRB,
+  EstadoITRB,
+  ITR,
+  EstadoITR,
+  Proyecto as LegacyProyecto
 } from "@/types";
 import { isWithinInterval, parseISO } from "date-fns";
+import { convertToITR, convertToProyecto } from '@/utils/typeMigration';
 
 interface AppContextType {
   // Usuario y autenticación
@@ -30,7 +35,7 @@ interface AppContextType {
   
   // Proyectos
   proyectos: Proyecto[];
-  addProyecto: (proyecto: Proyecto) => void;
+  addProyecto: (proyecto: LegacyProyecto | Proyecto) => void;
   updateProyecto: (id: string, proyecto: Partial<Proyecto>) => void;
   deleteProyecto: (id: string) => void;
   proyectoActual: string | "todos";
@@ -47,8 +52,8 @@ interface AppContextType {
   // ITRs
   itrbItems: ITR[];
   setItrbItems: (items: ITR[]) => void;
-  addITRB: (itrb: ITR) => void;
-  updateITRB: (id: string, itrb: Partial<ITR>) => void;
+  addITRB: (itrb: ITRB | ITR) => void;
+  updateITRB: (id: string, updates: Partial<ITRB | ITR>) => void;
   deleteITRB: (id: string) => void;
   completarTodosITRB: (proyectoId: string) => void;
   
@@ -331,16 +336,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Funciones CRUD para proyectos
-  const addProyecto = (proyecto: Proyecto) => {
-    // Validar que las fechas del proyecto sean válidas
-    if (!validateFechasProyecto(proyecto.fechaInicio, proyecto.fechaFin)) {
-      throw new Error("La fecha de inicio debe ser anterior a la fecha de fin");
-    }
+  const addProyecto = (proyecto: LegacyProyecto | Proyecto) => {
+    // Convert legacy Proyecto to new Proyecto if needed
+    const newProyecto = 'fechaInicio' in proyecto ? proyecto : convertToProyecto(proyecto);
     
-    setProyectos([...proyectos, proyecto]);
+    setProyectos([...proyectos, newProyecto]);
   };
 
-  const updateProyecto = (id: string, proyectoUpdates: Partial<Proyecto>) => {
+  const updateProyecto = (id: string, proyectoUpdates: Partial<LegacyProyecto | Proyecto>) => {
     // Obtener el proyecto actual para combinar con las actualizaciones
     const currentProyecto = proyectos.find(p => p.id === id);
     if (!currentProyecto) return;
@@ -512,65 +515,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Funciones CRUD para ITRs
-  const addITRB = (itrb: ITR) => {
-    // Validar que las fechas del ITR estén dentro del rango del proyecto
-    if (!validateFechasITR(itrb.proyectoId, itrb.fechaInicio, itrb.fechaFin)) {
-      throw new Error("Las fechas del ITR deben estar dentro del rango del proyecto");
-    }
+  const addITRB = (itrb: ITRB | ITR) => {
+    // Convert legacy ITRB to ITR if it's not already an ITR
+    const newITR = 'fechaFin' in itrb ? itrb as ITR : convertToITR(itrb);
     
-    // Si está asociado a una actividad, validar que las fechas estén dentro del rango de la actividad
-    if (itrb.actividadId) {
-      const actividad = actividades.find(a => a.id === itrb.actividadId);
-      if (actividad) {
-        const actividadInicio = new Date(actividad.fechaInicio);
-        const actividadFin = new Date(actividad.fechaFin);
-        const itrbInicio = new Date(itrb.fechaInicio);
-        const itrbFin = new Date(itrb.fechaFin);
-        
-        if (itrbInicio < actividadInicio || itrbFin > actividadFin) {
-          throw new Error("Las fechas del ITR deben estar dentro del rango de la actividad relacionada");
-        }
-      } else {
-        throw new Error("La actividad relacionada no existe");
-      }
-    }
-    
-    setItrbItems([...itrbItems, itrb]);
+    setItrbItems(prev => [...prev, newITR]);
   };
 
-  const updateITRB = (id: string, itrbUpdates: Partial<ITR>) => {
-    const currentITRB = itrbItems.find(item => item.id === id);
-    if (!currentITRB) return;
-    
-    // Validar cambios en las fechas o proyecto
-    const proyectoId = itrbUpdates.proyectoId || currentITRB.proyectoId;
-    const fechaInicio = itrbUpdates.fechaInicio || currentITRB.fechaInicio;
-    const fechaFin = itrbUpdates.fechaFin || currentITRB.fechaFin;
-    
-    if (!validateFechasITR(proyectoId, fechaInicio, fechaFin)) {
-      throw new Error("Las fechas del ITR deben estar dentro del rango del proyecto");
-    }
-    
-    // Si está asociado a una actividad, validar fechas
-    const actividadId = itrbUpdates.actividadId || currentITRB.actividadId;
-    if (actividadId) {
-      const actividad = actividades.find(a => a.id === actividadId);
-      if (actividad) {
-        const actividadInicio = new Date(actividad.fechaInicio);
-        const actividadFin = new Date(actividad.fechaFin);
-        const itrbInicio = new Date(fechaInicio);
-        const itrbFin = new Date(fechaFin);
-        
-        if (itrbInicio < actividadInicio || itrbFin > actividadFin) {
-          throw new Error("Las fechas del ITR deben estar dentro del rango de la actividad relacionada");
-        }
-      } else {
-        throw new Error("La actividad relacionada no existe");
-      }
-    }
-    
-    const updatedITRB = { ...currentITRB, ...itrbUpdates };
-    setItrbItems(itrbItems.map(item => item.id === id ? updatedITRB : item));
+  const updateITRB = (id: string, updates: Partial<ITRB | ITR>) => {
+    setItrbItems(prev => 
+      prev.map(item => 
+        item.id === id ? { ...item, ...updates } : item
+      )
+    );
   };
 
   const deleteITRB = (id: string) => {
@@ -657,6 +614,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalSubsistemas: todosSubsistemas.size,
       proyectoId
     };
+  };
+
+  // Add utility function to get project ID for an activity
+  window.getActividadProyectoId = (actividadId: string) => {
+    const actividad = actividades.find(a => a.id === actividadId);
+    return actividad?.proyectoId;
   };
 
   return (
