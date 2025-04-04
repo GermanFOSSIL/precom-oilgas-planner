@@ -19,12 +19,12 @@ export const useGanttData = (
         }
         
         // Filtrar por sistema si está definido
-        if (filtros.sistema && actividad.sistema !== filtros.sistema) {
+        if (filtros.sistema && filtros.sistema !== "todos" && actividad.sistema !== filtros.sistema) {
           return false;
         }
         
         // Filtrar por subsistema si está definido
-        if (filtros.subsistema && actividad.subsistema !== filtros.subsistema) {
+        if (filtros.subsistema && filtros.subsistema !== "todos" && actividad.subsistema !== filtros.subsistema) {
           return false;
         }
         
@@ -45,7 +45,7 @@ export const useGanttData = (
         // Verificar si hay ITRBs vencidos
         const hoy = new Date();
         const tieneVencidos = itrbsAsociados.some(
-          i => i.estado !== "Completado" && new Date(i.fechaVencimiento) < hoy
+          i => i.estado !== "Completado" && new Date(i.fechaVencimiento || i.fechaLimite) < hoy
         );
         
         // Verificar si tiene MCC (Manufacturing Completion Certificate)
@@ -68,7 +68,8 @@ export const useGanttData = (
         
         // Asegurarse de que los ITRBs asociados tengan fechas válidas
         const itrbsProcesados = itrbsAsociados.map(itrb => {
-          const itrbFechaInicio = new Date(itrb.fechaInicio || validFechaInicio);
+          // Asegurarse de que fechaInicio esté definida, usando la fecha de la actividad si es necesario
+          const itrbFechaInicio = itrb.fechaInicio ? new Date(itrb.fechaInicio) : validFechaInicio;
           const itrbFechaVencimiento = new Date(itrb.fechaVencimiento || itrb.fechaLimite || validFechaFin);
           
           return {

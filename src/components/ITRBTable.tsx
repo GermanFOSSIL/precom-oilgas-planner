@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import {
   Table,
@@ -20,7 +21,10 @@ import {
   Trash2,
   Save,
   X,
-  Plus
+  Plus,
+  Filter,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import { 
   Tooltip,
@@ -61,6 +65,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const ITRBTable: React.FC = () => {
   const { 
@@ -78,12 +87,51 @@ const ITRBTable: React.FC = () => {
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoITRB | "todos">("todos");
   const [mccFiltro, setMccFiltro] = useState<boolean | "todos">("todos");
   
+  // Nuevos estados para filtros de checkbox
+  const [sistemasFiltrados, setSistemasFiltrados] = useState<string[]>([]);
+  const [subsistemasFiltrados, setSubsistemasFiltrados] = useState<string[]>([]);
+  const [actividadesFiltradas, setActividadesFiltradas] = useState<string[]>([]);
+  const [showFilterPopover, setShowFilterPopover] = useState(false);
+  
   // Estado para la edición
   const [itrbEditando, setItrbEditando] = useState<ITRB | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
 
+  // Obtener sistemas, subsistemas y actividades disponibles para filtrar
+  const sistemasDisponibles = useMemo(() => {
+    const sistemas = new Set<string>();
+    actividades.forEach(act => {
+      if (proyectoActual === "todos" || act.proyectoId === proyectoActual) {
+        sistemas.add(act.sistema);
+      }
+    });
+    return Array.from(sistemas).sort();
+  }, [actividades, proyectoActual]);
+
+  const subsitemasDisponibles = useMemo(() => {
+    const subsistemas = new Set<string>();
+    actividades.forEach(act => {
+      if ((proyectoActual === "todos" || act.proyectoId === proyectoActual) &&
+          (sistemasFiltrados.length === 0 || sistemasFiltrados.includes(act.sistema))) {
+        subsistemas.add(act.subsistema);
+      }
+    });
+    return Array.from(subsistemas).sort();
+  }, [actividades, proyectoActual, sistemasFiltrados]);
+
+  const actividadesDisponibles = useMemo(() => {
+    return actividades
+      .filter(act => {
+        if (proyectoActual !== "todos" && act.proyectoId !== proyectoActual) return false;
+        if (sistemasFiltrados.length > 0 && !sistemasFiltrados.includes(act.sistema)) return false;
+        if (subsistemasFiltrados.length > 0 && !subsistemasFiltrados.includes(act.subsistema)) return false;
+        return true;
+      })
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [actividades, proyectoActual, sistemasFiltrados, subsistemasFiltrados]);
+
   // Obtener los ITRB filtrados
-  const itrbFiltrados = React.useMemo(() => {
+  const itrbFiltrados = useMemo(() => {
     return itrbItems.filter(itrb => {
       // Encontrar la actividad a la que pertenece el ITRB
       const actividad = actividades.find(act => act.id === itrb.actividadId);
@@ -95,16 +143,23 @@ const ITRBTable: React.FC = () => {
         }
       }
       
-      // Filtrar por sistema
-      if (filtros.sistema && filtros.sistema !== "todos") {
-        if (!actividad || actividad.sistema !== filtros.sistema) {
+      // Filtrar por sistema (checkbox)
+      if (sistemasFiltrados.length > 0) {
+        if (!actividad || !sistemasFiltrados.includes(actividad.sistema)) {
           return false;
         }
       }
       
-      // Filtrar por subsistema
-      if (filtros.subsistema && filtros.subsistema !== "todos") {
-        if (!actividad || actividad.subsistema !== filtros.subsistema) {
+      // Filtrar por subsistema (checkbox)
+      if (subsistemasFiltrados.length > 0) {
+        if (!actividad || !subsistemasFiltrados.includes(actividad.subsistema)) {
+          return false;
+        }
+      }
+      
+      // Filtrar por actividad (checkbox)
+      if (actividadesFiltradas.length > 0) {
+        if (!actividadesFiltradas.includes(itrb.actividadId)) {
           return false;
         }
       }
@@ -132,7 +187,62 @@ const ITRBTable: React.FC = () => {
       
       return true;
     });
-  }, [itrbItems, actividades, proyectoActual, filtros, estadoFiltro, mccFiltro, busqueda]);
+  }, [itrbItems, actividades, proyectoActual, filtros, estadoFiltro, mccFiltro, busqueda, 
+      sistemasFiltrados, subsistemasFiltrados, actividadesFiltradas]);
+
+  // Función para manejar cambios en los filtros de checkbox
+  const handleSistemaChange = (sistema: string, checked: boolean) => {
+    if (checked) {
+      setSistemasFiltrados([...sistemasFiltrados, sistema]);
+    } else {
+      setSistemasFiltrados(sistemasFiltrados.filter(s => s !== sistema));
+      // Limpiar subsistemas filtrados que pertenecen a este sistema
+      const subsistemasDeSistema = actividades
+        .filter(act => act.sistema === sistema)
+        .map(act => act.subsistema);
+      
+      setSubsistemasFiltrados(subsistemasFiltrados.filter(s => !subsistemasDeSistema.includes(s)));
+      
+      // Limpiar actividades filtradas que pertenecen a este sistema
+      const actividadesDelSistema = actividades
+        .filter(act => act.sistema === sistema)
+        .map(act => act.id);
+      
+      setActividadesFiltradas(actividadesFiltradas.filter(a => !actividadesDelSistema.includes(a)));
+    }
+  };
+
+  const handleSubsistemaChange = (subsistema: string, checked: boolean) => {
+    if (checked) {
+      setSubsistemasFiltrados([...subsistemasFiltrados, subsistema]);
+    } else {
+      setSubsistemasFiltrados(subsistemasFiltrados.filter(s => s !== subsistema));
+      
+      // Limpiar actividades filtradas que pertenecen a este subsistema
+      const actividadesDelSubsistema = actividades
+        .filter(act => act.subsistema === subsistema)
+        .map(act => act.id);
+      
+      setActividadesFiltradas(actividadesFiltradas.filter(a => !actividadesDelSubsistema.includes(a)));
+    }
+  };
+
+  const handleActividadChange = (actividadId: string, checked: boolean) => {
+    if (checked) {
+      setActividadesFiltradas([...actividadesFiltradas, actividadId]);
+    } else {
+      setActividadesFiltradas(actividadesFiltradas.filter(a => a !== actividadId));
+    }
+  };
+
+  const limpiarFiltros = () => {
+    setBusqueda("");
+    setEstadoFiltro("todos");
+    setMccFiltro("todos");
+    setSistemasFiltrados([]);
+    setSubsistemasFiltrados([]);
+    setActividadesFiltradas([]);
+  };
 
   // Función para abrir el diálogo de edición
   const handleEdit = (itrb: ITRB) => {
@@ -271,6 +381,155 @@ const ITRBTable: React.FC = () => {
             <SelectItem value="false">No MCC</SelectItem>
           </SelectContent>
         </Select>
+        
+        {/* Nuevo botón para filtros avanzados */}
+        <Popover open={showFilterPopover} onOpenChange={setShowFilterPopover}>
+          <PopoverTrigger asChild>
+            <Button 
+              variant={sistemasFiltrados.length > 0 || subsistemasFiltrados.length > 0 || actividadesFiltradas.length > 0 
+                ? "default" 
+                : "outline"
+              }
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filtros avanzados
+              {(sistemasFiltrados.length > 0 || subsistemasFiltrados.length > 0 || actividadesFiltradas.length > 0) && (
+                <Badge variant="secondary" className="ml-1">
+                  {sistemasFiltrados.length + subsistemasFiltrados.length + actividadesFiltradas.length}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-96 max-h-[80vh] overflow-auto p-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">Filtros avanzados</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={limpiarFiltros}
+                  className="text-xs"
+                >
+                  Limpiar todos
+                </Button>
+              </div>
+              
+              {/* Filtro por sistema */}
+              <div className="space-y-2">
+                <Label className="font-medium">Sistemas</Label>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
+                  {sistemasDisponibles.map(sistema => (
+                    <div key={sistema} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`sistema-${sistema}`}
+                        checked={sistemasFiltrados.includes(sistema)}
+                        onCheckedChange={(checked) => 
+                          handleSistemaChange(sistema, checked === true)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`sistema-${sistema}`}
+                        className="text-sm"
+                      >
+                        {sistema}
+                      </Label>
+                    </div>
+                  ))}
+                  {sistemasDisponibles.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-1">No hay sistemas disponibles</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Filtro por subsistema */}
+              <div className="space-y-2">
+                <Label className="font-medium">Subsistemas</Label>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
+                  {subsitemasDisponibles.map(subsistema => (
+                    <div key={subsistema} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`subsistema-${subsistema}`}
+                        checked={subsistemasFiltrados.includes(subsistema)}
+                        onCheckedChange={(checked) => 
+                          handleSubsistemaChange(subsistema, checked === true)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`subsistema-${subsistema}`}
+                        className="text-sm"
+                      >
+                        {subsistema}
+                      </Label>
+                    </div>
+                  ))}
+                  {subsitemasDisponibles.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-1">
+                      {sistemasFiltrados.length > 0 
+                        ? "No hay subsistemas para los sistemas seleccionados" 
+                        : "Seleccione al menos un sistema"
+                      }
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Filtro por actividad */}
+              <div className="space-y-2">
+                <Label className="font-medium">Actividades</Label>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
+                  {actividadesDisponibles.map(actividad => (
+                    <div key={actividad.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`actividad-${actividad.id}`}
+                        checked={actividadesFiltradas.includes(actividad.id)}
+                        onCheckedChange={(checked) => 
+                          handleActividadChange(actividad.id, checked === true)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`actividad-${actividad.id}`}
+                        className="text-sm"
+                      >
+                        {actividad.nombre}
+                        <span className="text-xs text-muted-foreground ml-1">
+                          ({actividad.sistema} / {actividad.subsistema})
+                        </span>
+                      </Label>
+                    </div>
+                  ))}
+                  {actividadesDisponibles.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-1">
+                      {sistemasFiltrados.length > 0 || subsistemasFiltrados.length > 0 
+                        ? "No hay actividades para los filtros seleccionados" 
+                        : "Seleccione al menos un sistema o subsistema"
+                      }
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={() => setShowFilterPopover(false)}
+                  className="w-full"
+                >
+                  Aplicar filtros
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+        
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={limpiarFiltros}
+          className="shrink-0"
+          title="Limpiar todos los filtros"
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
       
       <div className="rounded-md border overflow-hidden">

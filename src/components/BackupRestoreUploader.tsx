@@ -239,7 +239,8 @@ const BackupRestoreUploader = () => {
         const existingAlertaIds = new Set(backupData.alertas.map((a: any) => a.id));
         const newAlertas = backupData.alertas.filter((a: any) => !existingAlertaIds.has(a.id));
         
-        setAlertas((prev: Alerta[]) => [...prev, ...newAlertas] as Alerta[]);
+        const updatedAlertas = [...newAlertas] as Alerta[];
+        setAlertas(updatedAlertas);
       }
       
       if (backupData.kpiConfig && typeof backupData.kpiConfig === "object") {
