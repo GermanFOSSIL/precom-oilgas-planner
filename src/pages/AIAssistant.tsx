@@ -6,24 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Download, Mail, Bot } from "lucide-react";
+import { Send, Mail, Bot } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import AIConfigManager from "@/components/AIConfigManager";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-}
+import AIReportGenerator from "@/components/AIReportGenerator";
+import ApiKeyStorage from "@/services/ApiKeyStorage";
+import { Message } from "@/types";
 
 const AIAssistant: React.FC = () => {
-  const { user, isAdmin, apiKeys, proyectos, actividades, itrbItems } = useAppContext();
+  const { user, apiKeys, proyectos, actividades, itrbItems } = useAppContext();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   // Check if user is authenticated
   useEffect(() => {
@@ -47,7 +45,12 @@ const AIAssistant: React.FC = () => {
   
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      // Usar setTimeout para asegurar que el scroll se ejecuta después de que el DOM se actualiza
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
   }, [messages]);
   
   const handleSendMessage = async () => {
@@ -64,14 +67,20 @@ const AIAssistant: React.FC = () => {
     setInput("");
     setLoading(true);
     
+    // Intentar cargar la API key desde almacenamiento si no está disponible en el contexto
+    let openAIKey = apiKeys?.openAI;
+    if (!openAIKey) {
+      openAIKey = ApiKeyStorage.getApiKey();
+    }
+    
     // Check if OpenAI API key is configured
-    if (!apiKeys?.openAI) {
+    if (!openAIKey) {
       setLoading(false);
       setMessages(prev => [
         ...prev,
         {
           role: "assistant",
-          content: "No se ha configurado una API key de OpenAI. Por favor, configura la API key en la sección 'Configuración IA' para usar el asistente.",
+          content: "No se ha configurado una API key de OpenAI. Por favor, contacta a un administrador para configurar la API key.",
           timestamp: new Date()
         }
       ]);
@@ -154,10 +163,10 @@ Contexto actual del proyecto: ${JSON.stringify(contextData)}`
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKeys.openAI}`
+          "Authorization": `Bearer ${openAIKey}`
         },
         body: JSON.stringify({
-          model: apiKeys.aiModel || "gpt-4o",
+          model: apiKeys?.aiModel || "gpt-4o",
           messages: [systemMessage, ...conversationHistory],
           temperature: 0.7,
           max_tokens: 1000
@@ -204,15 +213,19 @@ Contexto actual del proyecto: ${JSON.stringify(contextData)}`
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
-  const handleGenerateReport = () => {
-    toast("Generando informe en base a la conversación...");
-    // Implementación real conectaría con OpenAI para generar un informe
-    // basado en el contenido de la conversación
-  };
-  
   const handleSendEmail = () => {
-    toast("Preparando email con la conversación...");
-    // Implementación real permitiría enviar la conversación por email
+    // Preparar el contenido del correo
+    const subject = encodeURIComponent("Conversación con Asistente IA");
+    const body = encodeURIComponent(
+      messages.map(msg => 
+        `${msg.role === 'user' ? 'Usuario' : 'Asistente IA'} (${formatTimestamp(msg.timestamp)}):\n${msg.content}\n\n`
+      ).join('')
+    );
+    
+    // Abrir el cliente de correo predeterminado
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    
+    toast.success("Preparando email con la conversación...");
   };
   
   return (
@@ -230,7 +243,7 @@ Contexto actual del proyecto: ${JSON.stringify(contextData)}`
             </CardHeader>
             
             <CardContent className="flex-1 flex flex-col overflow-hidden p-0">
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                 <div className="space-y-4">
                   {messages.map((message, index) => (
                     <div 
@@ -282,10 +295,7 @@ Contexto actual del proyecto: ${JSON.stringify(contextData)}`
                 </div>
                 
                 <div className="flex gap-2 mt-2">
-                  <Button variant="outline" size="sm" className="text-xs" onClick={handleGenerateReport}>
-                    <Download className="h-3 w-3 mr-1" />
-                    Generar informe
-                  </Button>
+                  <AIReportGenerator messages={messages} />
                   <Button variant="outline" size="sm" className="text-xs" onClick={handleSendEmail}>
                     <Mail className="h-3 w-3 mr-1" />
                     Enviar por email

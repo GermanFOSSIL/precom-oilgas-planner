@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Key, Save, Bot, Check, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import ApiKeyStorage from "@/services/ApiKeyStorage";
 
 const AIConfigManager: React.FC = () => {
-  const { apiKeys, updateAPIKeys } = useAppContext();
+  const { apiKeys, updateAPIKeys, user } = useAppContext();
   const [openAIKey, setOpenAIKey] = useState(apiKeys?.openAI || "");
   const [aiModel, setAIModel] = useState(apiKeys?.aiModel || "gpt-4o");
   const [showKey, setShowKey] = useState(false);
@@ -19,11 +20,22 @@ const AIConfigManager: React.FC = () => {
   const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
   
   useEffect(() => {
+    // Intentar cargar la API key desde el almacenamiento local
+    const savedKey = ApiKeyStorage.getApiKey();
+    if (savedKey && savedKey !== apiKeys?.openAI) {
+      setOpenAIKey(savedKey);
+      // Actualizar el contexto con la key guardada
+      updateAPIKeys({
+        openAI: savedKey,
+        aiModel: apiKeys?.aiModel || "gpt-4o"
+      });
+    }
+    
     // Reset validation state when key changes
     if (openAIKey !== apiKeys?.openAI) {
       setIsKeyValid(null);
     }
-  }, [openAIKey, apiKeys]);
+  }, [openAIKey, apiKeys, updateAPIKeys]);
   
   const validateAPIKey = async () => {
     if (!openAIKey.startsWith('sk-')) {
@@ -79,13 +91,60 @@ const AIConfigManager: React.FC = () => {
       if (!keyValid) return;
     }
     
+    // Guardar en el estado global
     updateAPIKeys({
       openAI: openAIKey,
       aiModel
     });
     
+    // Guardar en el almacenamiento local
+    if (openAIKey) {
+      ApiKeyStorage.saveApiKey(openAIKey);
+    }
+    
     toast.success("Configuración de IA guardada correctamente");
   };
+  
+  // Verificar si el usuario tiene permiso para ver/editar la API key
+  const isAdmin = user?.role === 'admin';
+  
+  if (!isAdmin) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-indigo-500" />
+            Configuración IA
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <Alert variant="default" className="bg-blue-50 dark:bg-slate-800 border-blue-200 dark:border-blue-900">
+            <AlertDescription>
+              Solo los administradores pueden configurar la API key de OpenAI.
+              Por favor contacta a un administrador si necesitas ayuda.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="ai-model">Modelo de IA</Label>
+              <Select value={aiModel} onValueChange={setAIModel}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un modelo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gpt-4o">GPT-4o (Recomendado)</SelectItem>
+                  <SelectItem value="gpt-4">GPT-4</SelectItem>
+                  <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card className="h-full">
@@ -100,7 +159,7 @@ const AIConfigManager: React.FC = () => {
         <Alert variant="default" className="bg-blue-50 dark:bg-slate-800 border-blue-200 dark:border-blue-900">
           <AlertDescription>
             Configura tu API key de OpenAI para habilitar el asistente IA.
-            La API key se guarda solo en tu navegador y no se comparte con nadie.
+            La API key se guarda de forma segura y no se comparte con nadie.
           </AlertDescription>
         </Alert>
         

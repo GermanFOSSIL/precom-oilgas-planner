@@ -1,4 +1,3 @@
-
 export interface Proyecto {
   id: string;
   titulo: string;
@@ -130,3 +129,9 @@ export interface Alerta {
 }
 
 export type EstadoITRB = "En curso" | "Completado" | "Pendiente" | "Vencido";
+
+export interface Message {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
