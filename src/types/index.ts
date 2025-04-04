@@ -1,3 +1,4 @@
+
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -33,6 +34,7 @@ export interface ITRB {
   descripcion: string;
   cantidadTotal: number;
   cantidadRealizada: number;
+  fechaInicio: string;
   fechaLimite: string;
   estado: EstadoITRB;
   mcc: boolean; 

@@ -1,3 +1,4 @@
+
 export interface Proyecto {
   id: string;
   titulo: string;
@@ -23,6 +24,7 @@ export interface ITRB {
   descripcion: string;
   cantidadTotal: number;
   cantidadRealizada: number;
+  fechaInicio: string;
   estado: "En curso" | "Completado" | "Pendiente" | "Vencido";
   fechaLimite: string;
   mcc: boolean;
