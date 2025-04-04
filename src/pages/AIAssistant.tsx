@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useNavigate } from "react-router-dom";
@@ -84,8 +83,7 @@ const AIAssistant: React.FC = () => {
         proyectos: proyectos.slice(0, 5).map(p => ({
           id: p.id,
           titulo: p.titulo,
-          descripcion: p.descripcion,
-          estado: p.estado
+          descripcion: p.descripcion
         })),
         actividadesCount: actividades.length,
         sistemasCount: new Set(actividades.map(a => a.sistema)).size,
