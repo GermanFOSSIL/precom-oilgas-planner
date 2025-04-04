@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,11 +18,12 @@ interface Message {
 }
 
 const AIAssistant: React.FC = () => {
-  const { user, isAdmin, apiKeys } = useAppContext();
+  const { user, isAdmin, apiKeys, proyectos, actividades } = useAppContext();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Check if user is authenticated
   useEffect(() => {
@@ -42,6 +43,11 @@ const AIAssistant: React.FC = () => {
         }
       ]);
     }
+  }, [messages]);
+  
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
   
   const handleSendMessage = async () => {
@@ -73,53 +79,79 @@ const AIAssistant: React.FC = () => {
     }
     
     try {
-      // Simulate AI response - in a real implementation, this would call the OpenAI API
-      // For demo purposes, we'll just use a timeout
-      setTimeout(() => {
-        const botResponse = {
-          role: "assistant" as const,
-          content: `He recibido tu mensaje: "${input}". En una implementación real, esto llamaría a la API de OpenAI para generar una respuesta basada en los datos de tu proyecto.`,
+      // Prepare context data for the AI
+      const contextData = {
+        proyectos: proyectos.slice(0, 5).map(p => ({
+          id: p.id,
+          titulo: p.titulo,
+          descripcion: p.descripcion,
+          estado: p.estado
+        })),
+        actividadesCount: actividades.length,
+        sistemasCount: new Set(actividades.map(a => a.sistema)).size,
+      };
+      
+      // Prepare conversation history for the API
+      const conversationHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      
+      // Add user's new message
+      conversationHistory.push({
+        role: "user",
+        content: input
+      });
+      
+      // System message with instructions
+      const systemMessage = {
+        role: "system",
+        content: `Eres un asistente AI especializado en planes de precomisionado y gestión de ITRs (Inspection and Test Records). Ayudas a analizar datos de proyectos y a responder preguntas técnicas. Contexto actual del proyecto: ${JSON.stringify(contextData)}`
+      };
+      
+      // Call OpenAI API
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKeys.openAI}`
+        },
+        body: JSON.stringify({
+          model: apiKeys.aiModel || "gpt-4o",
+          messages: [systemMessage, ...conversationHistory],
+          temperature: 0.7,
+          max_tokens: 1000
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("OpenAI API error:", errorData);
+        throw new Error(`Error al llamar a OpenAI: ${response.status} ${errorData.error?.message || ''}`);
+      }
+      
+      const data = await response.json();
+      const assistantResponse = data.choices[0]?.message?.content || "Lo siento, no pude procesar tu solicitud.";
+      
+      // Add assistant response to messages
+      setMessages(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content: assistantResponse,
           timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, botResponse]);
-        setLoading(false);
-      }, 1500);
-      
-      // In a real implementation, you would call OpenAI API here
-      // const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Authorization': `Bearer ${apiKeys.openAI}`,
-      //     'Content-Type': 'application/json'
-      //   },
-      //   body: JSON.stringify({
-      //     model: apiKeys.aiModel || 'gpt-4o',
-      //     messages: messages.map(msg => ({ role: msg.role, content: msg.content })),
-      //     max_tokens: 1000
-      //   })
-      // });
-      
-      // if (!response.ok) throw new Error('Error al llamar a OpenAI');
-      
-      // const responseData = await response.json();
-      // const botMessage = responseData.choices[0].message.content;
-      
-      // setMessages(prev => [...prev, {
-      //   role: "assistant",
-      //   content: botMessage,
-      //   timestamp: new Date()
-      // }]);
+        }
+      ]);
       
     } catch (error) {
       console.error("Error al procesar el mensaje:", error);
-      toast.error("Error al procesar el mensaje. Inténtalo de nuevo.");
+      toast.error(`Error: ${error instanceof Error ? error.message : "Error al procesar el mensaje"}`);
       
       setMessages(prev => [
         ...prev,
         {
           role: "assistant",
-          content: "Lo siento, ha ocurrido un error al procesar tu mensaje. Por favor, inténtalo de nuevo.",
+          content: "Lo siento, ha ocurrido un error al procesar tu mensaje. Por favor, verifica tu API key e inténtalo de nuevo.",
           timestamp: new Date()
         }
       ]);
@@ -130,6 +162,17 @@ const AIAssistant: React.FC = () => {
   
   const formatTimestamp = (date: Date): string => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  const handleGenerateReport = () => {
+    toast("Generando informe en base a la conversación...");
+    // Implementación real conectaría con OpenAI para generar un informe
+    // basado en el contenido de la conversación
+  };
+  
+  const handleSendEmail = () => {
+    toast("Preparando email con la conversación...");
+    // Implementación real permitiría enviar la conversación por email
   };
   
   return (
@@ -161,7 +204,7 @@ const AIAssistant: React.FC = () => {
                             : "bg-gray-100 dark:bg-slate-800"
                         }`}
                       >
-                        <div className="text-sm">{message.content}</div>
+                        <div className="text-sm whitespace-pre-wrap">{message.content}</div>
                         <div className="text-xs text-right mt-1 opacity-70">
                           {formatTimestamp(message.timestamp)}
                         </div>
@@ -180,6 +223,7 @@ const AIAssistant: React.FC = () => {
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
               
@@ -189,7 +233,7 @@ const AIAssistant: React.FC = () => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Escribe tu mensaje aquí..."
-                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
                     disabled={loading}
                   />
                   <Button onClick={handleSendMessage} disabled={loading}>
@@ -198,11 +242,11 @@ const AIAssistant: React.FC = () => {
                 </div>
                 
                 <div className="flex gap-2 mt-2">
-                  <Button variant="outline" size="sm" className="text-xs">
+                  <Button variant="outline" size="sm" className="text-xs" onClick={handleGenerateReport}>
                     <Download className="h-3 w-3 mr-1" />
                     Generar informe
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs">
+                  <Button variant="outline" size="sm" className="text-xs" onClick={handleSendEmail}>
                     <Mail className="h-3 w-3 mr-1" />
                     Enviar por email
                   </Button>
