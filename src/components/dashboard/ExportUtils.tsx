@@ -73,6 +73,8 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
       if (filtros.subsistema) filtrosAplicados.push(`Subsistema: ${filtros.subsistema}`);
       if (filtros.estadoITRB) filtrosAplicados.push(`Estado: ${filtros.estadoITRB}`);
       if (filtros.busquedaActividad) filtrosAplicados.push(`Búsqueda: ${filtros.busquedaActividad}`);
+      
+      // Ahora usamos la propiedad correcta itrFilter que hemos añadido a la interfaz
       if (filtros.itrFilter) filtrosAplicados.push(`ITR: ${filtros.itrFilter}`);
       
       if (filtrosAplicados.length > 0) {
@@ -138,6 +140,7 @@ export const useExportUtils = ({ proyectos, actividades, itrbItems, getKPIs }: E
           
         const cumpleFiltroEstado = !currentFiltros.estadoITRB || itrb.estado === currentFiltros.estadoITRB;
         
+        // Usamos la propiedad correcta itrFilter que hemos añadido a la interfaz
         const cumpleBusquedaITR = !currentFiltros.itrFilter || 
           itrb.descripcion.toLowerCase().includes((currentFiltros.itrFilter || "").toLowerCase());
           

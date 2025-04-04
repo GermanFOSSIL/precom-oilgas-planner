@@ -73,6 +73,9 @@ export interface FiltrosDashboard {
   mcc?: boolean;
   tareaVencida?: boolean;
   timestamp?: string;
+  itrFilter?: string;
+  fechaInicioFilter?: string;
+  fechaFinFilter?: string;
 }
 
 export interface ConfiguracionGrafico {
