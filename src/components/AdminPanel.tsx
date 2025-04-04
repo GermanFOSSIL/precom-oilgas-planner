@@ -125,6 +125,7 @@ const AdminPanel: React.FC = () => {
     descripcion: "",
     cantidadTotal: 1,
     cantidadRealizada: 0,
+    fechaInicio: new Date().toISOString().split('T')[0],
     fechaLimite: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     mcc: false,
     observaciones: ""
@@ -248,6 +249,7 @@ const AdminPanel: React.FC = () => {
       descripcion: "",
       cantidadTotal: 1,
       cantidadRealizada: 0,
+      fechaInicio: new Date().toISOString().split('T')[0],
       fechaLimite: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       mcc: false,
       observaciones: ""
@@ -1064,14 +1066,26 @@ const AdminPanel: React.FC = () => {
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="fechaLimite">Fecha Límite</Label>
-                <Input 
-                  id="fechaLimite" 
-                  type="date"
-                  value={nuevoITRB.fechaLimite}
-                  onChange={(e) => setNuevoITRB({...nuevoITRB, fechaLimite: e.target.value})}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fechaInicio">Fecha Inicio</Label>
+                  <Input 
+                    id="fechaInicio" 
+                    type="date"
+                    value={nuevoITRB.fechaInicio}
+                    onChange={(e) => setNuevoITRB({...nuevoITRB, fechaInicio: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="fechaFin">Fecha Fin</Label>
+                  <Input 
+                    id="fechaFin" 
+                    type="date"
+                    value={nuevoITRB.fechaLimite}
+                    onChange={(e) => setNuevoITRB({...nuevoITRB, fechaLimite: e.target.value})}
+                  />
+                </div>
               </div>
               
               <div className="flex items-center space-x-2 py-2">

@@ -152,7 +152,7 @@ const ITRExcelImporter: React.FC = () => {
           descripcion: `${codigo} - ${descripcion}`,
           cantidadTotal: 1,
           cantidadRealizada: 0,
-          fechaInicio: fechaActual,
+          fechaInicio: fechaActual, // Añadido fechaInicio
           fechaLimite: fechaLimite,
           estado: "En curso",
           mcc: false
