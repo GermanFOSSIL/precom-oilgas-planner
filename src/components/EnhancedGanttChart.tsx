@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
-import { startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { addDays, subDays, startOfMonth, endOfMonth } from "date-fns";
 
 import GanttLoadingState from "./gantt/GanttLoadingState";
 import GanttEmptyState from "./gantt/GanttEmptyState";
@@ -15,21 +15,18 @@ interface EnhancedGanttChartProps {
   configuracion: ConfiguracionGrafico;
 }
 
-const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
-  filtros,
-  configuracion,
+const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({ 
+  filtros, 
+  configuracion 
 }) => {
-  const {
-    actividades: appActividades,
-    itrbItems: appItrbItems,
-    proyectos: appProyectos,
-  } = useAppContext();
+  const { actividades: appActividades, itrbItems: appItrbItems, proyectos: appProyectos } = useAppContext();
 
-  const [loading, setLoading] = useState(true);
+  const today = new Date();
   const [zoomLevel, setZoomLevel] = useState(1);
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
-  const [currentStartDate, setCurrentStartDate] = useState<Date>(startOfMonth(new Date()));
-  const [currentEndDate, setCurrentEndDate] = useState<Date>(endOfMonth(new Date()));
+  const [currentStartDate, setCurrentStartDate] = useState<Date>(subDays(startOfMonth(today), 7));
+  const [currentEndDate, setCurrentEndDate] = useState<Date>(endOfMonth(today));
+  const [loading, setLoading] = useState(true);
   const [usingSampleData, setUsingSampleData] = useState<boolean>(false);
 
   const [sampleData, setSampleData] = useState<{
@@ -46,20 +43,14 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
   const itrbItems = usingSampleData ? sampleData.itrbItems : appItrbItems;
   const proyectos = usingSampleData ? sampleData.proyectos : appProyectos;
 
-  const mostrarSubsistemas =
-    configuracion.mostrarSubsistemas !== undefined
-      ? configuracion.mostrarSubsistemas
-      : true;
+  const mostrarSubsistemas = configuracion.mostrarSubsistemas !== undefined 
+    ? configuracion.mostrarSubsistemas 
+    : true;
 
-  const { ganttData } = useGanttData(
-    actividades,
-    itrbItems,
-    proyectos,
-    filtros
-  );
+  const { ganttData } = useGanttData(actividades, itrbItems, proyectos, filtros);
 
   const toggleSampleData = useCallback(() => {
-    setUsingSampleData((prev) => !prev);
+    setUsingSampleData(prev => !prev);
   }, []);
 
   useEffect(() => {
@@ -70,13 +61,46 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
   }, [usingSampleData]);
 
   const navigateTime = (direction: "prev" | "next" | "today") => {
-    let newDate = new Date(currentStartDate);
-    if (direction === "prev") newDate = addMonths(currentStartDate, -1);
-    else if (direction === "next") newDate = addMonths(currentStartDate, 1);
-    else newDate = new Date();
+    let newStartDate = currentStartDate;
+    let newEndDate = currentEndDate;
 
-    setCurrentStartDate(startOfMonth(newDate));
-    setCurrentEndDate(endOfMonth(newDate));
+    if (direction === "today") {
+      newStartDate = subDays(startOfMonth(today), 7);
+      newEndDate = endOfMonth(today);
+    } else if (direction === "prev") {
+      const prevMonth = subDays(startOfMonth(addDays(currentStartDate, -1)), 7);
+      newStartDate = prevMonth;
+      newEndDate = endOfMonth(prevMonth);
+    } else if (direction === "next") {
+      const nextMonth = subDays(startOfMonth(addDays(currentEndDate, 1)), 7);
+      newStartDate = nextMonth;
+      newEndDate = endOfMonth(nextMonth);
+    }
+
+    setCurrentStartDate(newStartDate);
+    setCurrentEndDate(newEndDate);
+  };
+
+  const handleViewModeChange = (newMode: "month" | "week" | "day") => {
+    setViewMode(newMode);
+    let newStartDate = new Date(currentStartDate);
+    let duration;
+
+    switch (newMode) {
+      case "day":
+        duration = 1;
+        break;
+      case "week":
+        duration = 7;
+        break;
+      case "month":
+      default:
+        duration = 30;
+        break;
+    }
+
+    const newEndDate = addDays(newStartDate, duration);
+    setCurrentEndDate(newEndDate);
   };
 
   const changeZoom = (direction: "in" | "out") => {
@@ -87,13 +111,37 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
     }
   };
 
-  const handleViewModeChange = (newMode: "month" | "week" | "day") => {
-    setViewMode(newMode);
-    // Podés agregar ajustes dinámicos para fechas por vista
-  };
+  useEffect(() => {
+    const exportPDFHandler = () => {
+      console.log("Export PDF");
+    };
 
-  if (loading) return <GanttLoadingState />;
-  if (ganttData.length === 0) return <GanttEmptyState />;
+    const exportExcelHandler = () => {
+      console.log("Export Excel");
+    };
+
+    const toggleDemoDataHandler = () => {
+      toggleSampleData();
+    };
+
+    window.addEventListener('export-gantt-pdf', exportPDFHandler);
+    window.addEventListener('export-gantt-excel', exportExcelHandler);
+    window.addEventListener('toggle-demo-data', toggleDemoDataHandler);
+
+    return () => {
+      window.removeEventListener('export-gantt-pdf', exportPDFHandler);
+      window.removeEventListener('export-gantt-excel', exportExcelHandler);
+      window.removeEventListener('toggle-demo-data', toggleDemoDataHandler);
+    };
+  }, [toggleSampleData]);
+
+  if (loading) {
+    return <GanttLoadingState />;
+  }
+
+  if (ganttData.length === 0) {
+    return <GanttEmptyState />;
+  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -108,22 +156,23 @@ const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({
             onViewModeChange={handleViewModeChange}
             onZoomChange={changeZoom}
           />
+
           <div className="flex items-center mr-4">
             <span className="text-sm font-medium text-muted-foreground mr-2">
               {usingSampleData ? "Usando datos de muestra" : "Datos reales"}
             </span>
-            <div
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                usingSampleData ? "bg-primary" : "bg-input"
+            <div 
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                usingSampleData ? 'bg-primary' : 'bg-input'
               }`}
               onClick={toggleSampleData}
               role="button"
               tabIndex={0}
             >
-              <span
+              <span 
                 className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
-                  usingSampleData ? "translate-x-6" : "translate-x-1"
-                }`}
+                  usingSampleData ? 'translate-x-6' : 'translate-x-1'
+                }`} 
               />
             </div>
           </div>
