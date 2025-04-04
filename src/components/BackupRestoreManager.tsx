@@ -8,8 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Archive, ArchiveRestore, Download } from "lucide-react";
+import { Archive, ArchiveRestore, Download, Check } from "lucide-react";
 import { BackupOptions } from "@/types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const BackupRestoreManager = () => {
   const { 
@@ -35,6 +36,7 @@ const BackupRestoreManager = () => {
   
   const [progress, setProgress] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [backupCreated, setBackupCreated] = useState(false);
   
   const handleBackupOptionChange = (key: keyof BackupOptions) => {
     setBackupOptions(prev => ({
@@ -45,6 +47,7 @@ const BackupRestoreManager = () => {
 
   const createBackup = async () => {
     try {
+      setBackupCreated(false);
       setIsExporting(true);
       setProgress(0);
       
@@ -83,6 +86,7 @@ const BackupRestoreManager = () => {
       backupData.metadata = {
         fecha: new Date().toISOString(),
         version: "1.0.0",
+        timestamp: Date.now(),
         opciones: backupOptions
       };
       
@@ -109,11 +113,17 @@ const BackupRestoreManager = () => {
           description: "El archivo se ha descargado automáticamente"
         });
         
+        setBackupCreated(true);
+        
         setTimeout(() => {
           setIsExporting(false);
-          setProgress(0);
-        }, 500);
+        }, 1000);
       }, 800);
+      
+      // Asegurar que se libere la URL del objeto
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 5000);
       
     } catch (error) {
       console.error("Error al crear backup:", error);
@@ -236,6 +246,16 @@ const BackupRestoreManager = () => {
             <p className="text-sm font-medium">Generando archivo de backup...</p>
             <Progress value={progress} className="h-2" />
           </div>
+        )}
+        
+        {backupCreated && !isExporting && (
+          <Alert className="mt-4 bg-green-50 border-green-200">
+            <Check className="h-4 w-4 text-green-500" />
+            <AlertTitle className="text-green-700">Backup generado correctamente</AlertTitle>
+            <AlertDescription className="text-green-600">
+              El archivo de backup se ha descargado en tu dispositivo. Guárdalo en un lugar seguro.
+            </AlertDescription>
+          </Alert>
         )}
       </CardContent>
     </Card>

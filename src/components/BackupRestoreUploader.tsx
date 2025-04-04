@@ -1,9 +1,10 @@
+
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileUp, AlertCircle } from "lucide-react";
+import { Upload, FileUp, AlertCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BackupOptions, Proyecto, Alerta } from "@/types";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const BackupRestoreUploader = () => {
   const { 
@@ -21,8 +23,10 @@ const BackupRestoreUploader = () => {
     setItrbItems,
     itrbItems,
     setAlertas,
+    alertas,
     updateKPIConfig,
-    addProyecto
+    addProyecto,
+    kpiConfig
   } = useAppContext();
   
   const [isUploading, setIsUploading] = useState(false);
@@ -33,6 +37,8 @@ const BackupRestoreUploader = () => {
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [targetProyectoId, setTargetProyectoId] = useState<string>("new");
   const [newProyectoNombre, setNewProyectoNombre] = useState<string>("");
+  const [backupRestored, setBackupRestored] = useState(false);
+  const [forceReload, setForceReload] = useState(false);
   
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -45,6 +51,7 @@ const BackupRestoreUploader = () => {
       setIsUploading(true);
       setProgress(0);
       setError(null);
+      setBackupRestored(false);
       
       const progressInterval = setInterval(() => {
         setProgress(prev => {
@@ -127,12 +134,46 @@ const BackupRestoreUploader = () => {
     }
   };
 
+  // Función para persistir los datos en localStorage de manera explícita
+  const persistDataToLocalStorage = (
+    newProyectos: Proyecto[], 
+    newActividades: any[], 
+    newItrbs: any[], 
+    newAlertas: Alerta[]
+  ) => {
+    try {
+      // Guardar datos en localStorage explícitamente
+      localStorage.setItem("proyectos", JSON.stringify(newProyectos));
+      localStorage.setItem("actividades", JSON.stringify(newActividades));
+      localStorage.setItem("itrbItems", JSON.stringify(newItrbs));
+      localStorage.setItem("alertas", JSON.stringify(newAlertas));
+      localStorage.setItem("kpiConfig", JSON.stringify(kpiConfig));
+      
+      // Añadir un timestamp para evitar problemas de caché
+      localStorage.setItem("lastBackupRestore", Date.now().toString());
+      
+      console.log("Datos persistidos en localStorage:", {
+        proyectos: newProyectos.length,
+        actividades: newActividades.length,
+        itrbItems: newItrbs.length,
+        alertas: newAlertas.length
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error al persistir datos en localStorage:", error);
+      return false;
+    }
+  };
+
   const handleRestoreBackup = () => {
     if (!backupData) return;
     
     try {
+      setProgress(10);
       let targetProyectoIdToUse = targetProyectoId;
       let nuevoProyecto: Proyecto | null = null;
+      let nuevosProyectos = [...proyectos];
       
       if (targetProyectoId === "new") {
         if (!newProyectoNombre.trim()) {
@@ -151,23 +192,27 @@ const BackupRestoreUploader = () => {
           fechaActualizacion: now
         };
         
-        addProyecto(nuevoProyecto);
+        nuevosProyectos = [...proyectos, nuevoProyecto];
         targetProyectoIdToUse = nuevoProyecto.id;
       }
       
-      if (backupData.proyectos && Array.isArray(backupData.proyectos)) {
-        if (targetProyectoId === "new") {
-          const existingProjectIds = new Set(proyectos.map(p => p.id));
-          const newProjects = backupData.proyectos.filter(p => !existingProjectIds.has(p.id));
-          
-          if (nuevoProyecto) {
-            setProyectos([...proyectos, nuevoProyecto]);
-          } else {
-            setProyectos([...proyectos, ...newProjects]);
-          }
+      setProgress(30);
+      
+      // Procesar proyectos
+      if (backupData.proyectos && Array.isArray(backupData.proyectos) && targetProyectoId === "new") {
+        const existingProjectIds = new Set(proyectos.map(p => p.id));
+        const newProjects = backupData.proyectos.filter(p => !existingProjectIds.has(p.id));
+        
+        if (nuevoProyecto) {
+          nuevosProyectos = [...proyectos, nuevoProyecto];
+        } else {
+          nuevosProyectos = [...proyectos, ...newProjects];
         }
       }
       
+      setProgress(50);
+      
+      // Procesar actividades
       let nuevasActividades = [...actividades];
       
       if (backupData.actividades && Array.isArray(backupData.actividades)) {
@@ -187,9 +232,11 @@ const BackupRestoreUploader = () => {
         const newActivities = actividadesModificadas.filter(a => !existingActivityIds.has(a.id));
         
         nuevasActividades = [...actividades, ...newActivities];
-        setActividades(nuevasActividades);
       }
       
+      setProgress(70);
+      
+      // Procesar ITRBs
       let nuevosITRBs = [...itrbItems];
       
       if (backupData.itrbItems && Array.isArray(backupData.itrbItems)) {
@@ -232,20 +279,59 @@ const BackupRestoreUploader = () => {
         }));
         
         nuevosITRBs = [...itrbItems, ...processedItrbs];
-        setItrbItems(nuevosITRBs);
       }
+      
+      setProgress(85);
+      
+      // Procesar alertas
+      let nuevasAlertas = [...alertas];
       
       if (backupData.alertas && Array.isArray(backupData.alertas)) {
-        const existingAlertaIds = new Set(backupData.alertas.map((a: any) => a.id));
+        const existingAlertaIds = new Set(alertas.map(a => a.id));
         const newAlertas = backupData.alertas.filter((a: any) => !existingAlertaIds.has(a.id));
         
-        const updatedAlertas = [...newAlertas] as Alerta[];
-        setAlertas(updatedAlertas);
+        if (backupData.proyectos && backupData.proyectos.length > 0 && targetProyectoId === "new") {
+          const originalProyectoId = backupData.proyectos[0].id;
+          
+          newAlertas.forEach((alerta: any) => {
+            if (alerta.proyectoId === originalProyectoId) {
+              alerta.proyectoId = targetProyectoIdToUse;
+            }
+          });
+        }
+        
+        nuevasAlertas = [...alertas, ...newAlertas];
       }
       
+      setProgress(90);
+      
+      // Procesar configuración de KPIs
       if (backupData.kpiConfig && typeof backupData.kpiConfig === "object") {
         updateKPIConfig(backupData.kpiConfig);
       }
+      
+      // Persistir datos en localStorage
+      const persistSuccess = persistDataToLocalStorage(
+        nuevosProyectos,
+        nuevasActividades, 
+        nuevosITRBs,
+        nuevasAlertas
+      );
+      
+      if (!persistSuccess) {
+        toast.error("Error al guardar datos en almacenamiento local");
+        setProgress(0);
+        return;
+      }
+      
+      // Actualizar el estado de la aplicación
+      setProyectos(nuevosProyectos);
+      setActividades(nuevasActividades);
+      setItrbItems(nuevosITRBs);
+      setAlertas(nuevasAlertas);
+      
+      setProgress(100);
+      setBackupRestored(true);
       
       toast.success("Backup restaurado exitosamente", {
         description: targetProyectoId === "new" 
@@ -256,24 +342,24 @@ const BackupRestoreUploader = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-      setShowRestoreDialog(false);
-      setBackupData(null);
-      
-      localStorage.setItem("proyectos", JSON.stringify(nuevoProyecto ? [...proyectos, nuevoProyecto] : proyectos));
-      localStorage.setItem("actividades", JSON.stringify(nuevasActividades));
-      localStorage.setItem("itrbItems", JSON.stringify(nuevosITRBs));
       
       setTimeout(() => {
-        localStorage.setItem("timestamp", Date.now().toString());
-        window.location.reload();
-      }, 3000);
+        setShowRestoreDialog(false);
+        setBackupData(null);
+      }, 1500);
       
     } catch (error) {
       console.error("Error al restaurar backup:", error);
       toast.error("Error al restaurar el backup", {
         description: error instanceof Error ? error.message : "Error desconocido"
       });
+      setProgress(0);
     }
+  };
+
+  const handleForceReload = () => {
+    setForceReload(true);
+    window.location.reload();
   };
 
   return (
@@ -305,7 +391,7 @@ const BackupRestoreUploader = () => {
             </p>
             <Button 
               onClick={triggerFileUpload}
-              disabled={isUploading}
+              disabled={isUploading || backupRestored}
               className="mt-4"
             >
               Seleccionar archivo
@@ -323,14 +409,32 @@ const BackupRestoreUploader = () => {
         
         {isUploading && (
           <div className="space-y-2 mt-4">
-            <p className="text-sm font-medium">Restaurando backup...</p>
+            <p className="text-sm font-medium">Procesando backup...</p>
             <Progress value={progress} className="h-2" />
           </div>
         )}
+
+        {backupRestored && (
+          <Alert className="mt-4 bg-green-50 border-green-200">
+            <Check className="h-4 w-4 text-green-500" />
+            <AlertTitle className="text-green-700">Restauración exitosa</AlertTitle>
+            <AlertDescription className="text-green-600">
+              Los datos se han restaurado correctamente. 
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleForceReload} 
+                className="mt-2 border-green-300 text-green-700"
+              >
+                Recargar aplicación
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="text-sm text-muted-foreground mt-4">
-          <p><strong>Nota:</strong> La restauración reemplazará todos los datos actuales por los del backup.</p>
-          <p className="mt-1">Se recomienda crear un backup de los datos actuales antes de realizar una restauración.</p>
+          <p><strong>Nota:</strong> La restauración añadirá los datos del backup a los datos actuales.</p>
+          <p className="mt-1">Si deseas crear un proyecto nuevo basado en el backup, selecciona "Crear nuevo proyecto" en la siguiente ventana.</p>
         </div>
         
         <Dialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
@@ -374,13 +478,18 @@ const BackupRestoreUploader = () => {
                   />
                 </div>
               )}
+              
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox id="persistencia" defaultChecked />
+                <Label htmlFor="persistencia">Forzar persistencia de datos (recomendado)</Label>
+              </div>
             </div>
             
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowRestoreDialog(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleRestoreBackup}>
+              <Button onClick={handleRestoreBackup} disabled={isUploading || progress > 0}>
                 Restaurar datos
               </Button>
             </DialogFooter>
