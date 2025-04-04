@@ -228,7 +228,17 @@ const ITRBTable: React.FC = () => {
   };
 
   const handleEdit = (itrb: ITRB) => {
-    setItrbEditando({...itrb});
+    const itrb_processed = {
+      ...itrb,
+      fechaInicio: itrb.fechaInicio ? new Date(itrb.fechaInicio).toISOString() : new Date().toISOString(),
+      fechaLimite: itrb.fechaLimite ? new Date(itrb.fechaLimite).toISOString() : (() => {
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 7);
+        return defaultDate.toISOString();
+      })()
+    };
+    
+    setItrbEditando(itrb_processed);
     setShowEditDialog(true);
   };
 
@@ -236,6 +246,19 @@ const ITRBTable: React.FC = () => {
     if (itrbEditando) {
       if (!itrbEditando.descripcion.trim() || !itrbEditando.actividadId) {
         toast.error("La descripción y la actividad son obligatorias");
+        return;
+      }
+      
+      try {
+        const fechaInicio = new Date(itrbEditando.fechaInicio);
+        const fechaLimite = new Date(itrbEditando.fechaLimite);
+        
+        if (isNaN(fechaInicio.getTime()) || isNaN(fechaLimite.getTime())) {
+          toast.error("Las fechas ingresadas no son válidas");
+          return;
+        }
+      } catch (error) {
+        toast.error("Error al procesar las fechas");
         return;
       }
       
@@ -298,11 +321,48 @@ const ITRBTable: React.FC = () => {
 
   const handleFechaLimiteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (itrbEditando) {
-      const fechaLimite = e.target.value;
-      setItrbEditando({
-        ...itrbEditando,
-        fechaLimite: new Date(fechaLimite).toISOString()
-      });
+      try {
+        const fechaStr = e.target.value;
+        const fecha = new Date(fechaStr);
+        if (!isNaN(fecha.getTime())) {
+          setItrbEditando({
+            ...itrbEditando,
+            fechaLimite: fecha.toISOString()
+          });
+        }
+      } catch (error) {
+        console.error("Error al procesar la fecha:", error);
+      }
+    }
+  };
+
+  const handleFechaInicioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (itrbEditando) {
+      try {
+        const fechaStr = e.target.value;
+        const fecha = new Date(fechaStr);
+        if (!isNaN(fecha.getTime())) {
+          setItrbEditando({
+            ...itrbEditando,
+            fechaInicio: fecha.toISOString()
+          });
+        }
+      } catch (error) {
+        console.error("Error al procesar la fecha:", error);
+      }
+    }
+  };
+
+  const formatFechaForDateInput = (fechaIso: string): string => {
+    try {
+      const fecha = new Date(fechaIso);
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toISOString().split('T')[0];
+      }
+      return new Date().toISOString().split('T')[0];
+    } catch (error) {
+      console.error("Error formateando fecha:", error);
+      return new Date().toISOString().split('T')[0];
     }
   };
 
@@ -726,27 +786,37 @@ const ITRBTable: React.FC = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="fechaInicio">Fecha Inicio</Label>
+                  <Input 
+                    id="fechaInicio"
+                    type="date"
+                    value={formatFechaForDateInput(itrbEditando.fechaInicio)}
+                    onChange={handleFechaInicioChange}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="fechaLimite">Fecha Límite</Label>
                   <Input 
                     id="fechaLimite"
                     type="date"
-                    value={new Date(itrbEditando.fechaLimite).toISOString().split('T')[0]}
+                    value={formatFechaForDateInput(itrbEditando.fechaLimite)}
                     onChange={handleFechaLimiteChange}
                   />
                 </div>
-                <div className="flex items-center pt-8">
-                  <Checkbox
-                    id="mcc"
-                    checked={itrbEditando.mcc}
-                    onCheckedChange={(checked) => setItrbEditando({
-                      ...itrbEditando,
-                      mcc: checked === true
-                    })}
-                  />
-                  <Label htmlFor="mcc" className="ml-2">
-                    Marcar como MCC
-                  </Label>
-                </div>
+              </div>
+              
+              <div className="flex items-center pt-4">
+                <Checkbox
+                  id="mcc"
+                  checked={itrbEditando.mcc}
+                  onCheckedChange={(checked) => setItrbEditando({
+                    ...itrbEditando,
+                    mcc: checked === true
+                  })}
+                />
+                <Label htmlFor="mcc" className="ml-2">
+                  Marcar como MCC
+                </Label>
               </div>
               
               <div className="space-y-2">

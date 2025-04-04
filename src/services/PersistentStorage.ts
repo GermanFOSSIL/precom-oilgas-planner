@@ -239,7 +239,57 @@ class PersistentStorage {
       // Restaurar datos del respaldo
       Object.entries(backup.data).forEach(([key, value]) => {
         if (value !== null && typeof value === 'string') {
-          localStorage.setItem(key, value);
+          // Manejo especial para ITRBs para asegurar que las fechas sean válidas
+          if (key === 'itrbItems') {
+            try {
+              const itrbItems = JSON.parse(value);
+              if (Array.isArray(itrbItems)) {
+                // Procesar cada ITRB para asegurar fechas válidas
+                const processedItems = itrbItems.map(item => {
+                  // Asegurarse que todas las fechas sean ISO strings válidos
+                  if (item.fechaInicio) {
+                    const fechaInicio = new Date(item.fechaInicio);
+                    if (isNaN(fechaInicio.getTime())) {
+                      item.fechaInicio = new Date().toISOString();
+                    } else {
+                      item.fechaInicio = fechaInicio.toISOString();
+                    }
+                  } else {
+                    item.fechaInicio = new Date().toISOString();
+                  }
+                  
+                  if (item.fechaLimite) {
+                    const fechaLimite = new Date(item.fechaLimite);
+                    if (isNaN(fechaLimite.getTime())) {
+                      // Usar fecha actual + 7 días como predeterminada
+                      const defaultDate = new Date();
+                      defaultDate.setDate(defaultDate.getDate() + 7);
+                      item.fechaLimite = defaultDate.toISOString();
+                    } else {
+                      item.fechaLimite = fechaLimite.toISOString();
+                    }
+                  } else {
+                    // Usar fecha actual + 7 días como predeterminada
+                    const defaultDate = new Date();
+                    defaultDate.setDate(defaultDate.getDate() + 7);
+                    item.fechaLimite = defaultDate.toISOString();
+                  }
+                  
+                  return item;
+                });
+                
+                // Guardar los ITRBs procesados
+                localStorage.setItem(key, JSON.stringify(processedItems));
+              } else {
+                localStorage.setItem(key, value);
+              }
+            } catch (e) {
+              console.error('Error procesando ITRBs:', e);
+              localStorage.setItem(key, value);
+            }
+          } else {
+            localStorage.setItem(key, value);
+          }
         }
       });
       

@@ -14,6 +14,19 @@ const GanttItrbTooltip: React.FC<GanttItrbTooltipProps> = ({
 }) => {
   if (!hoveredItrb) return null;
   
+  // Función para formatear fechas de manera segura
+  const formatFechaSafe = (fechaStr: string | Date, defaultDate?: Date): string => {
+    try {
+      const fecha = fechaStr instanceof Date ? fechaStr : new Date(fechaStr);
+      if (isNaN(fecha.getTime())) {
+        return format(defaultDate || new Date(), "dd/MM/yyyy", { locale: es });
+      }
+      return format(fecha, "dd/MM/yyyy", { locale: es });
+    } catch (error) {
+      return format(defaultDate || new Date(), "dd/MM/yyyy", { locale: es });
+    }
+  };
+  
   return (
     <div
       className="fixed z-50 bg-white dark:bg-slate-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-md p-3 text-sm min-w-[250px] max-w-[350px]"
@@ -39,12 +52,12 @@ const GanttItrbTooltip: React.FC<GanttItrbTooltipProps> = ({
         
         <div className="text-gray-500 dark:text-gray-400">Fecha inicio:</div>
         <div className="font-medium">
-          {format(new Date(hoveredItrb.fechaInicio || new Date()), "dd/MM/yyyy", { locale: es })}
+          {formatFechaSafe(hoveredItrb.fechaInicio)}
         </div>
         
         <div className="text-gray-500 dark:text-gray-400">Fecha límite:</div>
         <div className="font-medium">
-          {format(new Date(hoveredItrb.fechaLimite), "dd/MM/yyyy", { locale: es })}
+          {formatFechaSafe(hoveredItrb.fechaLimite)}
         </div>
         
         <div className="text-gray-500 dark:text-gray-400">Estado:</div>

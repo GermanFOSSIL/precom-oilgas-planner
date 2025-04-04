@@ -44,9 +44,17 @@ export const useGanttData = (
         
         // Verificar si hay ITRBs vencidos
         const hoy = new Date();
-        const tieneVencidos = itrbsAsociados.some(
-          i => i.estado !== "Completado" && new Date(i.fechaVencimiento || i.fechaLimite) < hoy
-        );
+        const tieneVencidos = itrbsAsociados.some(i => {
+          if (i.estado !== "Completado") {
+            try {
+              const fechaLimite = new Date(i.fechaLimite);
+              return !isNaN(fechaLimite.getTime()) && fechaLimite < hoy;
+            } catch (e) {
+              return false;
+            }
+          }
+          return false;
+        });
         
         // Verificar si tiene MCC (Manufacturing Completion Certificate)
         const tieneMCC = actividad.tieneMCC || false;
@@ -55,30 +63,65 @@ export const useGanttData = (
         const color = getColorByProgress(progreso, tieneVencidos);
         
         // Formatear fechas como objetos Date y asegurar que sean válidas
-        const fechaInicio = new Date(actividad.fechaInicio);
-        const fechaFin = new Date(actividad.fechaFin);
+        let fechaInicio, fechaFin;
         
-        // Si alguna fecha es inválida, usar fechas por defecto
-        const validFechaInicio = !isNaN(fechaInicio.getTime()) ? fechaInicio : new Date();
-        const validFechaFin = !isNaN(fechaFin.getTime()) ? fechaFin : new Date(new Date().setDate(new Date().getDate() + 7));
+        try {
+          fechaInicio = new Date(actividad.fechaInicio);
+          if (isNaN(fechaInicio.getTime())) {
+            fechaInicio = new Date();
+          }
+        } catch (e) {
+          fechaInicio = new Date();
+        }
+        
+        try {
+          fechaFin = new Date(actividad.fechaFin);
+          if (isNaN(fechaFin.getTime())) {
+            fechaFin = new Date();
+            fechaFin.setDate(fechaFin.getDate() + 7);
+          }
+        } catch (e) {
+          fechaFin = new Date();
+          fechaFin.setDate(fechaFin.getDate() + 7);
+        }
         
         // Calcular la duración en días (si no está definida)
         const duracion = actividad.duracion || 
-          Math.ceil((validFechaFin.getTime() - validFechaInicio.getTime()) / (1000 * 60 * 60 * 24));
+          Math.ceil((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24));
         
         // Asegurarse de que los ITRBs asociados tengan fechas válidas
         const itrbsProcesados = itrbsAsociados.map(itrb => {
-          // Asegurarse de que fechaInicio esté definida, usando la fecha de la actividad si es necesario
-          const itrbFechaInicio = itrb.fechaInicio 
-            ? new Date(itrb.fechaInicio) 
-            : validFechaInicio;
-            
-          const itrbFechaVencimiento = new Date(itrb.fechaVencimiento || itrb.fechaLimite || validFechaFin);
+          // Procesar fechas de ITRB
+          let itrbFechaInicio, itrbFechaLimite;
+          
+          try {
+            // Usar fecha inicio del ITRB si existe, si no, usar la de la actividad
+            itrbFechaInicio = itrb.fechaInicio 
+              ? new Date(itrb.fechaInicio) 
+              : fechaInicio;
+              
+            if (isNaN(itrbFechaInicio.getTime())) {
+              itrbFechaInicio = fechaInicio;
+            }
+          } catch (e) {
+            itrbFechaInicio = fechaInicio;
+          }
+          
+          try {
+            itrbFechaLimite = new Date(itrb.fechaLimite);
+            if (isNaN(itrbFechaLimite.getTime())) {
+              itrbFechaLimite = new Date(fechaInicio);
+              itrbFechaLimite.setDate(itrbFechaLimite.getDate() + 7);
+            }
+          } catch (e) {
+            itrbFechaLimite = new Date(fechaInicio);
+            itrbFechaLimite.setDate(itrbFechaLimite.getDate() + 7);
+          }
           
           return {
             ...itrb,
-            fechaInicio: !isNaN(itrbFechaInicio.getTime()) ? itrbFechaInicio : validFechaInicio,
-            fechaVencimiento: !isNaN(itrbFechaVencimiento.getTime()) ? itrbFechaVencimiento : validFechaFin
+            fechaInicio: itrbFechaInicio,
+            fechaLimite: itrbFechaLimite
           };
         });
         
@@ -87,8 +130,8 @@ export const useGanttData = (
           nombre: actividad.nombre,
           sistema: actividad.sistema,
           subsistema: actividad.subsistema,
-          fechaInicio: validFechaInicio,
-          fechaFin: validFechaFin,
+          fechaInicio: fechaInicio,
+          fechaFin: fechaFin,
           duracion,
           progreso,
           tieneVencidos,

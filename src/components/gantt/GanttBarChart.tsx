@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import "./styles/EnhancedGantt.css";
 import { format, isWithinInterval } from "date-fns";
@@ -38,7 +37,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   const { theme } = useAppContext();
   const isDarkMode = theme.mode === "dark";
   
-  // Calculate all dates to display on the axis
   const axisDates: Date[] = [];
   const currentDate = new Date(currentStartDate);
   
@@ -47,7 +45,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
     currentDate.setDate(currentDate.getDate() + 1);
   }
   
-  // Handle tooltips
   const [tooltipInfo, setTooltipInfo] = useState<{
     visible: boolean;
     type: "actividad" | "itrb" | null;
@@ -65,7 +62,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
     data: any,
     type: "actividad" | "itrb"
   ) => {
-    // Get mouse position relative to the viewport
     const x = event.clientX;
     const y = event.clientY;
     
@@ -84,10 +80,27 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
     });
   };
 
-  // Calculate position for bars
   const getItemPosition = (startDate: string | Date, endDate: string | Date, width: number) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    let start;
+    let end;
+    
+    try {
+      start = startDate instanceof Date ? startDate : new Date(startDate);
+      end = endDate instanceof Date ? endDate : new Date(endDate);
+      
+      if (isNaN(start.getTime())) {
+        start = currentStartDate;
+      }
+      if (isNaN(end.getTime())) {
+        end = new Date(currentStartDate);
+        end.setDate(end.getDate() + 7);
+      }
+    } catch (error) {
+      console.error("Error en fechas del gráfico Gantt:", error);
+      start = currentStartDate;
+      end = new Date(currentStartDate);
+      end.setDate(end.getDate() + 7);
+    }
     
     if (start > currentEndDate || end < currentStartDate) {
       return null;
@@ -115,7 +128,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
     return { left, width: barWidth };
   };
   
-  // Derived styles based on view mode
   const getCellWidth = () => {
     switch (viewMode) {
       case "day": return 80 / zoomLevel;
@@ -126,7 +138,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   
   const cellWidth = getCellWidth();
   
-  // Generate grid columns template
   const getGridTemplateColumns = () => {
     return `minmax(280px, auto) repeat(${axisDates.length}, ${cellWidth}px)`;
   };
@@ -134,14 +145,12 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   return (
     <div className="gantt-container">
       <div className="gantt-grid" style={{ gridTemplateColumns: getGridTemplateColumns() }}>
-        {/* Header with dates */}
         <GanttDateHeaders 
           axisDates={axisDates} 
           viewMode={viewMode}
           isDarkMode={isDarkMode}
         />
         
-        {/* Today indicator */}
         <GanttTodayIndicator 
           currentStartDate={currentStartDate}
           currentEndDate={currentEndDate}
@@ -153,7 +162,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
           }}
         />
         
-        {/* Render projects, systems, subsystems and their activities */}
         {data.map((proyecto) => (
           <React.Fragment key={proyecto.id}>
             <GanttProjectHeader 
@@ -170,7 +178,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                   isDarkMode={isDarkMode}
                 />
                 
-                {/* Render subsystems if the option is enabled */}
                 {mostrarSubsistemas && sistema.subsistemas.map((subsistema) => (
                   <React.Fragment key={`${proyecto.id}-${sistema.nombre}-${subsistema.nombre}`}>
                     <GanttSubsystemHeader 
@@ -179,17 +186,18 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                       isDarkMode={isDarkMode}
                     />
                     
-                    {/* Render activities for this subsystem */}
                     {subsistema.actividades.map((actividad) => {
+                      const fechaInicio = new Date(actividad.fechaInicio);
+                      const fechaFin = new Date(actividad.fechaFin);
+                      
                       const activityPosition = getItemPosition(
-                        actividad.fechaInicio,
-                        actividad.fechaFin,
+                        isNaN(fechaInicio.getTime()) ? new Date() : fechaInicio,
+                        isNaN(fechaFin.getTime()) ? new Date(new Date().setDate(new Date().getDate() + 7)) : fechaFin,
                         cellWidth
                       );
 
                       if (!activityPosition) return null;
 
-                      // Create a unique color based on the actividad's system and subsystem
                       const getColorShade = (str: string) => {
                         let hash = 0;
                         for (let i = 0; i < str.length; i++) {
@@ -230,24 +238,43 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                       );
                     })}
                     
-                    {/* Render ITRBs for this subsystem */}
                     {subsistema.itrbs?.map((itrb) => {
-                      // Find the associated actividad to get fechaInicio
                       const actividad = subsistema.actividades.find(
                         (act) => act.id === itrb.actividadId
                       );
                       
                       if (!actividad) return null;
                       
+                      let fechaInicio;
+                      let fechaLimite;
+                      
+                      try {
+                        fechaInicio = itrb.fechaInicio 
+                          ? new Date(itrb.fechaInicio) 
+                          : (actividad.fechaInicio ? new Date(actividad.fechaInicio) : new Date());
+                          
+                        fechaLimite = new Date(itrb.fechaLimite);
+                        
+                        if (isNaN(fechaInicio.getTime())) fechaInicio = new Date();
+                        if (isNaN(fechaLimite.getTime())) {
+                          fechaLimite = new Date();
+                          fechaLimite.setDate(fechaLimite.getDate() + 7);
+                        }
+                      } catch (error) {
+                        console.error("Error en fechas de ITRB:", error);
+                        fechaInicio = new Date();
+                        fechaLimite = new Date();
+                        fechaLimite.setDate(fechaLimite.getDate() + 7);
+                      }
+                      
                       const itrbPosition = getItemPosition(
-                        actividad.fechaInicio, // Use the actividad's fechaInicio
-                        itrb.fechaLimite,
+                        fechaInicio,
+                        fechaLimite,
                         cellWidth
                       );
                       
                       if (!itrbPosition) return null;
                       
-                      // Get color based on ITR state
                       const getItrColor = (estado: string) => {
                         switch (estado) {
                           case "Completado": return { bg: isDarkMode ? "#22c55e" : "#4ade80", border: "#16a34a" };
@@ -291,18 +318,18 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                   </React.Fragment>
                 ))}
                 
-                {/* If subsystems are not shown, display activities directly under systems */}
                 {!mostrarSubsistemas && sistema.actividades?.map((actividad) => {
+                  const fechaInicio = new Date(actividad.fechaInicio);
+                  const fechaFin = new Date(actividad.fechaFin);
+                  
                   const activityPosition = getItemPosition(
-                    actividad.fechaInicio,
-                    actividad.fechaFin,
+                    isNaN(fechaInicio.getTime()) ? new Date() : fechaInicio,
+                    isNaN(fechaFin.getTime()) ? new Date(new Date().setDate(new Date().getDate() + 7)) : fechaFin,
                     cellWidth
                   );
                   
                   if (!activityPosition) return null;
                   
-                  // Since we're not using GanttActivityBar component directly anymore,
-                  // we'll implement the rendering here
                   return (
                     <div 
                       key={actividad.id} 
@@ -334,10 +361,8 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
         ))}
       </div>
       
-      {/* Show legend if the option is enabled */}
       {mostrarLeyenda && <GanttLegend mostrarLeyenda={mostrarLeyenda} />}
       
-      {/* Tooltip */}
       {tooltipInfo.visible && tooltipInfo.type === "actividad" && (
         <GanttTooltip 
           item={tooltipInfo.data} 
