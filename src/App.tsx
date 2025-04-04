@@ -4,8 +4,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
+import { useAppContext } from "@/context/AppContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ITRManagement from "./pages/ITRManagement";
@@ -24,6 +25,76 @@ const queryClient = new QueryClient({
   },
 });
 
+// Componente que protege rutas requiriendo autenticación
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const { user } = useAppContext();
+  const location = useLocation();
+
+  // Si el usuario no está autenticado, redirigir a login
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
+
+// Componente que redirige usuarios ya autenticados desde login
+const PublicRoute = ({ children }: { children: JSX.Element }) => {
+  const { user } = useAppContext();
+  const location = useLocation();
+
+  // Si el usuario ya está autenticado y está intentando ir a login, redirigirlo a home
+  if (user && location.pathname === '/login') {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/login" element={
+        <PublicRoute>
+          <LoginPage />
+        </PublicRoute>
+      } />
+
+      {/* Rutas protegidas */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <Index />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/itr-management" element={
+        <ProtectedRoute>
+          <ITRManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/ai-assistant" element={
+        <ProtectedRoute>
+          <AIAssistant />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/test-gantt" element={
+        <ProtectedRoute>
+          <TestGanttPage />
+        </ProtectedRoute>
+      } />
+      
+      {/* Ruta para NotFound también protegida */}
+      <Route path="*" element={
+        <ProtectedRoute>
+          <NotFound />
+        </ProtectedRoute>
+      } />
+    </Routes>
+  );
+};
+
 const App = () => (
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -32,15 +103,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/itr-management" element={<ITRManagement />} />
-              <Route path="/ai-assistant" element={<AIAssistant />} />
-              <Route path="/test-gantt" element={<TestGanttPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppRoutes />
             <ChatbotButton />
           </BrowserRouter>
         </TooltipProvider>

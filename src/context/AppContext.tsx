@@ -2,9 +2,9 @@ import React, { createContext, useContext, useState, useEffect, Dispatch, SetSta
 import { 
   User, 
   Actividad, 
-  ITRB, 
+  ITR, 
   KPIs, 
-  EstadoITRB, 
+  EstadoITR, 
   Proyecto, 
   Alerta, 
   AppTheme,
@@ -12,6 +12,8 @@ import {
   KPIConfig,
   APIKeys
 } from "@/types";
+import { persistentStorage } from "@/services/PersistentStorage";
+import { toast } from "sonner";
 
 interface AppContextType {
   // Usuario y autenticación
@@ -21,6 +23,7 @@ interface AppContextType {
   logout: () => void;
   isAdmin: boolean;
   isTecnico: boolean;
+  changePassword: (email: string, currentPassword: string, newPassword: string) => Promise<boolean>;
   
   // Tema de la aplicación
   theme: AppTheme;
@@ -33,7 +36,7 @@ interface AppContextType {
   deleteProyecto: (id: string) => void;
   proyectoActual: string | "todos";
   setProyectoActual: (id: string | "todos") => void;
-  setProyectos: (proyectos: Proyecto[]) => void; // Required for backups
+  setProyectos: (proyectos: Proyecto[]) => void;
   
   // Actividades
   actividades: Actividad[];
@@ -42,11 +45,11 @@ interface AppContextType {
   updateActividad: (id: string, actividad: Actividad) => void;
   deleteActividad: (id: string) => void;
   
-  // ITRBs
-  itrbItems: ITRB[];
-  setItrbItems: (items: ITRB[]) => void;
-  addITRB: (itrb: ITRB) => void;
-  updateITRB: (id: string, itrb: ITRB) => void;
+  // ITRs
+  itrbItems: ITR[];
+  setItrbItems: (items: ITR[]) => void;
+  addITRB: (itrb: ITR) => void;
+  updateITRB: (id: string, itrb: ITR) => void;
   deleteITRB: (id: string) => void;
   completarTodosITRB: (proyectoId: string) => void;
   
@@ -55,7 +58,7 @@ interface AppContextType {
   addAlerta: (alerta: Alerta) => void;
   markAlertaAsRead: (id: string) => void;
   deleteAlerta: (id: string) => void;
-  setAlertas: (alertas: Alerta[]) => void; // Required for backups
+  setAlertas: (alertas: Alerta[]) => void;
   
   // Filtros
   filtros: FiltrosDashboard;
@@ -71,6 +74,11 @@ interface AppContextType {
   // API Keys
   apiKeys: APIKeys;
   updateAPIKeys: (keys: Partial<APIKeys>) => void;
+  
+  // Respaldo automático
+  createManualBackup: () => string;
+  restoreFromBackup: (backupData: string) => boolean;
+  getLastBackupTime: () => string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -80,7 +88,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [user, setUser] = useState<User | null>(null);
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
-  const [itrbItems, setItrbItems] = useState<ITRB[]>([]);
+  const [itrbItems, setItrbItems] = useState<ITR[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [proyectoActual, setProyectoActual] = useState<string | "todos">("todos");
   const [theme, setTheme] = useState<AppTheme>({ mode: "light" });
@@ -88,7 +96,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // Configuración de KPIs
   const [kpiConfig, setKPIConfig] = useState<KPIConfig>({
-    itrVencidosMostrar: "total", // valores posibles: "total", "diferencia", "pendientes", "completados"
+    itrVencidosMostrar: "total",
   });
   
   // API Keys
@@ -101,75 +109,102 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isAdmin = user?.role === "admin";
   const isTecnico = user?.role === "tecnico";
 
-  // Cargar datos desde localStorage al iniciar
+  // Usuarios del sistema (simulación de base de datos)
+  const [allUsers, setAllUsers] = useState<{[email: string]: User & {password: string}}>({
+    "admin@fossil.com": {
+      email: "admin@fossil.com",
+      role: "admin",
+      nombre: "Administrador",
+      password: "admin123"
+    },
+    "tecnico@ejemplo.com": {
+      email: "tecnico@ejemplo.com",
+      role: "tecnico",
+      nombre: "Técnico Ejemplo",
+      password: "tecnico123"
+    },
+    "viewer@ejemplo.com": {
+      email: "viewer@ejemplo.com",
+      role: "viewer",
+      nombre: "Visualizador",
+      password: "viewer123"
+    }
+  });
+
+  // Cargar datos desde el almacenamiento persistente al iniciar
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = persistentStorage.getItem<User>("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      setUser(storedUser);
     }
 
-    const storedProyectos = localStorage.getItem("proyectos");
+    const storedProyectos = persistentStorage.getItem<Proyecto[]>("proyectos");
     if (storedProyectos) {
-      setProyectos(JSON.parse(storedProyectos));
+      setProyectos(storedProyectos);
     }
 
-    const storedActividades = localStorage.getItem("actividades");
+    const storedActividades = persistentStorage.getItem<Actividad[]>("actividades");
     if (storedActividades) {
-      setActividades(JSON.parse(storedActividades));
+      setActividades(storedActividades);
     }
 
-    const storedITRBs = localStorage.getItem("itrbItems");
+    const storedITRBs = persistentStorage.getItem<ITR[]>("itrbItems");
     if (storedITRBs) {
-      setItrbItems(JSON.parse(storedITRBs));
+      setItrbItems(storedITRBs);
     }
 
-    const storedAlertas = localStorage.getItem("alertas");
+    const storedAlertas = persistentStorage.getItem<Alerta[]>("alertas");
     if (storedAlertas) {
-      setAlertas(JSON.parse(storedAlertas));
+      setAlertas(storedAlertas);
     }
 
-    const storedTheme = localStorage.getItem("theme");
+    const storedTheme = persistentStorage.getItem<AppTheme>("theme");
     if (storedTheme) {
-      setTheme(JSON.parse(storedTheme));
+      setTheme(storedTheme);
     }
     
-    const storedKPIConfig = localStorage.getItem("kpiConfig");
+    const storedKPIConfig = persistentStorage.getItem<KPIConfig>("kpiConfig");
     if (storedKPIConfig) {
-      setKPIConfig(JSON.parse(storedKPIConfig));
+      setKPIConfig(storedKPIConfig);
     }
     
-    const storedAPIKeys = localStorage.getItem("apiKeys");
+    const storedAPIKeys = persistentStorage.getItem<APIKeys>("apiKeys");
     if (storedAPIKeys) {
-      setApiKeys(JSON.parse(storedAPIKeys));
+      setApiKeys(storedAPIKeys);
+    }
+    
+    const storedUsers = persistentStorage.getItem<{[email: string]: User & {password: string}}>("allUsers");
+    if (storedUsers) {
+      setAllUsers(storedUsers);
     }
   }, []);
 
-  // Guardar datos en localStorage cuando cambian
+  // Guardar datos en almacenamiento persistente cuando cambian
   useEffect(() => {
     if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
+      persistentStorage.setItem("user", user);
     } else {
-      localStorage.removeItem("user");
+      persistentStorage.removeItem("user");
     }
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem("proyectos", JSON.stringify(proyectos));
+    persistentStorage.setItem("proyectos", proyectos);
   }, [proyectos]);
 
   useEffect(() => {
-    localStorage.setItem("actividades", JSON.stringify(actividades));
+    persistentStorage.setItem("actividades", actividades);
   }, [actividades]);
 
   useEffect(() => {
-    localStorage.setItem("itrbItems", JSON.stringify(itrbItems));
+    persistentStorage.setItem("itrbItems", itrbItems);
     
-    // Actualizar automáticamente los estados de los ITRB
+    // Actualizar automáticamente los estados de los ITR
     const today = new Date();
     const updatedItems = itrbItems.map(item => {
-      const fechaLimite = new Date(item.fechaLimite);
+      const fechaLimite = new Date(item.fechaFin);
       
-      let estado: EstadoITRB = "En curso";
+      let estado: EstadoITR = "En curso";
       
       if (item.cantidadRealizada >= item.cantidadTotal) {
         estado = "Completado";
@@ -183,19 +218,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (JSON.stringify(updatedItems) !== JSON.stringify(itrbItems)) {
       setItrbItems(updatedItems);
       
-      // Generar alertas para los ITRB vencidos
+      // Generar alertas para los ITR vencidos
       updatedItems.forEach(item => {
         if (item.estado === "Vencido" && !alertas.some(alerta => 
           alerta.tipo === "Vencimiento" && 
           alerta.itemsRelacionados?.includes(item.id)
         )) {
-          // Encontrar el proyecto asociado a este ITRB
+          // Encontrar el proyecto asociado a este ITR
           const actividad = actividades.find(act => act.id === item.actividadId);
           if (actividad) {
             addAlerta({
               id: `alerta-${Date.now()}-${item.id}`,
               tipo: "Vencimiento",
-              mensaje: `El ITR B "${item.descripcion}" ha vencido.`,
+              mensaje: `El ITR "${item.descripcion}" ha vencido.`,
               fechaCreacion: new Date().toISOString(),
               leida: false,
               itemsRelacionados: [item.id],
@@ -205,14 +240,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
     }
-  }, [itrbItems]);
+  }, [itrbItems, alertas, actividades]);
 
   useEffect(() => {
-    localStorage.setItem("alertas", JSON.stringify(alertas));
+    persistentStorage.setItem("alertas", alertas);
   }, [alertas]);
 
   useEffect(() => {
-    localStorage.setItem("theme", JSON.stringify(theme));
+    persistentStorage.setItem("theme", theme);
     // Aplicar clase al body para el tema oscuro/claro
     if (theme.mode === "dark") {
       document.documentElement.classList.add("dark");
@@ -222,12 +257,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [theme]);
   
   useEffect(() => {
-    localStorage.setItem("kpiConfig", JSON.stringify(kpiConfig));
+    persistentStorage.setItem("kpiConfig", kpiConfig);
   }, [kpiConfig]);
 
   useEffect(() => {
-    localStorage.setItem("apiKeys", JSON.stringify(apiKeys));
+    persistentStorage.setItem("apiKeys", apiKeys);
   }, [apiKeys]);
+  
+  useEffect(() => {
+    persistentStorage.setItem("allUsers", allUsers);
+  }, [allUsers]);
 
   // Función para actualizar la configuración de KPIs
   const updateKPIConfig = (config: Partial<KPIConfig>) => {
@@ -241,32 +280,93 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Funciones de autenticación
   const login = async (email: string, password?: string): Promise<boolean> => {
-    // Simulación de login
-    // Para admin se valida contraseña, para técnico solo email
-    if (email === "admin@fossil.com" && (password === "admin123" || !password)) {
+    // Verificar si el usuario existe
+    const userData = allUsers[email.toLowerCase()];
+    
+    if (!userData) {
+      // Si el email no está registrado, crear un usuario visualizador
+      if (!password) {
+        // Crear nuevo usuario
+        const newUser: User & {password: string} = {
+          email: email.toLowerCase(),
+          role: "viewer",
+          nombre: `Usuario ${email.split('@')[0]}`,
+          password: "viewer123" // Contraseña por defecto
+        };
+        
+        setAllUsers(prev => ({
+          ...prev,
+          [email.toLowerCase()]: newUser
+        }));
+        
+        setUser({
+          email: email.toLowerCase(),
+          role: "viewer",
+          nombre: `Usuario ${email.split('@')[0]}`
+        });
+        
+        return true;
+      }
+      return false;
+    }
+    
+    // Si es admin o se proporciona contraseña, validar
+    if (userData.role === "admin" || password) {
+      if (password && password !== userData.password) {
+        return false; // Contraseña incorrecta
+      }
+      
+      // Login exitoso
       setUser({
-        email,
-        role: "admin",
-        nombre: "Administrador"
+        email: userData.email,
+        role: userData.role,
+        nombre: userData.nombre
       });
-      return true;
-    } else if (email.includes("tecnico") || email.includes("técnico")) {
-      // Simular un técnico
-      setUser({
-        email,
-        role: "tecnico",
-        nombre: `Técnico ${email.split('@')[0]}`
-      });
+      
+      // Guardar la sesión
+      persistentStorage.setItem("lastSession", Date.now().toString());
+      
       return true;
     } else {
-      // Cualquier otro email es visualizador
+      // Para usuarios no admin sin contraseña
       setUser({
-        email,
-        role: "viewer",
-        nombre: `Usuario ${email.split('@')[0]}`
+        email: userData.email,
+        role: userData.role,
+        nombre: userData.nombre
       });
+      
+      // Guardar la sesión
+      persistentStorage.setItem("lastSession", Date.now().toString());
+      
       return true;
     }
+  };
+
+  const changePassword = async (email: string, currentPassword: string, newPassword: string): Promise<boolean> => {
+    // Verificar si el usuario existe
+    const userData = allUsers[email.toLowerCase()];
+    
+    if (!userData) {
+      return false;
+    }
+    
+    // Verificar contraseña actual
+    if (userData.password !== currentPassword) {
+      return false;
+    }
+    
+    // Cambiar contraseña
+    const updatedUser = {
+      ...userData,
+      password: newPassword
+    };
+    
+    setAllUsers(prev => ({
+      ...prev,
+      [email.toLowerCase()]: updatedUser
+    }));
+    
+    return true;
   };
 
   const logout = () => {
@@ -275,8 +375,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Reset filtros to default
     setFiltros({ proyecto: "todos" });
     
-    // Clear localStorage completely to avoid stale data
-    localStorage.clear();
+    // Mantener los datos pero eliminar la sesión
+    persistentStorage.removeItem("lastSession");
+    persistentStorage.removeItem("user");
     
     // Set default theme
     setTheme({ mode: "light" });
@@ -326,11 +427,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Funciones CRUD para ITRB
-  const addITRB = (itrb: ITRB) => {
+  const addITRB = (itrb: ITR) => {
     setItrbItems([...itrbItems, itrb]);
   };
 
-  const updateITRB = (id: string, itrb: ITRB) => {
+  const updateITRB = (id: string, itrb: ITR) => {
     setItrbItems(itrbItems.map(item => item.id === id ? itrb : item));
   };
 
@@ -351,7 +452,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           ...item,
           cantidadRealizada: item.cantidadTotal,
-          estado: "Completado"
+          estado: "Completado" as EstadoITR
         };
       }
       return item;
@@ -373,7 +474,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Calcular KPIs
   const getKPIs = (proyectoId?: string): KPIs => {
-    // Filtrar por proyecto si es necesario
+    // Código de KPIs sin cambios
     const actividadesFiltradas = proyectoId ? 
       actividades.filter(a => a.proyectoId === proyectoId) : 
       actividades;
@@ -405,10 +506,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .filter(Boolean)
     ).size;
     
-    // Contar actividades vencidas (mejorado)
+    // Contar actividades vencidas
     const hoy = new Date();
     const itrbsVencidos = itrbFiltrados.filter(item => {
-      const fechaLimite = new Date(item.fechaLimite);
+      const fechaLimite = new Date(item.fechaFin);
       return fechaLimite < hoy; // Es vencido si la fecha límite es anterior a hoy
     });
     
@@ -425,6 +526,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  // Funciones para respaldo de datos
+  const createManualBackup = (): string => {
+    persistentStorage.createBackup();
+    toast.success("Respaldo manual creado correctamente");
+    return persistentStorage.getLastBackupDate();
+  };
+
+  const restoreFromBackup = (backupData: string): boolean => {
+    const success = persistentStorage.restoreBackup(backupData);
+    
+    if (success) {
+      // Recargar datos después de la restauración
+      const storedProyectos = persistentStorage.getItem<Proyecto[]>("proyectos");
+      if (storedProyectos) setProyectos(storedProyectos);
+      
+      const storedActividades = persistentStorage.getItem<Actividad[]>("actividades");
+      if (storedActividades) setActividades(storedActividades);
+      
+      const storedITRBs = persistentStorage.getItem<ITR[]>("itrbItems");
+      if (storedITRBs) setItrbItems(storedITRBs);
+      
+      const storedAlertas = persistentStorage.getItem<Alerta[]>("alertas");
+      if (storedAlertas) setAlertas(storedAlertas);
+      
+      const storedUsers = persistentStorage.getItem<typeof allUsers>("allUsers");
+      if (storedUsers) setAllUsers(storedUsers);
+      
+      toast.success("Respaldo restaurado correctamente");
+    } else {
+      toast.error("Error al restaurar el respaldo");
+    }
+    
+    return success;
+  };
+
+  const getLastBackupTime = (): string => {
+    return persistentStorage.getLastBackupDate();
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -432,6 +572,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUser,
         login,
         logout,
+        changePassword,
         isAdmin,
         isTecnico,
         theme,
@@ -465,7 +606,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateKPIConfig,
         apiKeys,
         updateAPIKeys,
-        getKPIs
+        getKPIs,
+        createManualBackup,
+        restoreFromBackup,
+        getLastBackupTime
       }}
     >
       {children}

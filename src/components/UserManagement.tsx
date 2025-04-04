@@ -38,8 +38,10 @@ import {
   UserMinus, 
   Settings, 
   Lock, 
-  UserCog 
+  UserCog,
+  KeyRound
 } from "lucide-react";
+import { persistentStorage } from "@/services/PersistentStorage";
 
 // Estructura para permisos
 interface UserPermission {
@@ -65,10 +67,11 @@ interface AppUser {
 }
 
 const UserManagement: React.FC = () => {
-  const { user, isAdmin } = useAppContext();
+  const { user, isAdmin, changePassword } = useAppContext();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   
   // Nuevo usuario
@@ -87,68 +90,118 @@ const UserManagement: React.FC = () => {
     }
   });
   
-  // Cargar usuarios (simulación)
+  // Estado para cambio de contraseña
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  
+  // Cargar usuarios desde almacenamiento persistente
   useEffect(() => {
-    // En una implementación real, esto vendría de la API/base de datos
-    const mockUsers: AppUser[] = [
-      {
-        id: "user-1",
-        nombre: "Admin Principal",
-        email: "admin@example.com",
-        password: "********",
-        rol: "admin",
-        permisos: {
-          dashboard: true,
-          actividades: true,
-          itrb: true,
-          proyectos: true,
-          reportes: true,
-          configuracion: true
-        },
-        activo: true,
-        fechaCreacion: "2023-01-15T10:30:00Z",
-        ultimoAcceso: new Date().toISOString()
-      },
-      {
-        id: "user-2",
-        nombre: "Técnico Test",
-        email: "tecnico@example.com",
-        password: "********",
-        rol: "tecnico",
-        permisos: {
-          dashboard: true,
-          actividades: true,
-          itrb: true,
-          proyectos: false,
-          reportes: true,
-          configuracion: false
-        },
-        activo: true,
-        fechaCreacion: "2023-02-20T14:15:00Z",
-        ultimoAcceso: "2023-05-10T09:45:00Z"
-      },
-      {
-        id: "user-3",
-        nombre: "Visualizador",
-        email: "viewer@example.com",
-        password: "********",
-        rol: "viewer",
-        permisos: {
-          dashboard: true,
-          actividades: true,
-          itrb: false,
-          proyectos: false,
-          reportes: false,
-          configuracion: false
-        },
-        activo: true,
-        fechaCreacion: "2023-03-05T11:20:00Z",
-        ultimoAcceso: "2023-05-09T16:30:00Z"
-      }
-    ];
+    // Intentar cargar usuarios del almacenamiento persistente
+    const allUsers = persistentStorage.getItem<{[email: string]: any}>("allUsers");
     
-    setUsers(mockUsers);
+    if (allUsers) {
+      // Convertir formato de objeto a array
+      const usersArray: AppUser[] = Object.values(allUsers).map(userData => ({
+        id: userData.id || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        nombre: userData.nombre,
+        email: userData.email,
+        password: userData.password || "********",
+        rol: userData.role || "viewer",
+        permisos: {
+          dashboard: true,
+          actividades: userData.role === "admin" || userData.role === "tecnico",
+          itrb: userData.role === "admin" || userData.role === "tecnico",
+          proyectos: userData.role === "admin",
+          reportes: userData.role === "admin" || userData.role === "tecnico",
+          configuracion: userData.role === "admin"
+        },
+        activo: true,
+        fechaCreacion: userData.fechaCreacion || new Date().toISOString(),
+        ultimoAcceso: userData.ultimoAcceso
+      }));
+      
+      setUsers(usersArray);
+    } else {
+      // Si no hay usuarios en el almacenamiento, usar los de ejemplo
+      const mockUsers: AppUser[] = [
+        {
+          id: "user-1",
+          nombre: "Admin Principal",
+          email: "admin@fossil.com",
+          password: "********",
+          rol: "admin",
+          permisos: {
+            dashboard: true,
+            actividades: true,
+            itrb: true,
+            proyectos: true,
+            reportes: true,
+            configuracion: true
+          },
+          activo: true,
+          fechaCreacion: "2023-01-15T10:30:00Z",
+          ultimoAcceso: new Date().toISOString()
+        },
+        {
+          id: "user-2",
+          nombre: "Técnico Test",
+          email: "tecnico@ejemplo.com",
+          password: "********",
+          rol: "tecnico",
+          permisos: {
+            dashboard: true,
+            actividades: true,
+            itrb: true,
+            proyectos: false,
+            reportes: true,
+            configuracion: false
+          },
+          activo: true,
+          fechaCreacion: "2023-02-20T14:15:00Z",
+          ultimoAcceso: "2023-05-10T09:45:00Z"
+        },
+        {
+          id: "user-3",
+          nombre: "Visualizador",
+          email: "viewer@ejemplo.com",
+          password: "********",
+          rol: "viewer",
+          permisos: {
+            dashboard: true,
+            actividades: true,
+            itrb: false,
+            proyectos: false,
+            reportes: false,
+            configuracion: false
+          },
+          activo: true,
+          fechaCreacion: "2023-03-05T11:20:00Z",
+          ultimoAcceso: "2023-05-09T16:30:00Z"
+        }
+      ];
+      
+      setUsers(mockUsers);
+    }
   }, []);
+  
+  // Guardar usuarios en almacenamiento persistente cuando cambian
+  useEffect(() => {
+    if (users.length > 0) {
+      // Convertir array a objeto por email
+      const usersObject = users.reduce((acc, user) => {
+        acc[user.email.toLowerCase()] = {
+          ...user,
+          role: user.rol // Asegurar compatibilidad con formato de AppContext
+        };
+        return acc;
+      }, {} as {[email: string]: any});
+      
+      persistentStorage.setItem("allUsers", usersObject);
+    }
+  }, [users]);
   
   // Función para añadir usuario
   const handleAddUser = () => {
@@ -164,13 +217,13 @@ const UserManagement: React.FC = () => {
     }
     
     // Verificar si el email ya existe
-    if (users.some(u => u.email === newUser.email)) {
+    if (users.some(u => u.email.toLowerCase() === newUser.email.toLowerCase())) {
       toast.error("Ya existe un usuario con este email");
       return;
     }
     
     const newUserComplete: AppUser = {
-      id: `user-${Date.now()}`,
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       ...newUser,
       activo: true,
       fechaCreacion: new Date().toISOString()
@@ -188,6 +241,17 @@ const UserManagement: React.FC = () => {
     setShowEditUserDialog(true);
   };
   
+  // Función para abrir diálogo de cambio de contraseña
+  const handlePasswordChange = (user: AppUser) => {
+    setSelectedUser(user);
+    setPasswordData({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: ""
+    });
+    setShowPasswordDialog(true);
+  };
+  
   // Función para guardar edición
   const handleSaveEdit = () => {
     if (!selectedUser) return;
@@ -201,19 +265,82 @@ const UserManagement: React.FC = () => {
     toast.success("Usuario actualizado exitosamente");
   };
   
+  // Función para cambiar contraseña
+  const handleSavePassword = async () => {
+    if (!selectedUser) return;
+    
+    // Validaciones
+    if (!passwordData.currentPassword) {
+      toast.error("La contraseña actual es requerida");
+      return;
+    }
+    
+    if (passwordData.newPassword.length < 6) {
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+    
+    try {
+      // Usar la función del contexto para cambiar contraseña
+      const success = await changePassword(
+        selectedUser.email,
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
+      
+      if (success) {
+        // Actualizar usuario local
+        setUsers(users.map(u => 
+          u.id === selectedUser.id 
+            ? { ...u, password: "********" } // No almacenamos la contraseña real en el estado local
+            : u
+        ));
+        
+        setShowPasswordDialog(false);
+        setSelectedUser(null);
+        toast.success("Contraseña actualizada exitosamente");
+      } else {
+        toast.error("Contraseña actual incorrecta");
+      }
+    } catch (error) {
+      toast.error("Error al cambiar la contraseña");
+      console.error("Error al cambiar contraseña:", error);
+    }
+  };
+  
   // Función para eliminar usuario
   const handleDeleteUser = (userId: string) => {
+    const userToDelete = users.find(u => u.id === userId);
+    
+    // No permitir eliminar al usuario admin principal
+    if (userToDelete?.email.toLowerCase() === "admin@fossil.com") {
+      toast.error("No se puede eliminar el usuario administrador principal");
+      return;
+    }
+    
     setUsers(users.filter(u => u.id !== userId));
     toast.success("Usuario eliminado exitosamente");
   };
   
   // Función para activar/desactivar usuario
   const handleToggleUserStatus = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    
+    // No permitir desactivar al usuario admin principal
+    if (user?.email.toLowerCase() === "admin@fossil.com" && user.activo) {
+      toast.error("No se puede desactivar el usuario administrador principal");
+      return;
+    }
+    
     setUsers(users.map(u => 
       u.id === userId ? { ...u, activo: !u.activo } : u
     ));
     
-    const user = users.find(u => u.id === userId);
     toast.success(`Usuario ${user?.activo ? 'desactivado' : 'activado'} exitosamente`);
   };
   
@@ -405,6 +532,16 @@ const UserManagement: React.FC = () => {
                     >
                       <Settings className="h-4 w-4 mr-2" />
                       Editar
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handlePasswordChange(user)}
+                      className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                    >
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Contraseña
                     </Button>
                     
                     <Button
@@ -706,18 +843,6 @@ const UserManagement: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="edit-password">Contraseña</Label>
-                <Input 
-                  id="edit-password" 
-                  type="password"
-                  value={selectedUser.password}
-                  onChange={(e) => setSelectedUser({...selectedUser, password: e.target.value})}
-                  placeholder="Dejar vacío para mantener la misma"
-                />
-                <p className="text-xs text-muted-foreground">Dejar vacío para no cambiar la contraseña</p>
-              </div>
-              
-              <div className="space-y-2">
                 <Label>Rol del Usuario</Label>
                 <div className="flex space-x-4 mt-1">
                   <div className="flex items-center">
@@ -847,6 +972,69 @@ const UserManagement: React.FC = () => {
             <Button onClick={handleSaveEdit}>
               <UserCog className="h-4 w-4 mr-2" />
               Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo para cambiar contraseña */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Cambiar Contraseña</DialogTitle>
+            <DialogDescription>
+              {selectedUser && `Cambiar contraseña para el usuario ${selectedUser.nombre} (${selectedUser.email})`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Contraseña Actual *</Label>
+              <Input 
+                id="current-password" 
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                placeholder="••••••••"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nueva Contraseña *</Label>
+              <Input 
+                id="new-password" 
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                placeholder="••••••••"
+              />
+              <p className="text-xs text-muted-foreground">
+                La contraseña debe tener al menos 6 caracteres
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirmar Nueva Contraseña *</Label>
+              <Input 
+                id="confirm-password" 
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowPasswordDialog(false);
+              setSelectedUser(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSavePassword}>
+              <KeyRound className="h-4 w-4 mr-2" />
+              Cambiar Contraseña
             </Button>
           </DialogFooter>
         </DialogContent>
