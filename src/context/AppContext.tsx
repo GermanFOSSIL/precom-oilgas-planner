@@ -13,9 +13,7 @@ import {
   APIKeys,
   ITRB,
   EstadoITRB,
-  ITR,
-  EstadoITR,
-  Proyecto as LegacyProyecto
+  LegacyProyecto
 } from "@/types";
 import { isWithinInterval, parseISO } from "date-fns";
 import { convertToITR, convertToProyecto } from '@/utils/typeMigration';

@@ -1,5 +1,5 @@
 
-import { ITR, Proyecto } from "@/types";
+import { ITR, Proyecto } from '@/types';
 
 /**
  * Utility functions to handle migration from old ITRB to new ITR format
