@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import {
@@ -87,22 +86,19 @@ const ITRBTable: React.FC = () => {
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoITRB | "todos">("todos");
   const [mccFiltro, setMccFiltro] = useState<boolean | "todos">("todos");
   
-  // Nuevos estados para filtros de checkbox
   const [sistemasFiltrados, setSistemasFiltrados] = useState<string[]>([]);
   const [subsistemasFiltrados, setSubsistemasFiltrados] = useState<string[]>([]);
   const [actividadesFiltradas, setActividadesFiltradas] = useState<string[]>([]);
   const [showFilterPopover, setShowFilterPopover] = useState(false);
   
-  // Estado para la edición
   const [itrbEditando, setItrbEditando] = useState<ITRB | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
 
-  // Obtener sistemas, subsistemas y actividades disponibles para filtrar
   const sistemasDisponibles = useMemo(() => {
     const sistemas = new Set<string>();
     actividades.forEach(act => {
       if (proyectoActual === "todos" || act.proyectoId === proyectoActual) {
-        sistemas.add(act.sistema);
+        sistemas.add(act.sistema || "sin-sistema");
       }
     });
     return Array.from(sistemas).sort();
@@ -112,8 +108,8 @@ const ITRBTable: React.FC = () => {
     const subsistemas = new Set<string>();
     actividades.forEach(act => {
       if ((proyectoActual === "todos" || act.proyectoId === proyectoActual) &&
-          (sistemasFiltrados.length === 0 || sistemasFiltrados.includes(act.sistema))) {
-        subsistemas.add(act.subsistema);
+          (sistemasFiltrados.length === 0 || sistemasFiltrados.includes(act.sistema || "sin-sistema"))) {
+        subsistemas.add(act.subsistema || "sin-subsistema");
       }
     });
     return Array.from(subsistemas).sort();
@@ -123,58 +119,49 @@ const ITRBTable: React.FC = () => {
     return actividades
       .filter(act => {
         if (proyectoActual !== "todos" && act.proyectoId !== proyectoActual) return false;
-        if (sistemasFiltrados.length > 0 && !sistemasFiltrados.includes(act.sistema)) return false;
-        if (subsistemasFiltrados.length > 0 && !subsistemasFiltrados.includes(act.subsistema)) return false;
+        if (sistemasFiltrados.length > 0 && !sistemasFiltrados.includes(act.sistema || "sin-sistema")) return false;
+        if (subsistemasFiltrados.length > 0 && !subsistemasFiltrados.includes(act.subsistema || "sin-subsistema")) return false;
         return true;
       })
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [actividades, proyectoActual, sistemasFiltrados, subsistemasFiltrados]);
 
-  // Obtener los ITRB filtrados
   const itrbFiltrados = useMemo(() => {
     return itrbItems.filter(itrb => {
-      // Encontrar la actividad a la que pertenece el ITRB
       const actividad = actividades.find(act => act.id === itrb.actividadId);
       
-      // Filtrar por proyecto
       if (filtros.proyecto !== "todos" && proyectoActual !== "todos") {
         if (!actividad || actividad.proyectoId !== proyectoActual) {
           return false;
         }
       }
       
-      // Filtrar por sistema (checkbox)
       if (sistemasFiltrados.length > 0) {
-        if (!actividad || !sistemasFiltrados.includes(actividad.sistema)) {
+        if (!actividad || !sistemasFiltrados.includes(actividad.sistema || "sin-sistema")) {
           return false;
         }
       }
       
-      // Filtrar por subsistema (checkbox)
       if (subsistemasFiltrados.length > 0) {
-        if (!actividad || !subsistemasFiltrados.includes(actividad.subsistema)) {
+        if (!actividad || !subsistemasFiltrados.includes(actividad.subsistema || "sin-subsistema")) {
           return false;
         }
       }
       
-      // Filtrar por actividad (checkbox)
       if (actividadesFiltradas.length > 0) {
         if (!actividadesFiltradas.includes(itrb.actividadId)) {
           return false;
         }
       }
       
-      // Filtrar por estado de ITRB
       if (estadoFiltro !== "todos" && itrb.estado !== estadoFiltro) {
         return false;
       }
       
-      // Filtrar por MCC
       if (mccFiltro !== "todos" && itrb.mcc !== mccFiltro) {
         return false;
       }
       
-      // Filtrar por búsqueda en descripción o actividad
       if (busqueda) {
         const busquedaMinuscula = busqueda.toLowerCase();
         const actividadNombre = actividad ? actividad.nombre.toLowerCase() : "";
@@ -190,20 +177,17 @@ const ITRBTable: React.FC = () => {
   }, [itrbItems, actividades, proyectoActual, filtros, estadoFiltro, mccFiltro, busqueda, 
       sistemasFiltrados, subsistemasFiltrados, actividadesFiltradas]);
 
-  // Función para manejar cambios en los filtros de checkbox
   const handleSistemaChange = (sistema: string, checked: boolean) => {
     if (checked) {
       setSistemasFiltrados([...sistemasFiltrados, sistema]);
     } else {
       setSistemasFiltrados(sistemasFiltrados.filter(s => s !== sistema));
-      // Limpiar subsistemas filtrados que pertenecen a este sistema
       const subsistemasDeSistema = actividades
         .filter(act => act.sistema === sistema)
         .map(act => act.subsistema);
       
       setSubsistemasFiltrados(subsistemasFiltrados.filter(s => !subsistemasDeSistema.includes(s)));
       
-      // Limpiar actividades filtradas que pertenecen a este sistema
       const actividadesDelSistema = actividades
         .filter(act => act.sistema === sistema)
         .map(act => act.id);
@@ -218,7 +202,6 @@ const ITRBTable: React.FC = () => {
     } else {
       setSubsistemasFiltrados(subsistemasFiltrados.filter(s => s !== subsistema));
       
-      // Limpiar actividades filtradas que pertenecen a este subsistema
       const actividadesDelSubsistema = actividades
         .filter(act => act.subsistema === subsistema)
         .map(act => act.id);
@@ -244,13 +227,11 @@ const ITRBTable: React.FC = () => {
     setActividadesFiltradas([]);
   };
 
-  // Función para abrir el diálogo de edición
   const handleEdit = (itrb: ITRB) => {
     setItrbEditando({...itrb});
     setShowEditDialog(true);
   };
 
-  // Función para guardar los cambios
   const handleSaveChanges = () => {
     if (itrbEditando) {
       if (!itrbEditando.descripcion.trim() || !itrbEditando.actividadId) {
@@ -258,7 +239,6 @@ const ITRBTable: React.FC = () => {
         return;
       }
       
-      // Actualizar el estado si es necesario
       let estado: EstadoITRB = itrbEditando.estado;
       
       if (itrbEditando.cantidadRealizada >= itrbEditando.cantidadTotal) {
@@ -282,18 +262,15 @@ const ITRBTable: React.FC = () => {
     }
   };
 
-  // Función para confirmar eliminación
   const handleDelete = (id: string) => {
     deleteITRB(id);
     toast.success("ITR B eliminado exitosamente");
   };
 
-  // Obtener el porcentaje de progreso
   const getProgreso = (itrb: ITRB) => {
     return (itrb.cantidadRealizada / itrb.cantidadTotal) * 100;
   };
 
-  // Renderizar icono de estado
   const renderEstadoIcon = (estado: EstadoITRB) => {
     switch (estado) {
       case "Completado":
@@ -307,7 +284,6 @@ const ITRBTable: React.FC = () => {
     }
   };
 
-  // Función para cambiar la cantidad realizada
   const handleCantidadRealizadaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (itrbEditando) {
       const cantidad = parseInt(e.target.value);
@@ -320,7 +296,6 @@ const ITRBTable: React.FC = () => {
     }
   };
 
-  // Función para cambiar la fecha límite
   const handleFechaLimiteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (itrbEditando) {
       const fechaLimite = e.target.value;
@@ -369,8 +344,8 @@ const ITRBTable: React.FC = () => {
         </Select>
         
         <Select
-          value={mccFiltro.toString()}
-          onValueChange={(value) => setMccFiltro(value === "true" ? true : value === "false" ? false : "todos")}
+          value={mccFiltro === "todos" ? "todos" : String(mccFiltro)}
+          onValueChange={(value) => setMccFiltro(value === "todos" ? "todos" : value === "true")}
         >
           <SelectTrigger className="w-[120px]">
             <SelectValue placeholder="MCC" />
@@ -382,7 +357,6 @@ const ITRBTable: React.FC = () => {
           </SelectContent>
         </Select>
         
-        {/* Nuevo botón para filtros avanzados */}
         <Popover open={showFilterPopover} onOpenChange={setShowFilterPopover}>
           <PopoverTrigger asChild>
             <Button 
@@ -415,7 +389,6 @@ const ITRBTable: React.FC = () => {
                 </Button>
               </div>
               
-              {/* Filtro por sistema */}
               <div className="space-y-2">
                 <Label className="font-medium">Sistemas</Label>
                 <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
@@ -442,7 +415,6 @@ const ITRBTable: React.FC = () => {
                 </div>
               </div>
               
-              {/* Filtro por subsistema */}
               <div className="space-y-2">
                 <Label className="font-medium">Subsistemas</Label>
                 <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
@@ -474,7 +446,6 @@ const ITRBTable: React.FC = () => {
                 </div>
               </div>
               
-              {/* Filtro por actividad */}
               <div className="space-y-2">
                 <Label className="font-medium">Actividades</Label>
                 <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
@@ -671,7 +642,6 @@ const ITRBTable: React.FC = () => {
         </Table>
       </div>
 
-      {/* Diálogo de edición */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
@@ -701,7 +671,7 @@ const ITRBTable: React.FC = () => {
                       .filter(act => proyectoActual === "todos" || act.proyectoId === proyectoActual)
                       .map(actividad => (
                         <SelectItem key={actividad.id} value={actividad.id}>
-                          {actividad.nombre} ({actividad.sistema} - {actividad.subsistema})
+                          {actividad.nombre} ({actividad.sistema || "Sin sistema"} - {actividad.subsistema || "Sin subsistema"})
                         </SelectItem>
                       ))}
                   </SelectContent>

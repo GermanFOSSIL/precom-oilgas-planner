@@ -185,8 +185,8 @@ const PublicDashboard: React.FC = () => {
               <SelectContent>
                 <SelectItem value="todos">Todos los sistemas</SelectItem>
                 {sistemasDisponibles.map((sistema) => (
-                  <SelectItem key={sistema} value={sistema}>
-                    {sistema}
+                  <SelectItem key={sistema} value={sistema || "sin-sistema"}>
+                    {sistema || "Sin sistema"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -203,8 +203,8 @@ const PublicDashboard: React.FC = () => {
               <SelectContent>
                 <SelectItem value="todos">Todos los subsistemas</SelectItem>
                 {subsistemasFiltrados.map((subsistema) => (
-                  <SelectItem key={subsistema} value={subsistema}>
-                    {subsistema}
+                  <SelectItem key={subsistema} value={subsistema || "sin-subsistema"}>
+                    {subsistema || "Sin subsistema"}
                   </SelectItem>
                 ))}
               </SelectContent>
