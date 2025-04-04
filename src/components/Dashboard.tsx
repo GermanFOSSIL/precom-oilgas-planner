@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,12 +7,13 @@ import AlertasWidget from "@/components/AlertasWidget";
 import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { ConfiguracionGrafico, FiltrosDashboard } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Calendar } from "lucide-react";
+import { AlertTriangle, Calendar, FileText } from "lucide-react";
 import PublicHeader from "@/components/PublicHeader";
 import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
 import FilterControls from "@/components/dashboard/FilterControls";
 import GanttControls from "@/components/dashboard/GanttControls";
+import ReportGenerator from "@/components/ReportGenerator";
 
 const Dashboard: React.FC = () => {
   const {
@@ -36,6 +38,7 @@ const Dashboard: React.FC = () => {
   const [tabActual, setTabActual] = useState("alertas");
   const [exportingChart, setExportingChart] = useState(false);
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
+  const [showReportGenerator, setShowReportGenerator] = useState(false);
 
   const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
@@ -118,6 +121,10 @@ const Dashboard: React.FC = () => {
 
   const currentFilterTimestamp = ensureStringTimestamp(Date.now());
 
+  const handleToggleReportGenerator = () => {
+    setShowReportGenerator(!showReportGenerator);
+  };
+
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
       <PublicHeader />
@@ -129,6 +136,7 @@ const Dashboard: React.FC = () => {
           onExportPDF={handleExportPDF}
           onExportExcel={handleExportExcel}
           exportingChart={exportingChart}
+          onToggleReportGenerator={handleToggleReportGenerator}
         />
 
         <div className="flex justify-end mb-4">
@@ -140,6 +148,12 @@ const Dashboard: React.FC = () => {
           />
         </div>
 
+        {showReportGenerator && (
+          <div className="mb-6">
+            <ReportGenerator />
+          </div>
+        )}
+
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
 
         <Tabs
@@ -149,7 +163,7 @@ const Dashboard: React.FC = () => {
           onValueChange={setTabActual}
         >
           <div className="flex justify-between items-center mb-4">
-            <TabsList className="grid w-full md:w-auto grid-cols-2 mb-0">
+            <TabsList className="grid w-full md:w-auto grid-cols-3 mb-0">
               <TabsTrigger value="alertas" className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 <span className="hidden sm:inline">Alertas</span>
@@ -157,6 +171,10 @@ const Dashboard: React.FC = () => {
               <TabsTrigger value="gantt" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Gráfico Gantt</span>
+              </TabsTrigger>
+              <TabsTrigger value="reportes" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Reportes</span>
               </TabsTrigger>
             </TabsList>
             
@@ -193,6 +211,10 @@ const Dashboard: React.FC = () => {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="reportes" className="mt-0">
+            <ReportGenerator />
           </TabsContent>
         </Tabs>
         

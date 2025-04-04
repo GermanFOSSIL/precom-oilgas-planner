@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { OpcionesReporte } from "@/types";
 import { toast } from "sonner";
 import { FileText, Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useExportUtils } from "@/components/dashboard/ExportUtils";
 
 const ReportGenerator: React.FC = () => {
   const { proyectos, actividades, itrbItems, filtros, getKPIs } = useAppContext();
@@ -20,6 +22,14 @@ const ReportGenerator: React.FC = () => {
     incluirITRB: true
   });
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Use the existing ExportUtils to ensure consistent implementation
+  const { captureGanttChart } = useExportUtils({
+    proyectos,
+    actividades,
+    itrbItems,
+    getKPIs
+  });
 
   const handleOpcionChange = (key: keyof OpcionesReporte, value: any) => {
     setOpciones({ ...opciones, [key]: value });
@@ -38,8 +48,6 @@ const ReportGenerator: React.FC = () => {
       const jsPDFModule = await import('jspdf');
       const jsPDF = jsPDFModule.default;
       await import('jspdf-autotable');
-      const html2canvasModule = await import('html2canvas');
-      const html2canvas = html2canvasModule.default;
 
       const doc = new jsPDF({
         orientation: opciones.orientacion === "horizontal" ? "landscape" : "portrait",
@@ -98,49 +106,31 @@ const ReportGenerator: React.FC = () => {
       }
 
       if (opciones.incluirGantt) {
-        const ganttChartContainer = document.querySelector('.gantt-chart-container') as HTMLElement;
-
-        if (ganttChartContainer) {
-          const timestamp = document.createElement('div');
-          timestamp.className = 'chart-timestamp';
-          timestamp.style.position = 'absolute';
-          timestamp.style.bottom = '10px';
-          timestamp.style.right = '10px';
-          timestamp.style.fontSize = '10px';
-          timestamp.style.color = '#666';
-          timestamp.style.padding = '4px';
-          timestamp.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-          timestamp.style.borderRadius = '3px';
-
-          const userName = localStorage.getItem('userName') || 'Usuario';
-          timestamp.textContent = `Generado por: ${userName} - ${new Date().toLocaleString()}`;
-
-          ganttChartContainer.appendChild(timestamp);
-
-          const canvas = await html2canvas(ganttChartContainer, {
-            scale: 1.5,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: null,
-            logging: false,
-            width: ganttChartContainer.scrollWidth,
-            height: ganttChartContainer.scrollHeight
-          });
-
-          ganttChartContainer.removeChild(timestamp);
-
-          const imgData = canvas.toDataURL('image/png');
-
+        // Use the captureGanttChart utility from ExportUtils
+        const ganttImageData = await captureGanttChart();
+        
+        if (ganttImageData) {
+          const imgData = ganttImageData;
+          
+          // Calculate image dimensions maintaining aspect ratio
           const imgWidth = pageWidth - 2 * margin;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
+          // Assuming a 16:9 aspect ratio if we don't have the actual height
+          const imgHeight = imgWidth * 0.5;
+          
           checkPageBreak(imgHeight);
-
-          doc.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight);
-          currentY += imgHeight + margin;
+          
+          // Add the image to the PDF
+          try {
+            doc.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight);
+            currentY += imgHeight + margin;
+          } catch (err) {
+            console.error("Error adding Gantt chart to PDF:", err);
+            doc.text("Error al incluir el gráfico Gantt", margin, currentY);
+            currentY += 10;
+          }
         } else {
-          console.warn("Gantt chart container not found.");
-          toast.error("No se pudo encontrar el gráfico Gantt para incluir en el reporte.");
+          doc.text("No se pudo capturar el gráfico Gantt", margin, currentY);
+          currentY += 10;
         }
       }
 
@@ -294,23 +284,24 @@ const ReportGenerator: React.FC = () => {
             </select>
           </div>
         </div>
+        
+        <Button onClick={generarReporte} disabled={isGenerating} className="w-full">
+          {isGenerating ? (
+            <div className="flex items-center">
+              Generando...
+              <svg className="animate-spin h-5 w-5 ml-2" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          ) : (
+            <>
+              <Download className="h-4 w-4 mr-2" />
+              Generar Reporte
+            </>
+          )}
+        </Button>
       </CardContent>
-      <Button onClick={generarReporte} disabled={isGenerating}>
-        {isGenerating ? (
-          <div className="flex items-center">
-            Generando...
-            <svg className="animate-spin h-5 w-5 ml-2" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          </div>
-        ) : (
-          <>
-            <Download className="h-4 w-4 mr-2" />
-            Generar Reporte
-          </>
-        )}
-      </Button>
     </Card>
   );
 };
