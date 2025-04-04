@@ -1,628 +1,473 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
-import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
-import { addDays, subDays, startOfMonth, endOfMonth, addMonths, format, isWithinInterval, isSameDay } from "date-fns";
-import { es } from "date-fns/locale";
+import { Actividad, ITRB, FiltrosDashboard, ConfiguracionGrafico } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Calendar, ZoomIn, ZoomOut, ArrowLeft, ArrowRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, addMonths, subMonths, addWeeks, subWeeks, isWithinInterval } from "date-fns";
+import { es } from "date-fns/locale";
 
-// Importación de componentes y hooks existentes
-import GanttLoadingState from "./gantt/GanttLoadingState";
-import GanttEmptyState from "./gantt/GanttEmptyState";
-import GanttNavigationControls from "./gantt/GanttNavigationControls";
-import { useGanttData } from "./gantt/hooks/useGanttData";
-import { generateSampleData } from "./gantt/utils/sampleData";
-
-// Import custom styles for enhanced Gantt
-import "./gantt/styles/EnhancedGantt.css";
-
-interface EnhancedGanttChartProps {
+interface GanttChartProps {
   filtros: FiltrosDashboard;
   configuracion: ConfiguracionGrafico;
 }
 
-const EnhancedGanttChart: React.FC<EnhancedGanttChartProps> = ({ 
-  filtros, 
-  configuracion 
-}) => {
-  const { actividades: appActividades, itrbItems: appItrbItems, proyectos: appProyectos } = useAppContext();
-
-  const today = new Date();
-  const [zoomLevel, setZoomLevel] = useState(1);
+const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion }) => {
+  const { actividades, itrbItems, proyectos } = useAppContext();
+  
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
-  const [currentStartDate, setCurrentStartDate] = useState<Date>(subDays(startOfMonth(today), 7));
-  const [currentEndDate, setCurrentEndDate] = useState<Date>(endOfMonth(today));
-  const [loading, setLoading] = useState(true);
-  const [usingSampleData, setUsingSampleData] = useState<boolean>(false);
-  const [hoveredItem, setHoveredItem] = useState<any | null>(null);
-  const [hoveredITRB, setHoveredITRB] = useState<any | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-
-  const [sampleData, setSampleData] = useState<{
-    actividades: any[];
-    itrbItems: any[];
-    proyectos: any[];
-  }>({ actividades: [], itrbItems: [], proyectos: [] });
-
-  useEffect(() => {
-    setSampleData(generateSampleData());
-  }, []);
-
-  const actividades = usingSampleData ? sampleData.actividades : appActividades;
-  const itrbItems = usingSampleData ? sampleData.itrbItems : appItrbItems;
-  const proyectos = usingSampleData ? sampleData.proyectos : appProyectos;
-
-  const mostrarSubsistemas = configuracion.mostrarSubsistemas !== undefined 
-    ? configuracion.mostrarSubsistemas 
-    : true;
-
-  const { ganttData } = useGanttData(actividades, itrbItems, proyectos, filtros);
-
-  // Calculate dates for timeline based on current view and zoom level
-  const axisDatesMemo = useMemo(() => {
-    const result: Date[] = [];
-    let currentDate = new Date(currentStartDate);
-    
-    while (currentDate <= currentEndDate) {
-      result.push(new Date(currentDate));
+  const [currentStartDate, setCurrentStartDate] = useState(new Date());
+  const [hoveredItem, setHoveredItem] = useState<{ id: string, tipo: "actividad" | "itrb" } | null>(null);
+  
+  const actividadesFiltradas = useMemo(() => {
+    return actividades.filter(actividad => {
+      if (filtros.proyecto !== "todos" && actividad.proyectoId !== filtros.proyecto) {
+        return false;
+      }
       
-      if (viewMode === "day") {
-        currentDate = addDays(currentDate, 1);
-      } else if (viewMode === "week") {
-        currentDate = addDays(currentDate, 1);
-      } else {
-        currentDate = addDays(currentDate, 1);
+      if (filtros.sistema && actividad.sistema !== filtros.sistema) {
+        return false;
       }
-    }
-    
-    return result;
-  }, [currentStartDate, currentEndDate, viewMode]);
-
-  const toggleSampleData = useCallback(() => {
-    setUsingSampleData(prev => !prev);
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [usingSampleData]);
-
-  const navigateTime = (direction: "prev" | "next" | "today") => {
-    let newStartDate = currentStartDate;
-    let newEndDate = currentEndDate;
-
-    if (direction === "today") {
-      newStartDate = subDays(startOfMonth(today), 7);
-      newEndDate = endOfMonth(today);
-    } else if (direction === "prev") {
-      if (viewMode === "month") {
-        newStartDate = addMonths(currentStartDate, -1);
-        newEndDate = endOfMonth(newStartDate);
-      } else if (viewMode === "week") {
-        newStartDate = addDays(currentStartDate, -7);
-        newEndDate = addDays(newStartDate, 14);
-      } else {
-        newStartDate = addDays(currentStartDate, -1);
-        newEndDate = addDays(newStartDate, 2);
+      
+      if (filtros.subsistema && actividad.subsistema !== filtros.subsistema) {
+        return false;
       }
-    } else if (direction === "next") {
-      if (viewMode === "month") {
-        newStartDate = addMonths(currentStartDate, 1);
-        newEndDate = endOfMonth(newStartDate);
-      } else if (viewMode === "week") {
-        newStartDate = addDays(currentStartDate, 7);
-        newEndDate = addDays(newStartDate, 14);
-      } else {
-        newStartDate = addDays(currentStartDate, 1);
-        newEndDate = addDays(newStartDate, 2);
+      
+      if (filtros.busquedaActividad && !actividad.nombre.toLowerCase().includes(filtros.busquedaActividad.toLowerCase())) {
+        return false;
       }
-    }
-
-    setCurrentStartDate(newStartDate);
-    setCurrentEndDate(newEndDate);
-  };
-
-  const handleViewModeChange = (newMode: "month" | "week" | "day") => {
-    setViewMode(newMode);
+      
+      return true;
+    });
+  }, [actividades, filtros]);
+  
+  const itrbFiltrados = useMemo(() => {
+    const actividadesIds = actividadesFiltradas.map(a => a.id);
     
-    // Adjust date range based on view mode
-    const today = new Date();
+    return itrbItems.filter(itrb => {
+      if (!actividadesIds.includes(itrb.actividadId)) {
+        return false;
+      }
+      
+      if (filtros.estadoITRB && filtros.estadoITRB !== "todos" && itrb.estado !== filtros.estadoITRB) {
+        return false;
+      }
+      
+      if (filtros.mcc !== undefined && itrb.ccc !== filtros.mcc) {
+        return false;
+      }
+      
+      if (filtros.tareaVencida && itrb.estado !== "Vencido") {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [itrbItems, actividadesFiltradas, filtros]);
+  
+  const timeConfig = useMemo(() => {
+    let start = new Date(currentStartDate);
+    let end, slots, width;
     
-    if (newMode === "month") {
-      setCurrentStartDate(subDays(startOfMonth(today), 7));
-      setCurrentEndDate(endOfMonth(today));
-    } else if (newMode === "week") {
-      setCurrentStartDate(today);
-      setCurrentEndDate(addDays(today, 14));
-    } else if (newMode === "day") {
-      setCurrentStartDate(today);
-      setCurrentEndDate(addDays(today, 2));
-    }
-  };
-
-  const changeZoom = (direction: "in" | "out") => {
-    if (direction === "in" && zoomLevel < 2) {
-      setZoomLevel(zoomLevel + 0.25);
-    } else if (direction === "out" && zoomLevel > 0.5) {
-      setZoomLevel(zoomLevel - 0.25);
-    }
-  };
-
-  // Calculate position on the timeline
-  const calculatePosition = (date: Date): number => {
-    if (!isWithinInterval(date, { start: currentStartDate, end: currentEndDate })) {
-      if (date < currentStartDate) return 0;
-      if (date > currentEndDate) return 100;
+    switch (viewMode) {
+      case "month":
+        start.setDate(1);
+        end = addMonths(start, 3);
+        slots = [];
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          slots.push(new Date(d));
+        }
+        width = 20;
+        break;
+      case "week":
+        const dayOfWeek = start.getDay();
+        start = new Date(start.setDate(start.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)));
+        end = addWeeks(start, 4);
+        slots = [];
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          slots.push(new Date(d));
+        }
+        width = 40;
+        break;
+      case "day":
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(end.getDate() + 14);
+        slots = [];
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          slots.push(new Date(d));
+        }
+        width = 80;
+        break;
+      default:
+        start.setDate(1);
+        end = addMonths(start, 3);
+        slots = [];
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          slots.push(new Date(d));
+        }
+        width = 20;
     }
     
-    const timelineStart = currentStartDate.getTime();
-    const timelineEnd = currentEndDate.getTime();
-    const dateTime = date.getTime();
-    
-    // Calculate percentage position
-    const position = ((dateTime - timelineStart) / (timelineEnd - timelineStart)) * 100;
-    return Math.max(0, Math.min(100, position));
-  };
-
-  useEffect(() => {
-    const exportPDFHandler = () => {
-      console.log("Export PDF");
-      // Implementación de exportación PDF
+    return { 
+      viewStartDate: start,
+      viewEndDate: end,
+      timeSlots: slots,
+      slotWidth: width
     };
-
-    const exportExcelHandler = () => {
-      console.log("Export Excel");
-      // Implementación de exportación Excel
-    };
-
-    const toggleDemoDataHandler = () => {
-      toggleSampleData();
-    };
-
-    window.addEventListener('export-gantt-pdf', exportPDFHandler);
-    window.addEventListener('export-gantt-excel', exportExcelHandler);
-    window.addEventListener('toggle-demo-data', toggleDemoDataHandler);
-
-    return () => {
-      window.removeEventListener('export-gantt-pdf', exportPDFHandler);
-      window.removeEventListener('export-gantt-excel', exportExcelHandler);
-      window.removeEventListener('toggle-demo-data', toggleDemoDataHandler);
-    };
-  }, [toggleSampleData]);
-
-  // Handle tooltip display
-  const handleMouseOver = (e: React.MouseEvent, item: any) => {
-    setHoveredItem(item);
-    setHoveredITRB(null);
-    setTooltipPosition({ x: e.clientX, y: e.clientY });
+  }, [currentStartDate, viewMode]);
+  
+  const { viewStartDate, viewEndDate, timeSlots, slotWidth } = timeConfig;
+  
+  const handleChangeViewMode = (mode: "month" | "week" | "day") => {
+    setViewMode(mode);
   };
-
-  const handleITRBMouseOver = (e: React.MouseEvent, itrb: any, item: any) => {
-    setHoveredITRB({ ...itrb, actividad: item });
-    setHoveredItem(null);
-    setTooltipPosition({ x: e.clientX, y: e.clientY });
-    e.stopPropagation();
-  };
-
-  const handleMouseOut = () => {
-    setHoveredItem(null);
-    setHoveredITRB(null);
-  };
-
-  // Get gantt chart height based on configuration
-  const getGanttHeight = () => {
-    switch (configuracion.tamano) {
-      case "pequeno": return "h-[400px]";
-      case "mediano": return "h-[600px]";
-      case "grande": return "h-[800px]";
-      case "completo": return "h-screen";
-      default: return "h-[600px]";
+  
+  const handleNavigateBack = () => {
+    switch (viewMode) {
+      case "month":
+        setCurrentStartDate(subMonths(currentStartDate, 1));
+        break;
+      case "week":
+        setCurrentStartDate(subWeeks(currentStartDate, 1));
+        break;
+      case "day":
+        const newDate = new Date(currentStartDate);
+        newDate.setDate(newDate.getDate() - 7);
+        setCurrentStartDate(newDate);
+        break;
     }
   };
-
-  // Group data by project, system and subsystem for hierarchical display
-  const groupedData = useMemo(() => {
-    const result: Record<string, Record<string, Record<string, any[]>>> = {};
+  
+  const handleNavigateForward = () => {
+    switch (viewMode) {
+      case "month":
+        setCurrentStartDate(addMonths(currentStartDate, 1));
+        break;
+      case "week":
+        setCurrentStartDate(addWeeks(currentStartDate, 1));
+        break;
+      case "day":
+        const newDate = new Date(currentStartDate);
+        newDate.setDate(newDate.getDate() + 7);
+        setCurrentStartDate(newDate);
+        break;
+    }
+  };
+  
+  const handleTodayView = () => {
+    setCurrentStartDate(new Date());
+  };
+  
+  const getItemPosition = (startDate: Date, endDate: Date) => {
+    const start = new Date(startDate) < viewStartDate ? viewStartDate : new Date(startDate);
+    const end = new Date(endDate) > viewEndDate ? viewEndDate : new Date(endDate);
     
-    ganttData.forEach(item => {
-      const proyecto = item.proyecto;
-      const sistema = item.sistema;
-      const subsistema = item.subsistema;
+    const totalDays = timeSlots.length;
+    const startDayIndex = timeSlots.findIndex(d => d.toDateString() === start.toDateString());
+    let endDayIndex = timeSlots.findIndex(d => d.toDateString() === end.toDateString());
+    
+    if (endDayIndex === -1) endDayIndex = totalDays - 1;
+    if (startDayIndex === -1) return { left: 0, width: 0 };
+    
+    const left = startDayIndex * slotWidth;
+    const width = (endDayIndex - startDayIndex + 1) * slotWidth;
+    
+    return { left, width };
+  };
+  
+  const getColorByEstado = (estado: string) => {
+    switch (estado) {
+      case "Completado": return { bg: "#22c55e", border: "#15803d" };
+      case "En curso": return { bg: "#f59e0b", border: "#d97706" };
+      case "Vencido": return { bg: "#ef4444", border: "#b91c1c" };
+      default: return { bg: "#94a3b8", border: "#64748b" };
+    }
+  };
+  
+  const organizarActividades = useMemo(() => {
+    const resultado: {
+      proyectoId: string;
+      proyectoNombre: string;
+      sistemas: {
+        nombre: string;
+        subsistemas: {
+          nombre: string;
+          actividades: Actividad[];
+          itrbsPorActividad: Record<string, ITRB[]>;
+        }[];
+      }[];
+    }[] = [];
+    
+    actividadesFiltradas.forEach(actividad => {
+      let proyectoEntry = resultado.find(p => p.proyectoId === actividad.proyectoId);
+      const proyecto = proyectos.find(p => p.id === actividad.proyectoId);
       
-      if (!result[proyecto]) {
-        result[proyecto] = {};
+      if (!proyectoEntry) {
+        proyectoEntry = {
+          proyectoId: actividad.proyectoId,
+          proyectoNombre: proyecto ? proyecto.titulo : `Proyecto ${actividad.proyectoId}`,
+          sistemas: []
+        };
+        resultado.push(proyectoEntry);
       }
       
-      if (!result[proyecto][sistema]) {
-        result[proyecto][sistema] = {};
+      let sistemaEntry = proyectoEntry.sistemas.find(s => s.nombre === actividad.sistema);
+      
+      if (!sistemaEntry) {
+        sistemaEntry = {
+          nombre: actividad.sistema,
+          subsistemas: []
+        };
+        proyectoEntry.sistemas.push(sistemaEntry);
       }
       
-      if (!result[proyecto][sistema][subsistema]) {
-        result[proyecto][sistema][subsistema] = [];
+      let subsistemaEntry = sistemaEntry.subsistemas.find(s => s.nombre === actividad.subsistema);
+      
+      if (!subsistemaEntry) {
+        subsistemaEntry = {
+          nombre: actividad.subsistema,
+          actividades: [],
+          itrbsPorActividad: {}
+        };
+        sistemaEntry.subsistemas.push(subsistemaEntry);
       }
       
-      result[proyecto][sistema][subsistema].push(item);
+      subsistemaEntry.actividades.push(actividad);
+      subsistemaEntry.itrbsPorActividad[actividad.id] = [];
     });
     
-    return result;
-  }, [ganttData]);
-
-  if (loading) {
-    return <GanttLoadingState />;
-  }
-
-  if (ganttData.length === 0) {
-    return <GanttEmptyState />;
-  }
-
-  return (
-    <div className="w-full h-full flex flex-col">
-      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm mb-2 p-2">
-        <div className="flex justify-between items-center">
-          <GanttNavigationControls
-            currentStartDate={currentStartDate}
-            currentEndDate={currentEndDate}
-            viewMode={viewMode}
-            zoomLevel={zoomLevel}
-            onNavigate={navigateTime}
-            onViewModeChange={handleViewModeChange}
-            onZoomChange={changeZoom}
-          />
-
-          <div className="flex items-center mr-4">
-            <span className="text-sm font-medium text-muted-foreground mr-2">
-              {usingSampleData ? "Usando datos de muestra" : "Datos reales"}
-            </span>
-            <div 
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                usingSampleData ? 'bg-primary' : 'bg-input'
-              }`}
-              onClick={toggleSampleData}
-              role="button"
-              tabIndex={0}
-            >
-              <span 
-                className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
-                  usingSampleData ? 'translate-x-6' : 'translate-x-1'
-                }`} 
-              />
-            </div>
-          </div>
+    itrbFiltrados.forEach(itrb => {
+      const actividadId = itrb.actividadId;
+      const actividad = actividadesFiltradas.find(a => a.id === actividadId);
+      
+      if (actividad) {
+        const proyectoEntry = resultado.find(p => p.proyectoId === actividad.proyectoId);
+        if (proyectoEntry) {
+          const sistemaEntry = proyectoEntry.sistemas.find(s => s.nombre === actividad.sistema);
+          if (sistemaEntry) {
+            const subsistemaEntry = sistemaEntry.subsistemas.find(s => s.nombre === actividad.subsistema);
+            if (subsistemaEntry) {
+              if (!subsistemaEntry.itrbsPorActividad[actividadId]) {
+                subsistemaEntry.itrbsPorActividad[actividadId] = [];
+              }
+              subsistemaEntry.itrbsPorActividad[actividadId].push(itrb);
+            }
+          }
+        }
+      }
+    });
+    
+    return resultado;
+  }, [actividadesFiltradas, itrbFiltrados, proyectos]);
+  
+  if (actividadesFiltradas.length === 0) {
+    return (
+      <div className="border dark:border-gray-700 rounded-lg p-8 text-center text-muted-foreground bg-muted/20 h-full flex items-center justify-center">
+        <div>
+          <p className="mb-2">No hay actividades disponibles para mostrar</p>
+          <p className="text-sm">Agregue actividades o modifique los filtros aplicados</p>
         </div>
       </div>
-
-      <div className={`flex-1 min-h-0 w-full overflow-hidden ${getGanttHeight()}`}>
-        <ScrollArea className="h-full">
-          <div className="relative gantt-chart min-w-[800px]">
-            {/* Timeline header */}
-            <div className="grid gantt-header sticky top-0 z-10"
-                 style={{ gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))" }}>
-              <div className="px-2 py-3 font-semibold border-b border-r">Actividad</div>
-              {axisDatesMemo.map((date, i) => (
-                <div key={`date-${i}`} 
-                     className={`text-center text-xs py-2 border-b border-r
-                       ${isSameDay(date, today) ? 'bg-blue-50 dark:bg-blue-900/30 font-semibold' : ''}`}>
-                  {viewMode === "day" 
-                    ? format(date, "HH:mm", { locale: es }) 
-                    : viewMode === "week" 
-                      ? format(date, "EEE d", { locale: es })
-                      : format(date, "d", { locale: es })}
+    );
+  }
+  
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center p-3 border-b mb-2">
+        <div className="flex items-center space-x-2">
+          <Button size="sm" variant="outline" onClick={handleNavigateBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleTodayView}>
+            <Calendar className="h-4 w-4 mr-1" />
+            Hoy
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleNavigateForward}>
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          <div className="text-sm font-medium ml-2">
+            {format(viewStartDate, "MMMM yyyy", {locale: es})}
+          </div>
+        </div>
+        
+        <div className="flex space-x-2">
+          <Select value={viewMode} onValueChange={(value: "month" | "week" | "day") => handleChangeViewMode(value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Vista" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Vista por Mes</SelectItem>
+              <SelectItem value="week">Vista por Semana</SelectItem>
+              <SelectItem value="day">Vista Detallada</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button variant="outline" size="icon" onClick={() => handleChangeViewMode(viewMode === "month" ? "week" : viewMode === "week" ? "day" : "month")}>
+            {viewMode === "day" ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
+      
+      <ScrollArea className="flex-1 overflow-hidden">
+        <div className="relative" style={{ minWidth: timeSlots.length * slotWidth + 300 }}>
+          <div className="sticky top-0 z-10 flex border-b bg-white dark:bg-gray-900" style={{ marginLeft: "300px" }}>
+            {timeSlots.map((slot, index) => {
+              const isWeekend = slot.getDay() === 0 || slot.getDay() === 6;
+              const isFirstOfMonth = slot.getDate() === 1;
+              const displayDate = viewMode === "month" 
+                ? (isFirstOfMonth ? format(slot, "MMM", {locale: es}) : slot.getDate().toString()) 
+                : format(slot, "EEE d", {locale: es});
+              
+              return (
+                <div 
+                  key={index}
+                  className={`text-center text-xs p-1 border-r flex-shrink-0 ${isWeekend ? "bg-gray-100 dark:bg-gray-800" : ""}`}
+                  style={{ width: `${slotWidth}px`, borderBottom: isFirstOfMonth ? "2px solid #cbd5e1" : "" }}
+                >
+                  {displayDate}
                 </div>
-              ))}
+              );
+            })}
+          </div>
+          
+          {timeSlots.some(d => d.toDateString() === new Date().toDateString()) && (
+            <div className="absolute top-7 bottom-0 w-px bg-red-500 z-5" 
+                 style={{ 
+                   left: `${300 + timeSlots.findIndex(d => d.toDateString() === new Date().toDateString()) * slotWidth + slotWidth/2}px` 
+                 }}>
             </div>
-
-            {/* Today indicator */}
-            {isWithinInterval(today, { start: currentStartDate, end: currentEndDate }) && (
-              <div className="absolute h-full border-l-2 border-red-500 z-[5] pointer-events-none" 
-                   style={{ left: `calc(220px + ${calculatePosition(today)}% * (100% - 220px) / 100)` }}>
-              </div>
-            )}
-
-            {/* Content */}
-            <div className="gantt-body">
-              {Object.entries(groupedData).map(([proyecto, sistemas], proyectoIndex) => (
-                <React.Fragment key={`proyecto-${proyectoIndex}`}>
-                  {/* Proyecto header */}
-                  <div className="grid gantt-row gantt-proyecto"
-                       style={{ gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))" }}>
-                    <div className="px-3 py-2 font-bold border-b border-r bg-indigo-800 text-white">
-                      {proyecto}
+          )}
+          
+          <div className="mt-1">
+            {organizarActividades.map((proyecto, proyectoIndex) => (
+              <div key={proyecto.proyectoId} className="mb-4">
+                <div className="sticky left-0 z-10 flex items-center h-8 bg-indigo-700 text-white font-bold pl-4 pr-2 mb-1">
+                  <div className="truncate w-[300px]">{proyecto.proyectoNombre}</div>
+                </div>
+                
+                {proyecto.sistemas.map((sistema, sistemaIndex) => (
+                  <div key={`${proyecto.proyectoId}-${sistema.nombre}`} className="mb-2">
+                    <div className="sticky left-0 z-10 flex items-center h-7 bg-indigo-500 text-white pl-8 pr-2">
+                      <div className="truncate w-[300px]">{sistema.nombre}</div>
                     </div>
-                    <div className="col-span-full"></div>
-                  </div>
-                  
-                  {Object.entries(sistemas).map(([sistema, subsistemas], sistemaIndex) => (
-                    <React.Fragment key={`sistema-${proyectoIndex}-${sistemaIndex}`}>
-                      {/* Sistema header */}
-                      <div className="grid gantt-row gantt-sistema" 
-                           style={{ gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))" }}>
-                        <div className="px-3 py-1.5 font-semibold border-b border-r bg-indigo-600 text-white">
-                          {sistema}
+                    
+                    {sistema.subsistemas.map((subsistema, subsistemaIndex) => (
+                      <div key={`${proyecto.proyectoId}-${sistema.nombre}-${subsistema.nombre}`} className="mb-1">
+                        <div className="sticky left-0 z-10 flex items-center h-7 bg-indigo-300 dark:bg-indigo-600 text-black dark:text-white pl-12 pr-2">
+                          <div className="truncate w-[300px]">{subsistema.nombre}</div>
                         </div>
-                        <div className="col-span-full"></div>
-                      </div>
-                      
-                      {mostrarSubsistemas && Object.entries(subsistemas).map(([subsistema, actividades], subsistemaIndex) => (
-                        <React.Fragment key={`subsistema-${proyectoIndex}-${sistemaIndex}-${subsistemaIndex}`}>
-                          {/* Subsistema header */}
-                          <div className="grid gantt-row gantt-subsistema"
-                               style={{ gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))" }}>
-                            <div className="pl-6 py-1 font-medium text-sm border-b border-r bg-indigo-400 text-white">
-                              {subsistema}
-                            </div>
-                            <div className="col-span-full"></div>
-                          </div>
+                        
+                        {subsistema.actividades.map((actividad, actividadIndex) => {
+                          const fechaInicio = new Date(actividad.fechaInicio);
+                          const fechaFin = new Date(actividad.fechaFin);
+                          const { left, width } = getItemPosition(fechaInicio, fechaFin);
                           
-                          {/* Actividades del subsistema */}
-                          {actividades.map((actividad, actividadIndex) => (
-                            <div key={`actividad-${actividad.id}`} 
-                                 className={`grid gantt-row gantt-actividad relative ${actividadIndex % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/20' : ''}`}
-                                 style={{ 
-                                   gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))",
-                                   height: `${40 + (actividad.itrbsAsociados.length * 24)}px` 
-                                 }}>
-                              <div className="pl-8 py-2 border-b border-r flex items-center">
-                                <span className="text-sm font-medium truncate">{actividad.nombre}</span>
-                                {actividad.itrbsAsociados.length > 0 && (
-                                  <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                                    {actividad.itrbsAsociados.length}
-                                  </span>
-                                )}
-                              </div>
-                              
-                              {/* Barra de la actividad */}
-                              <div className="col-span-full h-full relative">
-                                <div 
-                                  className="absolute h-6 rounded-sm cursor-pointer top-2"
-                                  style={{
-                                    left: `${calculatePosition(new Date(actividad.fechaInicio))}%`,
-                                    width: `${calculatePosition(new Date(actividad.fechaFin)) - calculatePosition(new Date(actividad.fechaInicio))}%`,
-                                    backgroundColor: actividad.color || '#64748b',
-                                    opacity: 0.9
-                                  }}
-                                  onMouseOver={(e) => handleMouseOver(e, actividad)}
-                                  onMouseOut={handleMouseOut}
-                                >
-                                  <div 
-                                    className="h-full rounded-sm flex items-center px-2 overflow-hidden"
-                                    style={{ 
-                                      width: `${actividad.progreso}%`,
-                                      backgroundColor: actividad.tieneVencidos ? '#ef4444' : (actividad.progreso === 100 ? '#22c55e' : '#eab308')
-                                    }}
-                                  >
-                                    <span className="text-xs text-white font-medium whitespace-nowrap">
-                                      {actividad.progreso}%
+                          const activityItrbs = subsistema.itrbsPorActividad[actividad.id] || [];
+                          
+                          if (width === 0) return null;
+                          
+                          return (
+                            <div key={actividad.id}>
+                              <div className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-16 pr-2 border-b w-[300px]">
+                                  <div className="truncate text-sm">
+                                    {actividad.nombre}
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      ({activityItrbs.length} ITR)
                                     </span>
                                   </div>
                                 </div>
                                 
-                                {/* ITRBs asociados */}
-                                {actividad.itrbsAsociados.map((itrb, itrbIndex) => {
-                                  const itrbStartDate = new Date(itrb.fechaInicio || actividad.fechaInicio);
-                                  const itrbEndDate = new Date(itrb.fechaVencimiento || itrb.fechaLimite || actividad.fechaFin);
-                                  const itrbProgress = itrb.estado === 'Completado' ? 100 : itrb.estado === 'Vencido' ? 0 : 50;
-                                  const itrbColor = itrb.estado === 'Completado' ? '#22c55e' : 
-                                                   itrb.estado === 'Vencido' ? '#ef4444' : '#3b82f6';
-                                  
-                                  return (
-                                    <div 
-                                      key={`itrb-${itrb.id}`}
-                                      className="absolute h-4 rounded-sm cursor-pointer hover:h-5 transition-all"
-                                      style={{
-                                        left: `${calculatePosition(itrbStartDate)}%`,
-                                        width: `${calculatePosition(itrbEndDate) - calculatePosition(itrbStartDate)}%`,
-                                        top: `${38 + (itrbIndex * 24)}px`,
-                                        backgroundColor: '#94a3b8',
-                                        opacity: 0.9
-                                      }}
-                                      onMouseOver={(e) => handleITRBMouseOver(e, itrb, actividad)}
-                                      onMouseOut={handleMouseOut}
-                                    >
-                                      <div 
-                                        className="h-full rounded-sm"
-                                        style={{ 
-                                          width: `${itrbProgress}%`, 
-                                          backgroundColor: itrbColor,
-                                          transition: 'width 0.3s ease-in-out'
-                                        }}
-                                      >
-                                        <div className="px-1 text-[10px] text-white truncate">
-                                          {itrb.descripcion || `ITRB ${itrbIndex + 1}`}
-                                        </div>
+                                <div 
+                                  className={`absolute h-5 rounded-sm shadow-md flex items-center justify-center text-xs text-white overflow-hidden
+                                            ${hoveredItem?.id === actividad.id ? "ring-2 ring-offset-2 ring-blue-500 z-20" : ""}`}
+                                  style={{ 
+                                    left: `${300 + left}px`, 
+                                    width: `${width}px`,
+                                    backgroundColor: "#64748b",
+                                    borderColor: "#475569"
+                                  }}
+                                  onMouseEnter={() => setHoveredItem({ id: actividad.id, tipo: "actividad" })}
+                                  onMouseLeave={() => setHoveredItem(null)}
+                                >
+                                  {width > 50 && (
+                                    <span className="px-2 truncate">
+                                      {actividad.nombre}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {activityItrbs.map((itrb, itrbIndex) => {
+                                const fechaInicio = new Date(actividad.fechaInicio);
+                                const fechaLimite = new Date(itrb.fechaLimite);
+                                const { left, width } = getItemPosition(fechaInicio, fechaLimite);
+                                const colors = getColorByEstado(itrb.estado);
+                                
+                                if (width === 0) return null;
+                                
+                                return (
+                                  <div key={itrb.id} className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-20 pr-2 border-b w-[300px]">
+                                      <div className="truncate text-xs text-gray-600 dark:text-gray-400">
+                                        {itrb.descripcion.substring(0, 25)}{itrb.descripcion.length > 25 ? '...' : ''}
                                       </div>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                      
-                      {/* Si no se muestran subsistemas, mostrar las actividades directamente bajo el sistema */}
-                      {!mostrarSubsistemas && Object.values(subsistemas).flat().map((actividad, actividadIndex) => (
-                        <div key={`actividad-dir-${actividad.id}`} 
-                             className={`grid gantt-row gantt-actividad relative ${actividadIndex % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/20' : ''}`}
-                             style={{ 
-                               gridTemplateColumns: "220px repeat(" + axisDatesMemo.length + ", minmax(30px, 1fr))",
-                               height: `${40 + (actividad.itrbsAsociados.length * 24)}px` 
-                             }}>
-                          <div className="pl-6 py-2 border-b border-r flex items-center">
-                            <span className="text-sm font-medium truncate">{actividad.nombre}</span>
-                            {actividad.itrbsAsociados.length > 0 && (
-                              <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                                {actividad.itrbsAsociados.length}
-                              </span>
-                            )}
-                          </div>
-                          
-                          {/* Barra de la actividad */}
-                          <div className="col-span-full h-full relative">
-                            <div 
-                              className="absolute h-6 rounded-sm cursor-pointer top-2"
-                              style={{
-                                left: `${calculatePosition(new Date(actividad.fechaInicio))}%`,
-                                width: `${calculatePosition(new Date(actividad.fechaFin)) - calculatePosition(new Date(actividad.fechaInicio))}%`,
-                                backgroundColor: actividad.color || '#64748b',
-                                opacity: 0.9
-                              }}
-                              onMouseOver={(e) => handleMouseOver(e, actividad)}
-                              onMouseOut={handleMouseOut}
-                            >
-                              <div 
-                                className="h-full rounded-sm flex items-center px-2 overflow-hidden"
-                                style={{ 
-                                  width: `${actividad.progreso}%`,
-                                  backgroundColor: actividad.tieneVencidos ? '#ef4444' : (actividad.progreso === 100 ? '#22c55e' : '#eab308')
-                                }}
-                              >
-                                <span className="text-xs text-white font-medium whitespace-nowrap">
-                                  {actividad.progreso}%
-                                </span>
-                              </div>
-                            </div>
-                            
-                            {/* ITRBs asociados */}
-                            {actividad.itrbsAsociados.map((itrb, itrbIndex) => {
-                              const itrbStartDate = new Date(itrb.fechaInicio || actividad.fechaInicio);
-                              const itrbEndDate = new Date(itrb.fechaVencimiento || itrb.fechaLimite || actividad.fechaFin);
-                              const itrbProgress = itrb.estado === 'Completado' ? 100 : itrb.estado === 'Vencido' ? 0 : 50;
-                              const itrbColor = itrb.estado === 'Completado' ? '#22c55e' : 
-                                              itrb.estado === 'Vencido' ? '#ef4444' : '#3b82f6';
-                              
-                              return (
-                                <div 
-                                  key={`itrb-${itrb.id}`}
-                                  className="absolute h-4 rounded-sm cursor-pointer hover:h-5 transition-all"
-                                  style={{
-                                    left: `${calculatePosition(itrbStartDate)}%`,
-                                    width: `${calculatePosition(itrbEndDate) - calculatePosition(itrbStartDate)}%`,
-                                    top: `${38 + (itrbIndex * 24)}px`,
-                                    backgroundColor: '#94a3b8',
-                                    opacity: 0.9
-                                  }}
-                                  onMouseOver={(e) => handleITRBMouseOver(e, itrb, actividad)}
-                                  onMouseOut={handleMouseOut}
-                                >
-                                  <div 
-                                    className="h-full rounded-sm"
-                                    style={{ 
-                                      width: `${itrbProgress}%`, 
-                                      backgroundColor: itrbColor,
-                                      transition: 'width 0.3s ease-in-out'
-                                    }}
-                                  >
-                                    <div className="px-1 text-[10px] text-white truncate">
-                                      {itrb.descripcion || `ITRB ${itrbIndex + 1}`}
+                                    
+                                    <div 
+                                      className={`absolute h-4 rounded-full flex items-center justify-center text-xs text-white overflow-hidden
+                                                 ${hoveredItem?.id === itrb.id ? "ring-2 ring-offset-1 ring-blue-500 z-20" : ""}`}
+                                      style={{ 
+                                        left: `${300 + left}px`, 
+                                        width: `${width}px`,
+                                        backgroundColor: colors.bg,
+                                        borderColor: colors.border
+                                      }}
+                                      onMouseEnter={() => setHoveredItem({ id: itrb.id, tipo: "itrb" })}
+                                      onMouseLeave={() => setHoveredItem(null)}
+                                    >
+                                      {width > 50 && (
+                                        <span className="px-2 truncate">
+                                          {itrb.descripcion} ({itrb.cantidadRealizada}/{itrb.cantidadTotal})
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Tooltip para actividades */}
-      {hoveredItem && (
-        <div 
-          className="fixed z-50 p-3 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm min-w-[200px] max-w-[300px]"
-          style={{ 
-            left: tooltipPosition.x + 10, 
-            top: tooltipPosition.y + 10,
-            transform: tooltipPosition.x > window.innerWidth - 320 ? 'translateX(-100%)' : 'none'
-          }}
-        >
-          <div className="font-bold text-indigo-700 dark:text-indigo-400 mb-1">{hoveredItem.nombre}</div>
-          <div className="grid grid-cols-2 gap-1">
-            <div className="text-gray-500 dark:text-gray-400">Progreso:</div>
-            <div className="font-medium">{hoveredItem.progreso}%</div>
-            <div className="text-gray-500 dark:text-gray-400">Inicio:</div>
-            <div>{new Date(hoveredItem.fechaInicio).toLocaleDateString()}</div>
-            <div className="text-gray-500 dark:text-gray-400">Fin:</div>
-            <div>{new Date(hoveredItem.fechaFin).toLocaleDateString()}</div>
-            <div className="text-gray-500 dark:text-gray-400">Sistema:</div>
-            <div>{hoveredItem.sistema}</div>
-            {mostrarSubsistemas && (
-              <>
-                <div className="text-gray-500 dark:text-gray-400">Subsistema:</div>
-                <div>{hoveredItem.subsistema}</div>
-              </>
-            )}
-            <div className="text-gray-500 dark:text-gray-400">ITRBs:</div>
-            <div>{hoveredItem.itrbsAsociados.length}</div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
-      )}
-
-      {/* Tooltip para ITRBs */}
-      {hoveredITRB && (
-        <div 
-          className="fixed z-50 p-3 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm min-w-[200px] max-w-[300px]"
-          style={{ 
-            left: tooltipPosition.x + 10, 
-            top: tooltipPosition.y + 10,
-            transform: tooltipPosition.x > window.innerWidth - 320 ? 'translateX(-100%)' : 'none'
-          }}
-        >
-          <div className="font-bold text-indigo-700 dark:text-indigo-400 mb-1">
-            {hoveredITRB.descripcion || "ITRB sin descripción"}
-          </div>
-          <div className="text-xs font-medium text-gray-500 mb-2">
-            Parte de: {hoveredITRB.actividad.nombre}
-          </div>
-          <div className="grid grid-cols-2 gap-1">
-            <div className="text-gray-500 dark:text-gray-400">Estado:</div>
-            <div className={`font-medium ${
-              hoveredITRB.estado === 'Completado' ? 'text-green-600 dark:text-green-400' : 
-              hoveredITRB.estado === 'Vencido' ? 'text-red-600 dark:text-red-400' : 
-              'text-blue-600 dark:text-blue-400'
-            }`}>
-              {hoveredITRB.estado || "En curso"}
-            </div>
-            <div className="text-gray-500 dark:text-gray-400">Fecha límite:</div>
-            <div>{new Date(hoveredITRB.fechaVencimiento || hoveredITRB.fechaLimite).toLocaleDateString()}</div>
-            {hoveredITRB.cantidadRealizada !== undefined && hoveredITRB.cantidadTotal !== undefined && (
-              <>
-                <div className="text-gray-500 dark:text-gray-400">Progreso:</div>
-                <div>{hoveredITRB.cantidadRealizada}/{hoveredITRB.cantidadTotal}</div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Leyenda */}
+      </ScrollArea>
+      
       {configuracion.mostrarLeyenda && (
-        <div className="mt-4 p-2 bg-muted rounded-md">
-          <div className="text-sm font-medium mb-2">Leyenda</div>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center">
-              <div className="w-4 h-4 mr-2 rounded bg-green-500"></div>
-              <span className="text-xs">Completado</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 mr-2 rounded bg-yellow-500"></div>
-              <span className="text-xs">En progreso</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 mr-2 rounded bg-red-500"></div>
-              <span className="text-xs">Vencido</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 mr-2 rounded bg-blue-500"></div>
-              <span className="text-xs">ITRB</span>
-            </div>
+        <div className="flex justify-center mt-4 space-x-4 pb-4">
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#22c55e" }}></div>
+            <span className="text-sm">Completado</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#f59e0b" }}></div>
+            <span className="text-sm">En curso</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#ef4444" }}></div>
+            <span className="text-sm">Vencido</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#64748b" }}></div>
+            <span className="text-sm">Actividad</span>
           </div>
         </div>
       )}
