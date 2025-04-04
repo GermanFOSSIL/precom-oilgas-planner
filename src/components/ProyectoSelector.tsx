@@ -38,7 +38,7 @@ const ProyectoSelector: React.FC = () => {
       proyectosDisponibles.find(p => p.id === proyectoId)?.titulo : 
       "Todos los proyectos";
       
-    toast.success(`Proyecto seleccionado: ${proyectoSeleccionado}`);
+    toast.success(`Proyecto seleccionado: ${proyectoSeleccionado || "Proyecto sin nombre"}`);
   };
 
   return (
@@ -53,7 +53,7 @@ const ProyectoSelector: React.FC = () => {
         <SelectItem value="todos">Todos los proyectos</SelectItem>
         {proyectosDisponibles.map((proyecto) => (
           <SelectItem key={proyecto.id} value={proyecto.id}>
-            {proyecto.titulo}
+            {proyecto.titulo || "Proyecto sin nombre"}
           </SelectItem>
         ))}
       </SelectContent>

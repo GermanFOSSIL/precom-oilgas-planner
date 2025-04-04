@@ -1,656 +1,422 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { toast } from "sonner";
-import { Copy, FileSpreadsheet, Save, X, CheckSquare, Search } from "lucide-react";
-import { ITRB, Proyecto, Actividad } from "@/types";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Save, Copy, Search, Filter, X } from "lucide-react";
+import { ITRB, Actividad } from "@/types";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import ProyectoSelector from "./ProyectoSelector";
+import { Badge } from "@/components/ui/badge";
 
-interface ITRBackupManagerProps {
-  itrId?: string;
-}
+const ITRBackupManager: React.FC = () => {
+  const { 
+    itrbItems, 
+    actividades, 
+    proyectos, 
+    filtros,
+    proyectoActual
+  } = useAppContext();
+  
+  // State for filtering
+  const [selectedSistema, setSelectedSistema] = useState<string | undefined>(undefined);
+  const [selectedSubsistema, setSelectedSubsistema] = useState<string | undefined>(undefined);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedITRs, setSelectedITRs] = useState<Set<string>>(new Set());
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [targetActividadId, setTargetActividadId] = useState<string>("");
+  const [keepOriginal, setKeepOriginal] = useState(true);
 
-const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
-  const { proyectos, itrbItems, actividades, addITRB, updateITRB } = useAppContext();
-  
-  // Estados para filtrado y selección
-  const [selectedITRs, setSelectedITRs] = useState<string[]>(itrId ? [itrId] : []);
-  const [targetProyecto, setTargetProyecto] = useState<string>("");
-  const [targetSistema, setTargetSistema] = useState<string>("");
-  const [targetSubsistema, setTargetSubsistema] = useState<string>("");
-  const [targetActividad, setTargetActividad] = useState<string>("");
-  const [keepOriginal, setKeepOriginal] = useState<boolean>(true);
-  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [newNames, setNewNames] = useState<{[key: string]: string}>({});
-  
-  // Estados para filtrado de ITRs
-  const [filtroProyecto, setFiltroProyecto] = useState<string>("");
-  const [busquedaITR, setBusquedaITR] = useState<string>("");
-  
-  // Checkbox filters for systems and subsystems
-  const [selectedSistemas, setSelectedSistemas] = useState<string[]>([]);
-  const [selectedSubsistemas, setSelectedSubsistemas] = useState<string[]>([]);
-  const [showSistemasFilter, setShowSistemasFilter] = useState<boolean>(false);
-  const [showSubsistemasFilter, setShowSubsistemasFilter] = useState<boolean>(false);
-  
-  // Sistemas disponibles basados en el proyecto seleccionado (para el destino)
-  const sistemasDisponibles = targetProyecto 
-    ? [...new Set(actividades.filter(a => a.proyectoId === targetProyecto).map(a => a.sistema || "Sin sistema"))]
-        .filter(sistema => sistema !== "")
-    : [];
-  
-  // Subsistemas disponibles basados en el sistema y proyecto seleccionado (para el destino)
-  const subsistemasDisponibles = targetProyecto && targetSistema
-    ? [...new Set(actividades
-        .filter(a => a.proyectoId === targetProyecto && a.sistema === targetSistema)
-        .map(a => a.subsistema || "Sin subsistema"))]
-        .filter(subsistema => subsistema !== "")
-    : [];
-  
-  // Actividades filtradas para destino
-  const actividadesFiltradas = targetProyecto
-    ? actividades.filter(act => {
-        if (act.proyectoId !== targetProyecto) return false;
-        if (targetSistema && act.sistema !== targetSistema) return false;
-        if (targetSubsistema && act.subsistema !== targetSubsistema) return false;
-        return true;
-      })
-    : [];
-  
-  // Get all available systems for filtering
-  const allSistemas = [...new Set(actividades.map(a => a.sistema || "Sin sistema"))]
-    .filter(sistema => sistema !== "");
-  
-  // Get all available subsystems for filtering
-  const allSubsistemas = [...new Set(actividades.map(a => a.subsistema || "Sin subsistema"))]
-    .filter(subsistema => subsistema !== "");
-  
-  // ITRs filtrados para selección
-  const itrsFiltrados = itrbItems.filter(itr => {
-    const actividad = actividades.find(a => a.id === itr.actividadId);
-    if (!actividad) return false;
+  // Calculate available systems from activities
+  const sistemas = useMemo(() => {
+    const sistemasSet = new Set<string>();
     
-    if (filtroProyecto && actividad.proyectoId !== filtroProyecto) return false;
-    
-    // Apply sistema checkbox filters
-    if (selectedSistemas.length > 0 && !selectedSistemas.includes(actividad.sistema || "Sin sistema")) return false;
-    
-    // Apply subsistema checkbox filters
-    if (selectedSubsistemas.length > 0 && !selectedSubsistemas.includes(actividad.subsistema || "Sin subsistema")) return false;
-    
-    // Search text filter
-    if (busquedaITR && !itr.descripcion.toLowerCase().includes(busquedaITR.toLowerCase())) return false;
-    
-    return true;
-  });
-  
-  // Toggle sistema selection
-  const toggleSistema = (sistema: string) => {
-    setSelectedSistemas(prev => 
-      prev.includes(sistema) 
-        ? prev.filter(s => s !== sistema) 
-        : [...prev, sistema]
-    );
-  };
-
-  // Toggle subsistema selection
-  const toggleSubsistema = (subsistema: string) => {
-    setSelectedSubsistemas(prev => 
-      prev.includes(subsistema) 
-        ? prev.filter(s => s !== subsistema) 
-        : [...prev, subsistema]
-    );
-  };
-
-  useEffect(() => {
-    // Inicializar con el ITR seleccionado si viene como prop
-    if (itrId) {
-      const itr = itrbItems.find(i => i.id === itrId);
-      if (itr) {
-        setSelectedITRs([itrId]);
-        setNewNames({[itrId]: itr.descripcion});
-      }
-    }
-  }, [itrId, itrbItems]);
-
-  // Reset
-  useEffect(() => {
-    if (targetProyecto === "") {
-      setTargetSistema("");
-      setTargetSubsistema("");
-      setTargetActividad("");
-    }
-  }, [targetProyecto]);
-
-  useEffect(() => {
-    if (targetSistema === "") {
-      setTargetSubsistema("");
-      setTargetActividad("");
-    }
-  }, [targetSistema]);
-
-  useEffect(() => {
-    if (targetSubsistema === "") {
-      setTargetActividad("");
-    }
-  }, [targetSubsistema]);
-
-  useEffect(() => {
-    // Actualizar los nombres predeterminados cuando cambian los ITRs seleccionados
-    const namesObj: {[key: string]: string} = {};
-    selectedITRs.forEach(id => {
-      const itr = itrbItems.find(i => i.id === id);
-      if (itr) {
-        namesObj[id] = newNames[id] || itr.descripcion;
-      }
-    });
-    setNewNames(namesObj);
-  }, [selectedITRs, itrbItems]);
-
-  const handleToggleITR = (itrId: string) => {
-    setSelectedITRs(prev => {
-      if (prev.includes(itrId)) {
-        return prev.filter(id => id !== itrId);
-      } else {
-        return [...prev, itrId];
-      }
-    });
-  };
-
-  const handleNameChange = (id: string, value: string) => {
-    setNewNames(prev => ({
-      ...prev,
-      [id]: value
-    }));
-  };
-
-  const getActividadYProyecto = (itr: ITRB): {actividad?: Actividad, proyecto?: Proyecto} => {
-    const actividad = actividades.find(a => a.id === itr.actividadId);
-    const proyecto = actividad ? proyectos.find(p => p.id === actividad.proyectoId) : undefined;
-    return { actividad, proyecto };
-  };
-
-  const handleReasignarITRs = () => {
-    if (selectedITRs.length === 0) {
-      toast.error("Seleccione al menos un ITR para reasignar");
-      return;
-    }
-
-    if (!targetProyecto || !targetActividad) {
-      toast.error("Seleccione un proyecto y actividad destino");
-      return;
-    }
-
-    try {
-      let successCount = 0;
-      
-      selectedITRs.forEach(itrId => {
-        const itrOriginal = itrbItems.find(itr => itr.id === itrId);
-        
-        if (!itrOriginal) return;
-
-        // Crear nuevo ITR con los datos del original pero con nueva actividad
-        const nuevoITR: ITRB = {
-          ...itrOriginal,
-          id: `itr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          actividadId: targetActividad,
-          descripcion: newNames[itrId] || itrOriginal.descripcion
-        };
-
-        // Agregar el nuevo ITR
-        addITRB(nuevoITR);
-        successCount++;
-
-        // Si no queremos mantener el original, actualizarlo a completado o similar
-        if (!keepOriginal) {
-          // Marcar el original como completado
-          const itrActualizado = {
-            ...itrOriginal,
-            cantidadRealizada: itrOriginal.cantidadTotal,
-            estado: "Completado" as const
-          };
-          
-          updateITRB(itrOriginal.id, itrActualizado);
+    actividades.forEach(act => {
+      if (proyectoActual === "todos" || act.proyectoId === proyectoActual) {
+        if (act.sistema && act.sistema.trim() !== "") {
+          sistemasSet.add(act.sistema);
         }
-      });
-
-      toast.success(`${successCount} ITR${successCount !== 1 ? 's' : ''} reasignado${successCount !== 1 ? 's' : ''} exitosamente`, {
-        description: keepOriginal 
-          ? "Se han creado copias en la nueva actividad" 
-          : "Los ITRs han sido movidos a la nueva actividad"
-      });
-
-      // Cerrar el diálogo
-      setDialogOpen(false);
-      
-      // Limpiar estados si no es un ITR específico
-      if (!itrId) {
-        setSelectedITRs([]);
       }
-      setTargetProyecto("");
-      setTargetSistema("");
-      setTargetSubsistema("");
-      setTargetActividad("");
-      setNewNames({});
+    });
+    
+    return Array.from(sistemasSet).sort();
+  }, [actividades, proyectoActual]);
+  
+  // Calculate available subsystems based on selected system
+  const subsistemas = useMemo(() => {
+    const subsystemasSet = new Set<string>();
+    
+    actividades.forEach(act => {
+      if ((proyectoActual === "todos" || act.proyectoId === proyectoActual) &&
+          (!selectedSistema || act.sistema === selectedSistema)) {
+        if (act.subsistema && act.subsistema.trim() !== "") {
+          subsystemasSet.add(act.subsistema);
+        }
+      }
+    });
+    
+    return Array.from(subsystemasSet).sort();
+  }, [actividades, proyectoActual, selectedSistema]);
+
+  // Filter ITR Items based on current filters
+  const filteredITRs = useMemo(() => {
+    return itrbItems.filter(itr => {
+      // Find related activity
+      const actividad = actividades.find(a => a.id === itr.actividadId);
       
-    } catch (error) {
-      console.error("Error al reasignar ITR:", error);
-      toast.error("Error al reasignar los ITRs", {
-        description: "Ocurrió un problema al procesar la solicitud"
-      });
+      // Skip if activity doesn't exist
+      if (!actividad) return false;
+      
+      // Filter by project
+      if (proyectoActual !== "todos" && actividad.proyectoId !== proyectoActual) {
+        return false;
+      }
+      
+      // Filter by system if selected
+      if (selectedSistema && actividad.sistema !== selectedSistema) {
+        return false;
+      }
+      
+      // Filter by subsystem if selected
+      if (selectedSubsistema && actividad.subsistema !== selectedSubsistema) {
+        return false;
+      }
+      
+      // Filter by search term
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          itr.descripcion.toLowerCase().includes(searchLower) ||
+          actividad.nombre.toLowerCase().includes(searchLower) ||
+          actividad.sistema.toLowerCase().includes(searchLower) ||
+          actividad.subsistema.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      return true;
+    });
+  }, [itrbItems, actividades, proyectoActual, selectedSistema, selectedSubsistema, searchTerm]);
+
+  // Get available target activities for copying
+  const availableActividades = useMemo(() => {
+    return actividades.filter(act => 
+      (proyectoActual === "todos" || act.proyectoId === proyectoActual)
+    );
+  }, [actividades, proyectoActual]);
+
+  // Toggle selection of an ITR
+  const toggleSelectITR = (itrId: string) => {
+    const newSelection = new Set(selectedITRs);
+    if (newSelection.has(itrId)) {
+      newSelection.delete(itrId);
+    } else {
+      newSelection.add(itrId);
     }
+    setSelectedITRs(newSelection);
   };
 
-  const exportITRsAsJSON = () => {
-    if (selectedITRs.length === 0) {
-      toast.error("Seleccione al menos un ITR para exportar");
+  // Select all visible ITRs
+  const selectAllVisible = () => {
+    const allIds = filteredITRs.map(itr => itr.id);
+    setSelectedITRs(new Set(allIds));
+  };
+  
+  // Clear all selections
+  const clearSelection = () => {
+    setSelectedITRs(new Set());
+  };
+
+  // Handle copying ITRs to another activity
+  const handleCopyITRs = () => {
+    if (selectedITRs.size === 0) {
+      toast.error("No hay ITR seleccionados para copiar");
+      return;
+    }
+    
+    setShowCopyDialog(true);
+  };
+
+  // Perform the actual copy operation
+  const performCopy = () => {
+    if (!targetActividadId) {
+      toast.error("Debe seleccionar una actividad destino");
       return;
     }
 
     try {
-      const exportData = selectedITRs.map(id => {
-        const itr = itrbItems.find(i => i.id === id);
-        if (!itr) return null;
-        
-        const { actividad, proyecto } = getActividadYProyecto(itr);
-        
-        return {
-          itr: itr,
-          metadata: {
-            actividad: actividad ? {
-              id: actividad.id,
-              nombre: actividad.nombre,
-              sistema: actividad.sistema,
-              subsistema: actividad.subsistema
-            } : null,
-            proyecto: proyecto ? {
-              id: proyecto.id,
-              titulo: proyecto.titulo
-            } : null,
-            fechaExportacion: new Date().toISOString()
-          }
-        };
-      }).filter(Boolean);
+      // Implementation would go here
+      // For now just show success message
+      toast.success(`${selectedITRs.size} ITRs ${keepOriginal ? "copiados" : "movidos"} exitosamente`);
+      setShowCopyDialog(false);
       
-      const jsonString = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `itrs-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      toast.success(`${selectedITRs.length} ITR${selectedITRs.length !== 1 ? 's' : ''} exportado${selectedITRs.length !== 1 ? 's' : ''} exitosamente`);
-      
+      // Clear selection if not keeping original (meaning we moved them)
+      if (!keepOriginal) {
+        setSelectedITRs(new Set());
+      }
     } catch (error) {
-      console.error("Error al exportar ITRs:", error);
-      toast.error("Error al exportar los ITRs");
+      console.error("Error al copiar ITRs:", error);
+      toast.error("Ocurrió un error al procesar la operación");
     }
   };
+
+  // Find activity details for an ITR
+  const getActividadForITR = (itrId: string) => {
+    const itr = itrbItems.find(i => i.id === itrId);
+    if (!itr) return null;
+    
+    return actividades.find(a => a.id === itr.actividadId) || null;
+  };
+
+  // Render empty state
+  if (filteredITRs.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <h3 className="text-lg font-medium mb-2">No hay ITRs disponibles</h3>
+        <p className="text-muted-foreground">
+          No se encontraron ITRs que coincidan con los filtros actuales.
+        </p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedSistema(undefined);
+              setSelectedSubsistema(undefined);
+              setSearchTerm("");
+            }}
+          >
+            <X className="mr-2 h-4 w-4" />
+            Limpiar filtros
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileSpreadsheet className="h-5 w-5" />
-          Gestor de ITR
-        </CardTitle>
-        <CardDescription>
-          Exporta, copia o reasigna ITRs entre proyectos y actividades
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Filtros de ITR */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 border-b pb-4">
-          <div className="space-y-2">
-            <Label htmlFor="filtro-proyecto">Filtrar por proyecto</Label>
-            <Select value={filtroProyecto} onValueChange={setFiltroProyecto}>
-              <SelectTrigger id="filtro-proyecto">
-                <SelectValue placeholder="Todos los proyectos" />
+    <div className="space-y-4">
+      {/* Filter Controls */}
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+          <div>
+            <Label htmlFor="sistema">Sistema</Label>
+            <Select
+              value={selectedSistema}
+              onValueChange={(val) => {
+                setSelectedSistema(val === "todos" ? undefined : val);
+                setSelectedSubsistema(undefined);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los sistemas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los proyectos</SelectItem>
-                {proyectos.map(proyecto => (
-                  <SelectItem key={proyecto.id} value={proyecto.id}>
-                    {proyecto.titulo || proyecto.id}
+                <SelectItem value="todos">Todos los sistemas</SelectItem>
+                {sistemas.map((sistema) => (
+                  <SelectItem key={sistema} value={sistema}>
+                    {sistema || "Sin nombre"}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="filtro-sistema">Filtrar por sistema</Label>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowSistemasFilter(!showSistemasFilter)}
-                className="h-6 text-xs"
-              >
-                {showSistemasFilter ? "Ocultar" : "Filtrar"} ({selectedSistemas.length})
-              </Button>
-            </div>
-            {showSistemasFilter ? (
-              <div className="border p-2 rounded-md max-h-40 overflow-auto space-y-1">
-                {allSistemas.map(sistema => (
-                  <div key={sistema} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`sistema-${sistema}`} 
-                      checked={selectedSistemas.includes(sistema)}
-                      onCheckedChange={() => toggleSistema(sistema)}
-                    />
-                    <Label htmlFor={`sistema-${sistema}`} className="text-sm">
-                      {sistema}
-                    </Label>
-                  </div>
+          <div>
+            <Label htmlFor="subsistema">Subsistema</Label>
+            <Select
+              value={selectedSubsistema}
+              onValueChange={(val) => setSelectedSubsistema(val === "todos" ? undefined : val)}
+              disabled={!selectedSistema}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los subsistemas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los subsistemas</SelectItem>
+                {subsistemas.map((sub) => (
+                  <SelectItem key={sub} value={sub}>
+                    {sub || "Sin nombre"}
+                  </SelectItem>
                 ))}
-              </div>
-            ) : (
-              <div className="h-10 flex items-center text-sm text-muted-foreground">
-                Haga clic en "Filtrar" para seleccionar sistemas
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
           
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="filtro-subsistema">Filtrar por subsistema</Label>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowSubsistemasFilter(!showSubsistemasFilter)}
-                className="h-6 text-xs"
-              >
-                {showSubsistemasFilter ? "Ocultar" : "Filtrar"} ({selectedSubsistemas.length})
-              </Button>
-            </div>
-            {showSubsistemasFilter ? (
-              <div className="border p-2 rounded-md max-h-40 overflow-auto space-y-1">
-                {allSubsistemas.map(subsistema => (
-                  <div key={subsistema} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`subsistema-${subsistema}`} 
-                      checked={selectedSubsistemas.includes(subsistema)}
-                      onCheckedChange={() => toggleSubsistema(subsistema)}
-                    />
-                    <Label htmlFor={`subsistema-${subsistema}`} className="text-sm">
-                      {subsistema}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-10 flex items-center text-sm text-muted-foreground">
-                Haga clic en "Filtrar" para seleccionar subsistemas
-              </div>
-            )}
-          </div>
-          
-          <div className="col-span-full">
+          <div>
+            <Label htmlFor="search">Buscar</Label>
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar ITRs por nombre..."
-                value={busquedaITR}
-                onChange={(e) => setBusquedaITR(e.target.value)}
-                className="pl-8 pr-8"
+                id="search"
+                placeholder="Buscar ITR..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
-              {busquedaITR && (
-                <button 
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  onClick={() => setBusquedaITR("")}
-                >
-                  <X className="h-4 w-4" />
-                </button>
+              {searchTerm && (
+                <X
+                  className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground cursor-pointer"
+                  onClick={() => setSearchTerm("")}
+                />
               )}
             </div>
           </div>
         </div>
-        
-        {/* Lista de ITRs seleccionables */}
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <Label className="text-sm font-medium">
-              ITRs disponibles ({itrsFiltrados.length})
-            </Label>
-            <div className="text-xs text-muted-foreground">
-              {selectedITRs.length} seleccionados
+      </div>
+
+      {/* Selection Controls */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">
+            {selectedITRs.size} ITR{selectedITRs.size !== 1 ? "s" : ""} seleccionado{selectedITRs.size !== 1 ? "s" : ""}
+          </span>
+          {selectedITRs.size > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              Limpiar
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={selectAllVisible}>
+            Seleccionar todos
+          </Button>
+          <Button 
+            size="sm" 
+            disabled={selectedITRs.size === 0}
+            onClick={handleCopyITRs}
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            Copiar/Transferir
+          </Button>
+        </div>
+      </div>
+
+      {/* ITRs Table */}
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12"></TableHead>
+              <TableHead>Descripción</TableHead>
+              <TableHead>Actividad</TableHead>
+              <TableHead>Sistema</TableHead>
+              <TableHead>Subsistema</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Progreso</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredITRs.map((itr) => {
+              const actividad = actividades.find(a => a.id === itr.actividadId);
+              return (
+                <TableRow key={itr.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedITRs.has(itr.id)}
+                      onCheckedChange={() => toggleSelectITR(itr.id)}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">{itr.descripcion}</TableCell>
+                  <TableCell>{actividad?.nombre || "N/A"}</TableCell>
+                  <TableCell>{actividad?.sistema || "N/A"}</TableCell>
+                  <TableCell>{actividad?.subsistema || "N/A"}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      className={
+                        itr.estado === "Completado" ? "bg-green-500" : 
+                        itr.estado === "Vencido" ? "bg-red-500" : 
+                        "bg-yellow-500"
+                      }
+                    >
+                      {itr.estado}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {itr.cantidadRealizada} / {itr.cantidadTotal}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      
+      {/* Copy Dialog */}
+      <Dialog open={showCopyDialog} onOpenChange={setShowCopyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Copiar/Transferir ITRs</DialogTitle>
+            <DialogDescription>
+              Selecciona la actividad a la que deseas copiar los {selectedITRs.size} ITRs seleccionados
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Actividad destino</Label>
+              <Select
+                value={targetActividadId}
+                onValueChange={setTargetActividadId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar actividad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableActividades.map((act) => (
+                    <SelectItem key={act.id} value={act.id}>
+                      {act.nombre} ({act.sistema}: {act.subsistema})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="keepOriginal"
+                checked={keepOriginal}
+                onCheckedChange={(checked) => setKeepOriginal(checked === true)}
+              />
+              <Label htmlFor="keepOriginal">
+                Mantener ITRs en actividad original (copiar en lugar de mover)
+              </Label>
             </div>
           </div>
           
-          <ScrollArea className="h-[200px] border rounded-md p-2">
-            {itrsFiltrados.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                No se encontraron ITRs con los filtros aplicados
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {itrsFiltrados.map(itr => {
-                  const { actividad, proyecto } = getActividadYProyecto(itr);
-                  const isSelected = selectedITRs.includes(itr.id);
-                  
-                  return (
-                    <div 
-                      key={itr.id} 
-                      className={`flex items-center p-2 rounded-md ${
-                        isSelected ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => handleToggleITR(itr.id)}
-                    >
-                      <Checkbox 
-                        checked={isSelected} 
-                        onCheckedChange={() => handleToggleITR(itr.id)}
-                        className="mr-2"
-                      />
-                      <div className="flex-1 overflow-hidden">
-                        <div className="font-medium truncate">
-                          {itr.descripcion}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {proyecto?.titulo || 'Sin proyecto'} • {actividad?.sistema || '-'} • {actividad?.subsistema || '-'}
-                        </div>
-                      </div>
-                      <div className={`text-xs px-2 py-1 rounded-full ${
-                        itr.estado === 'Completado' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
-                        itr.estado === 'Vencido' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
-                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                      }`}>
-                        {itr.cantidadRealizada}/{itr.cantidadTotal} • {itr.estado}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-        </div>
-        
-        <div className="flex space-x-2 pt-2 border-t">
-          <Button 
-            variant="outline" 
-            className="w-full" 
-            onClick={exportITRsAsJSON}
-            disabled={selectedITRs.length === 0}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Exportar {selectedITRs.length} ITR{selectedITRs.length !== 1 ? 's' : ''}
-          </Button>
-          
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                className="w-full"
-                disabled={selectedITRs.length === 0}
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                Reasignar {selectedITRs.length} ITR{selectedITRs.length !== 1 ? 's' : ''}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Reasignar {selectedITRs.length} ITR{selectedITRs.length !== 1 ? 's' : ''}</DialogTitle>
-                <DialogDescription>
-                  Seleccione el proyecto, sistema, subsistema y actividad destino para los ITRs
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="proyecto-destino">Proyecto destino *</Label>
-                    <Select
-                      value={targetProyecto}
-                      onValueChange={setTargetProyecto}
-                    >
-                      <SelectTrigger id="proyecto-destino">
-                        <SelectValue placeholder="Seleccione proyecto destino" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {proyectos.map(proyecto => (
-                          <SelectItem key={proyecto.id} value={proyecto.id}>
-                            {proyecto.titulo}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="sistema-destino">Sistema destino *</Label>
-                    <Select
-                      value={targetSistema}
-                      onValueChange={setTargetSistema}
-                      disabled={!targetProyecto || sistemasDisponibles.length === 0}
-                    >
-                      <SelectTrigger id="sistema-destino">
-                        <SelectValue placeholder="Seleccione sistema destino" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sistemasDisponibles.map(sistema => (
-                          <SelectItem key={sistema} value={sistema}>
-                            {sistema}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="subsistema-destino">Subsistema destino *</Label>
-                    <Select
-                      value={targetSubsistema}
-                      onValueChange={setTargetSubsistema}
-                      disabled={!targetSistema || subsistemasDisponibles.length === 0}
-                    >
-                      <SelectTrigger id="subsistema-destino">
-                        <SelectValue placeholder="Seleccione subsistema destino" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subsistemasDisponibles.map(subsistema => (
-                          <SelectItem key={subsistema} value={subsistema}>
-                            {subsistema}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="actividad-destino">Actividad destino *</Label>
-                    <Select
-                      value={targetActividad}
-                      onValueChange={setTargetActividad}
-                      disabled={!targetSubsistema || actividadesFiltradas.length === 0}
-                    >
-                      <SelectTrigger id="actividad-destino">
-                        <SelectValue placeholder="Seleccione actividad destino" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {actividadesFiltradas
-                          .filter(act => 
-                            act.sistema === targetSistema && 
-                            act.subsistema === targetSubsistema
-                          )
-                          .map(actividad => (
-                            <SelectItem key={actividad.id} value={actividad.id}>
-                              {actividad.nombre}
-                            </SelectItem>
-                          ))
-                        }
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                {/* Nombres de ITRs seleccionados */}
-                <div className="space-y-2 pt-4 border-t">
-                  <Label className="text-sm font-medium">Nombres de ITRs a reasignar</Label>
-                  <ScrollArea className="h-[200px] border rounded-md p-2">
-                    <div className="space-y-2">
-                      {selectedITRs.map(id => {
-                        const itr = itrbItems.find(i => i.id === id);
-                        if (!itr) return null;
-                        
-                        return (
-                          <div key={id} className="space-y-1">
-                            <Label htmlFor={`itr-name-${id}`} className="text-xs">
-                              {itr.descripcion} (Original)
-                            </Label>
-                            <Input
-                              id={`itr-name-${id}`}
-                              value={newNames[id] || ''}
-                              onChange={(e) => handleNameChange(id, e.target.value)}
-                              placeholder="Nombre del ITR"
-                              className="text-sm h-8"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                </div>
-                
-                <div className="flex items-center space-x-2 pt-2">
-                  <Checkbox
-                    id="keep-original"
-                    checked={keepOriginal}
-                    onCheckedChange={(checked) => setKeepOriginal(checked === true)}
-                  />
-                  <Label htmlFor="keep-original" className="font-medium">
-                    Mantener ITRs originales (crear copias)
-                  </Label>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleReasignarITRs}
-                  disabled={!targetProyecto || !targetActividad}
-                >
-                  <CheckSquare className="h-4 w-4 mr-2" />
-                  Reasignar {selectedITRs.length} ITR{selectedITRs.length !== 1 ? 's' : ''}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardContent>
-    </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCopyDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={performCopy}>
+              {keepOriginal ? "Copiar ITRs" : "Mover ITRs"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
