@@ -47,49 +47,23 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
   const startPosition = Math.max(calculatePosition(item.fechaInicio), 0);
   const endPosition = Math.min(calculatePosition(item.fechaFin), 100);
   const barWidth = Math.max(endPosition - startPosition, 0.5);
+
   const itrbCount = item.itrbsAsociados?.length || 0;
 
-  const getBarHeight = () => {
-    switch (tamanoGrafico) {
-      case "pequeno": return "h-5 top-1/2 -mt-2.5";
-      case "mediano": return "h-6 top-1/2 -mt-3";
-      case "grande": return "h-7 top-1/2 -mt-3.5";
-      case "completo": return "h-9 top-1/2 -mt-4";
-      default: return "h-6 top-1/2 -mt-3";
-    }
-  };
-
-  const getItrbVerticalSpacing = (index: number) => {
-    const baseSpacing = tamanoGrafico === "pequeno" ? 6 :
-                        tamanoGrafico === "grande" ? 10 :
-                        tamanoGrafico === "completo" ? 12 : 8;
-    return baseSpacing + (index * 4);
-  };
-
-  // NUEVA FUNCIÓN: altura dinámica de la fila
-  const getDynamicRowHeight = () => {
-    const base = tamanoGrafico === "pequeno" ? 30 :
-                 tamanoGrafico === "grande" ? 40 :
-                 tamanoGrafico === "completo" ? 50 : 36;
-
-    const perItrb = tamanoGrafico === "pequeno" ? 6 :
-                    tamanoGrafico === "grande" ? 10 :
-                    tamanoGrafico === "completo" ? 12 : 8;
-
-    const total = base + item.itrbsAsociados.length * perItrb;
-    return `${total}px`;
-  };
+  const baseHeight = 40;
+  const rowHeight = baseHeight + itrbCount * 14;
 
   return (
     <div
       key={`activity-${item.id}`}
       className="grid border-b relative mb-1"
       style={{
-        height: getDynamicRowHeight(),
         gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
-        backgroundColor: getRowBackgroundColor(itemIndex, isDarkMode)
+        backgroundColor: getRowBackgroundColor(itemIndex, isDarkMode),
+        height: `${rowHeight}px`
       }}
     >
+      {/* Nombre + badge */}
       <div className={`px-2 ${withSubsystem ? 'pl-8' : 'pl-6'} border-r border-gray-200 dark:border-gray-700 flex items-center gap-2`}>
         <span className="text-sm truncate">{item.nombre}</span>
         {itrbCount > 0 && (
@@ -99,10 +73,11 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
         )}
       </div>
 
-      <div className="col-span-full h-full relative">
+      {/* Contenedor gráfico */}
+      <div className="col-span-full relative w-full h-full">
         {/* Barra principal */}
         <div
-          className={`absolute rounded ${getBarHeight()}`}
+          className="absolute top-3 rounded h-6 z-10"
           style={{
             left: `${startPosition}%`,
             width: `${barWidth}%`,
@@ -116,8 +91,7 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
             className="h-full rounded"
             style={{
               width: `${item.progreso}%`,
-              backgroundColor: item.tieneVencidos ? "#ef4444" :
-                               item.progreso === 100 ? "#22c55e" : "#f59e0b",
+              backgroundColor: item.tieneVencidos ? "#ef4444" : item.progreso === 100 ? "#22c55e" : "#f59e0b"
             }}
           >
             {barWidth > 10 && (
@@ -129,48 +103,48 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
         </div>
 
         {/* ITRs individuales */}
-        {item.itrbsAsociados.map((itrb, itrbIndex) => {
-          const itrbStatus = itrb.estado || "En curso";
-          const itrbStartDate = itrb.fechaInicio ? new Date(itrb.fechaInicio) : new Date(item.fechaInicio);
-          const itrbEndDate = itrb.fechaVencimiento ? new Date(itrb.fechaVencimiento) :
-                              itrb.fechaLimite ? new Date(itrb.fechaLimite) : new Date(item.fechaFin);
-          if (!isDateInRange(itrbStartDate) && !isDateInRange(itrbEndDate)) return null;
+        {item.itrbsAsociados.map((itrb, index) => {
+          const itrbStart = itrb.fechaInicio ? new Date(itrb.fechaInicio) : new Date(item.fechaInicio);
+          const itrbEnd = itrb.fechaVencimiento ? new Date(itrb.fechaVencimiento) : itrb.fechaLimite ? new Date(itrb.fechaLimite) : new Date(item.fechaFin);
 
-          const barStart = Math.max(calculatePosition(itrbStartDate), 0);
-          const barEnd = Math.min(calculatePosition(itrbEndDate), 100);
+          if (!isDateInRange(itrbStart) && !isDateInRange(itrbEnd)) return null;
+
+          const barStart = Math.max(calculatePosition(itrbStart), 0);
+          const barEnd = Math.min(calculatePosition(itrbEnd), 100);
           const itrbBarWidth = Math.max(barEnd - barStart, 0.5);
+
+          const itrbStatus = itrb.estado || "En curso";
+          const yOffset = 10 + index * 16;
+
           const itrbProgress = itrb.cantidadRealizada && itrb.cantidadTotal
             ? Math.round((itrb.cantidadRealizada / itrb.cantidadTotal) * 100)
             : itrbStatus === "Completado" ? 100 : 0;
-          const yOffset = getItrbVerticalSpacing(itrbIndex);
 
           return (
             <div
               key={`itrb-${itrb.id}`}
-              className="absolute h-3 rounded-sm z-10 hover:h-4 hover:shadow-lg transition-all"
+              className="absolute h-3 rounded-sm z-20 hover:h-4 hover:shadow-lg transition-all"
               style={{
                 left: `${barStart}%`,
                 width: `${itrbBarWidth}%`,
-                top: `calc(50% + ${yOffset}px)`,
+                top: `${yOffset}px`,
                 backgroundColor: getStatusColor(itrbStatus)
               }}
-              onMouseOver={(e) =>
-                handleItrbMouseOver(e, {
-                  ...itrb,
-                  actividad: item.nombre,
-                  sistema: item.sistema,
-                  subsistema: item.subsistema,
-                  proyecto: item.proyecto,
-                  fechaInicio: itrbStartDate,
-                  fechaFin: itrbEndDate,
-                  progreso: itrbProgress
-                })
-              }
+              onMouseOver={(e) => handleItrbMouseOver(e, {
+                ...itrb,
+                actividad: item.nombre,
+                sistema: item.sistema,
+                subsistema: item.subsistema,
+                proyecto: item.proyecto,
+                fechaInicio: itrbStart,
+                fechaFin: itrbEnd,
+                progreso: itrbProgress
+              })}
               onMouseOut={handleMouseOut}
             >
               {itrbBarWidth > 5 && (
                 <div className="mx-1 text-white text-[10px] truncate">
-                  {itrb.descripcion || `ITR ${itrbIndex + 1}`}
+                  {itrb.descripcion || `ITR ${index + 1}`}
                 </div>
               )}
             </div>
@@ -182,4 +156,3 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
 };
 
 export default GanttActivityBar;
-
