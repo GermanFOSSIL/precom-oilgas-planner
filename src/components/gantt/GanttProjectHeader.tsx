@@ -14,13 +14,12 @@ const GanttProjectHeader: React.FC<GanttProjectHeaderProps> = ({
 }) => {
   return (
     <div 
-      className="grid border-b mb-1"
+      className="grid border-b mb-1 gantt-proyecto-header"
       style={{ 
-        gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
-        backgroundColor: "#4b32c3" // Violet solid for projects
+        gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`
       }}
     >
-      <div className="p-2 font-bold text-white">
+      <div className="p-2 font-bold gantt-label">
         {proyecto}
       </div>
       <div className="col-span-full"></div>

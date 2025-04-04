@@ -8,6 +8,7 @@ import { Calendar, ZoomIn, ZoomOut, ArrowLeft, ArrowRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, addMonths, subMonths, addWeeks, subWeeks, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
+import "@/components/gantt/styles/EnhancedGantt.css";
 
 interface GanttChartProps {
   filtros: FiltrosDashboard;
@@ -19,7 +20,7 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
   
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
   const [currentStartDate, setCurrentStartDate] = useState(new Date());
-  const [hoveredItem, setHoveredItem] = useState<{ id: string, tipo: "actividad" | "itrb" } | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<{ id: string, tipo: "actividad" | "itrb" | "sistema" | "subsistema" } | null>(null);
   
   const actividadesFiltradas = useMemo(() => {
     return actividades.filter(actividad => {
@@ -55,7 +56,8 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
         return false;
       }
       
-      if (filtros.mcc !== undefined && itrb.ccc !== filtros.mcc) {
+      // Corregido: Usar mcc en lugar de ccc
+      if (filtros.mcc !== undefined && itrb.mcc !== filtros.mcc) {
         return false;
       }
       
@@ -275,8 +277,8 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
   }
   
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center p-3 border-b mb-2">
+    <div className="flex flex-col h-full gantt-chart">
+      <div className="flex justify-between items-center p-3 border-b mb-2 gantt-header">
         <div className="flex items-center space-x-2">
           <Button size="sm" variant="outline" onClick={handleNavigateBack}>
             <ArrowLeft className="h-4 w-4" />
@@ -312,8 +314,9 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
       </div>
       
       <ScrollArea className="flex-1 overflow-hidden">
-        <div className="relative" style={{ minWidth: timeSlots.length * slotWidth + 300 }}>
-          <div className="sticky top-0 z-10 flex border-b bg-white dark:bg-gray-900" style={{ marginLeft: "300px" }}>
+        <div className="relative gantt-container" style={{ minWidth: timeSlots.length * slotWidth + 300 }}>
+          {/* Encabezado de fechas */}
+          <div className="sticky top-0 z-10 flex border-b gantt-timeline-header" style={{ marginLeft: "300px" }}>
             {timeSlots.map((slot, index) => {
               const isWeekend = slot.getDay() === 0 || slot.getDay() === 6;
               const isFirstOfMonth = slot.getDate() === 1;
@@ -324,8 +327,8 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
               return (
                 <div 
                   key={index}
-                  className={`text-center text-xs p-1 border-r flex-shrink-0 ${isWeekend ? "bg-gray-100 dark:bg-gray-800" : ""}`}
-                  style={{ width: `${slotWidth}px`, borderBottom: isFirstOfMonth ? "2px solid #cbd5e1" : "" }}
+                  className={`gantt-day-header ${isWeekend ? "gantt-weekend" : ""} ${isFirstOfMonth ? "gantt-month-start" : ""}`}
+                  style={{ width: `${slotWidth}px` }}
                 >
                   {displayDate}
                 </div>
@@ -333,31 +336,33 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
             })}
           </div>
           
+          {/* Línea de hoy */}
           {timeSlots.some(d => d.toDateString() === new Date().toDateString()) && (
-            <div className="absolute top-7 bottom-0 w-px bg-red-500 z-5" 
+            <div className="gantt-today-line" 
                  style={{ 
                    left: `${300 + timeSlots.findIndex(d => d.toDateString() === new Date().toDateString()) * slotWidth + slotWidth/2}px` 
                  }}>
             </div>
           )}
           
-          <div className="mt-1">
+          {/* Contenido del Gantt */}
+          <div className="gantt-content">
             {organizarActividades.map((proyecto, proyectoIndex) => (
-              <div key={proyecto.proyectoId} className="mb-4">
-                <div className="sticky left-0 z-10 flex items-center h-8 bg-indigo-700 text-white font-bold pl-4 pr-2 mb-1">
-                  <div className="truncate w-[300px]">{proyecto.proyectoNombre}</div>
+              <div key={proyecto.proyectoId} className="gantt-proyecto-container">
+                <div className="gantt-proyecto-header">
+                  <div className="gantt-label">{proyecto.proyectoNombre}</div>
                 </div>
                 
                 {proyecto.sistemas.map((sistema, sistemaIndex) => (
-                  <div key={`${proyecto.proyectoId}-${sistema.nombre}`} className="mb-2">
-                    <div className="sticky left-0 z-10 flex items-center h-7 bg-indigo-500 text-white pl-8 pr-2">
-                      <div className="truncate w-[300px]">{sistema.nombre}</div>
+                  <div key={`${proyecto.proyectoId}-${sistema.nombre}`} className="gantt-sistema-container">
+                    <div className="gantt-sistema-header">
+                      <div className="gantt-label">{sistema.nombre}</div>
                     </div>
                     
                     {sistema.subsistemas.map((subsistema, subsistemaIndex) => (
-                      <div key={`${proyecto.proyectoId}-${sistema.nombre}-${subsistema.nombre}`} className="mb-1">
-                        <div className="sticky left-0 z-10 flex items-center h-7 bg-indigo-300 dark:bg-indigo-600 text-black dark:text-white pl-12 pr-2">
-                          <div className="truncate w-[300px]">{subsistema.nombre}</div>
+                      <div key={`${proyecto.proyectoId}-${sistema.nombre}-${subsistema.nombre}`} className="gantt-subsistema-container">
+                        <div className="gantt-subsistema-header">
+                          <div className="gantt-label">{subsistema.nombre}</div>
                         </div>
                         
                         {subsistema.actividades.map((actividad, actividadIndex) => {
@@ -366,73 +371,90 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
                           const { left, width } = getItemPosition(fechaInicio, fechaFin);
                           
                           const activityItrbs = subsistema.itrbsPorActividad[actividad.id] || [];
+                          const totalItrs = activityItrbs.length;
                           
                           if (width === 0) return null;
                           
+                          // Calcular el progreso total de la actividad basado en los ITRs
+                          const completedItrs = activityItrbs.filter(itr => itr.estado === "Completado").length;
+                          const progressPercentage = totalItrs > 0 ? (completedItrs / totalItrs) * 100 : 0;
+                          
                           return (
-                            <div key={actividad.id}>
-                              <div className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-16 pr-2 border-b w-[300px]">
-                                  <div className="truncate text-sm">
-                                    {actividad.nombre}
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      ({activityItrbs.length} ITR)
-                                    </span>
+                            <div key={actividad.id} className="gantt-actividad-container">
+                              <div className="gantt-actividad-row">
+                                <div className="gantt-actividad-label">
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="text-sm font-medium truncate">{actividad.nombre}</span>
+                                    <span className="text-xs text-gray-500 ml-1">{totalItrs} ITR</span>
                                   </div>
                                 </div>
                                 
                                 <div 
-                                  className={`absolute h-5 rounded-sm shadow-md flex items-center justify-center text-xs text-white overflow-hidden
-                                            ${hoveredItem?.id === actividad.id ? "ring-2 ring-offset-2 ring-blue-500 z-20" : ""}`}
+                                  className={`gantt-bar gantt-actividad-bar ${hoveredItem?.id === actividad.id ? "gantt-bar-hovered" : ""}`}
                                   style={{ 
                                     left: `${300 + left}px`, 
-                                    width: `${width}px`,
-                                    backgroundColor: "#64748b",
-                                    borderColor: "#475569"
+                                    width: `${width}px`
                                   }}
                                   onMouseEnter={() => setHoveredItem({ id: actividad.id, tipo: "actividad" })}
                                   onMouseLeave={() => setHoveredItem(null)}
                                 >
+                                  {/* Barra de progreso interna */}
+                                  <div 
+                                    className="gantt-progress-bar"
+                                    style={{ width: `${progressPercentage}%` }}
+                                  ></div>
+                                  
                                   {width > 50 && (
-                                    <span className="px-2 truncate">
-                                      {actividad.nombre}
-                                    </span>
+                                    <div className="gantt-bar-label">
+                                      {actividad.nombre} ({progressPercentage.toFixed(0)}%)
+                                    </div>
                                   )}
                                 </div>
                               </div>
                               
+                              {/* Agrupar ITRs por rango de fechas si aplica */}
                               {activityItrbs.map((itrb, itrbIndex) => {
-                                const fechaInicio = new Date(actividad.fechaInicio);
+                                const fechaInicio = new Date(itrb.fechaInicio || actividad.fechaInicio);
                                 const fechaLimite = new Date(itrb.fechaLimite);
                                 const { left, width } = getItemPosition(fechaInicio, fechaLimite);
                                 const colors = getColorByEstado(itrb.estado);
                                 
                                 if (width === 0) return null;
                                 
+                                // Calcular progreso del ITR
+                                const itrbProgress = itrb.cantidadRealizada && itrb.cantidadTotal ? 
+                                  (itrb.cantidadRealizada / itrb.cantidadTotal) * 100 : 0;
+                                
                                 return (
-                                  <div key={itrb.id} className="relative flex items-center h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                    <div className="sticky left-0 z-10 bg-white dark:bg-gray-900 flex items-center h-full pl-20 pr-2 border-b w-[300px]">
-                                      <div className="truncate text-xs text-gray-600 dark:text-gray-400">
-                                        {itrb.descripcion.substring(0, 25)}{itrb.descripcion.length > 25 ? '...' : ''}
-                                      </div>
+                                  <div key={itrb.id} className="gantt-itrb-row">
+                                    <div className="gantt-itrb-label">
+                                      <span className="truncate text-xs">{itrb.descripcion}</span>
                                     </div>
                                     
                                     <div 
-                                      className={`absolute h-4 rounded-full flex items-center justify-center text-xs text-white overflow-hidden
-                                                 ${hoveredItem?.id === itrb.id ? "ring-2 ring-offset-1 ring-blue-500 z-20" : ""}`}
+                                      className={`gantt-bar gantt-itrb-bar ${hoveredItem?.id === itrb.id ? "gantt-bar-hovered" : ""}`}
                                       style={{ 
                                         left: `${300 + left}px`, 
                                         width: `${width}px`,
                                         backgroundColor: colors.bg,
-                                        borderColor: colors.border
                                       }}
                                       onMouseEnter={() => setHoveredItem({ id: itrb.id, tipo: "itrb" })}
                                       onMouseLeave={() => setHoveredItem(null)}
                                     >
+                                      {/* Barra de progreso interna */}
+                                      <div 
+                                        className="gantt-progress-bar"
+                                        style={{ 
+                                          width: `${itrbProgress}%`,
+                                          backgroundColor: colors.border 
+                                        }}
+                                      ></div>
+                                      
                                       {width > 50 && (
-                                        <span className="px-2 truncate">
-                                          {itrb.descripcion} ({itrb.cantidadRealizada}/{itrb.cantidadTotal})
-                                        </span>
+                                        <div className="gantt-bar-label">
+                                          {itrb.descripcion.substring(0, 15)}{itrb.descripcion.length > 15 ? '...' : ''} 
+                                          ({itrb.cantidadRealizada}/{itrb.cantidadTotal})
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -452,22 +474,22 @@ const EnhancedGanttChart: React.FC<GanttChartProps> = ({ filtros, configuracion 
       </ScrollArea>
       
       {configuracion.mostrarLeyenda && (
-        <div className="flex justify-center mt-4 space-x-4 pb-4">
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#22c55e" }}></div>
-            <span className="text-sm">Completado</span>
+        <div className="gantt-legend">
+          <div className="gantt-legend-item">
+            <div className="gantt-legend-color" style={{ backgroundColor: "#22c55e" }}></div>
+            <span>Completado</span>
           </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#f59e0b" }}></div>
-            <span className="text-sm">En curso</span>
+          <div className="gantt-legend-item">
+            <div className="gantt-legend-color" style={{ backgroundColor: "#f59e0b" }}></div>
+            <span>En curso</span>
           </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#ef4444" }}></div>
-            <span className="text-sm">Vencido</span>
+          <div className="gantt-legend-item">
+            <div className="gantt-legend-color" style={{ backgroundColor: "#ef4444" }}></div>
+            <span>Vencido</span>
           </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 rounded mr-2" style={{ backgroundColor: "#64748b" }}></div>
-            <span className="text-sm">Actividad</span>
+          <div className="gantt-legend-item">
+            <div className="gantt-legend-color" style={{ backgroundColor: "#64748b" }}></div>
+            <span>Actividad</span>
           </div>
         </div>
       )}

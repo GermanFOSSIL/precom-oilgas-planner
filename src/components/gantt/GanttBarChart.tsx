@@ -12,6 +12,7 @@ import GanttSubsystemHeader from "./GanttSubsystemHeader";
 import GanttActivityBar from "./GanttActivityBar";
 import { isWithinInterval } from "date-fns";
 import { getAxisDates } from "./utils/dateUtils";
+import "./styles/EnhancedGantt.css";
 
 // Este componente se mantiene para compatibilidad con código existente
 // pero internamente ahora usa la nueva implementación basada en la librería
@@ -141,13 +142,13 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col gantt-chart">
       <div className="w-full overflow-y-auto flex-1">
         <ScrollArea className="w-full h-[calc(100vh-300px)]">
-          <div className="min-w-[800px] relative">
+          <div className="min-w-[800px] relative gantt-container">
             <GanttDateHeaders axisDates={axisDates} viewMode={viewMode} isDarkMode={isDarkMode} />
             <GanttTodayIndicator currentStartDate={currentStartDate} currentEndDate={currentEndDate} calculatePosition={calculatePosition} />
-            <div className={`w-full ${getSpacingClass()} ${getAlturaFila(tamanoGrafico)}`}>
+            <div className={`w-full ${getSpacingClass()} gantt-content`}>
               {Object.entries(groupedData).map(([proyecto, sistemas], proyectoIndex) => (
                 <React.Fragment key={`proyecto-${proyectoIndex}`}>
                   <GanttProjectHeader proyecto={proyecto} axisDates={axisDates} isDarkMode={isDarkMode} />

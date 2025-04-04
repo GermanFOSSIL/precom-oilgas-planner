@@ -14,13 +14,12 @@ const GanttSystemHeader: React.FC<GanttSystemHeaderProps> = ({
 }) => {
   return (
     <div 
-      className="grid border-b mb-1"
+      className="grid border-b mb-1 gantt-sistema-header"
       style={{ 
-        gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`,
-        backgroundColor: "#4e5ed4" // Medium blue for systems
+        gridTemplateColumns: `minmax(200px, auto) repeat(${axisDates.length}, 1fr)`
       }}
     >
-      <div className="p-2 pl-4 font-semibold text-white">
+      <div className="p-2 pl-4 font-medium gantt-label">
         {sistema}
       </div>
       <div className="col-span-full"></div>

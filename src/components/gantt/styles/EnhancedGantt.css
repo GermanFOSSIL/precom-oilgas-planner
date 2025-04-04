@@ -1,67 +1,294 @@
 
-/* Estilos personalizados para el Gantt Chart */
+/* Estilos mejorados para el Gantt Chart */
 .gantt-chart {
   width: 100%;
   height: 100%;
   font-family: inherit;
+  --gantt-proyecto-bg: rgba(67, 56, 202, 0.15);
+  --gantt-proyecto-border: #4f46e5;
+  --gantt-sistema-bg: rgba(79, 70, 229, 0.1);
+  --gantt-sistema-border: #6366f1;
+  --gantt-subsistema-bg: rgba(129, 140, 248, 0.05);
+  --gantt-subsistema-border: #a5b4fc;
+  --gantt-actividad-bg: #f8fafc;
+  --gantt-weekend-bg: rgba(241, 245, 249, 0.6);
+  --gantt-today-line: #ef4444;
+  --gantt-hover-bg: rgba(99, 102, 241, 0.1);
+  --gantt-bar-bg: #94a3b8;
+  --gantt-bar-border: #64748b;
+  --gantt-bar-progress: #475569;
 }
 
-/* Filas básicas */
-.gantt-row {
+/* En modo oscuro */
+.dark .gantt-chart {
+  --gantt-proyecto-bg: rgba(79, 70, 229, 0.25);
+  --gantt-proyecto-border: #6366f1;
+  --gantt-sistema-bg: rgba(99, 102, 241, 0.2);
+  --gantt-sistema-border: #818cf8;
+  --gantt-subsistema-bg: rgba(129, 140, 248, 0.15);
+  --gantt-subsistema-border: #c7d2fe;
+  --gantt-actividad-bg: #1e293b;
+  --gantt-weekend-bg: rgba(30, 41, 59, 0.7);
+  --gantt-hover-bg: rgba(99, 102, 241, 0.2);
+}
+
+.gantt-container {
   position: relative;
 }
 
-/* Estilos para los encabezados jerárquicos */
-.gantt-proyecto {
-  border-bottom: 1px solid var(--border);
-  background-color: rgba(79, 70, 229, 0.05);
-}
-
-.gantt-sistema {
-  border-bottom: 1px solid var(--border);
-  background-color: rgba(99, 102, 241, 0.03);
-}
-
-.gantt-subsistema {
-  border-bottom: 1px solid var(--border);
-  background-color: rgba(129, 140, 248, 0.02);
-}
-
-.gantt-actividad {
-  border-bottom: 1px solid var(--border);
-  transition: background-color 0.2s;
-}
-
-.gantt-actividad:hover {
-  background-color: rgba(99, 102, 241, 0.05);
-}
-
-/* Encabezado del gráfico */
 .gantt-header {
   background-color: var(--background);
   border-bottom: 2px solid var(--border);
   z-index: 10;
 }
 
-/* Estilos para tema oscuro */
-.dark .gantt-proyecto {
-  background-color: rgba(79, 70, 229, 0.15);
+/* Encabezados de tiempo */
+.gantt-timeline-header {
+  background-color: var(--background);
+  border-bottom: 2px solid var(--border);
+  z-index: 10;
 }
 
-.dark .gantt-sistema {
-  background-color: rgba(99, 102, 241, 0.1);
+.gantt-day-header {
+  text-align: center;
+  font-size: 0.75rem;
+  padding: 0.25rem;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-.dark .gantt-subsistema {
-  background-color: rgba(129, 140, 248, 0.08);
+.gantt-weekend {
+  background-color: var(--gantt-weekend-bg);
 }
 
-.dark .gantt-actividad:hover {
-  background-color: rgba(99, 102, 241, 0.15);
+.gantt-month-start {
+  border-left: 1px solid var(--border);
+  font-weight: 600;
 }
 
-.dark .gantt-header {
-  background-color: hsl(224 71% 4%);
+/* Línea de hoy */
+.gantt-today-line {
+  position: absolute;
+  top: 28px;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--gantt-today-line);
+  z-index: 5;
+}
+
+/* Contenedor de contenido */
+.gantt-content {
+  margin-top: 0.25rem;
+}
+
+/* Estilos para proyectos */
+.gantt-proyecto-container {
+  margin-bottom: 1rem;
+}
+
+.gantt-proyecto-header {
+  display: flex;
+  align-items: center;
+  height: 2.25rem;
+  background: linear-gradient(90deg, var(--gantt-proyecto-bg) 0%, rgba(67, 56, 202, 0.05) 100%);
+  border-left: 4px solid var(--gantt-proyecto-border);
+  border-bottom: 1px solid var(--border);
+  font-weight: bold;
+  color: var(--foreground);
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  margin-bottom: 0.25rem;
+}
+
+/* Estilos para sistemas */
+.gantt-sistema-container {
+  margin-bottom: 0.75rem;
+}
+
+.gantt-sistema-header {
+  display: flex;
+  align-items: center;
+  height: 1.75rem;
+  background: linear-gradient(90deg, var(--gantt-sistema-bg) 0%, rgba(79, 70, 229, 0.02) 100%);
+  border-left: 3px solid var(--gantt-sistema-border);
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+  color: var(--foreground);
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  margin-bottom: 0.25rem;
+}
+
+/* Estilos para subsistemas */
+.gantt-subsistema-container {
+  margin-bottom: 0.5rem;
+}
+
+.gantt-subsistema-header {
+  display: flex;
+  align-items: center;
+  height: 1.5rem;
+  background: linear-gradient(90deg, var(--gantt-subsistema-bg) 0%, transparent 100%);
+  border-left: 2px solid var(--gantt-subsistema-border);
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  margin-bottom: 0.125rem;
+}
+
+/* Estilos para actividades */
+.gantt-actividad-container {
+  margin-bottom: 0.25rem;
+}
+
+.gantt-actividad-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 2rem;
+  transition: background-color 0.2s ease;
+}
+
+.gantt-actividad-row:hover {
+  background-color: var(--gantt-hover-bg);
+}
+
+/* Estilos para ITRBs */
+.gantt-itrb-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 1.75rem;
+  transition: background-color 0.2s ease;
+}
+
+.gantt-itrb-row:hover {
+  background-color: var(--gantt-hover-bg);
+}
+
+/* Etiquetas laterales */
+.gantt-label {
+  padding: 0.25rem 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.gantt-proyecto-header .gantt-label {
+  padding-left: 1rem;
+}
+
+.gantt-sistema-header .gantt-label {
+  padding-left: 2rem;
+}
+
+.gantt-subsistema-header .gantt-label {
+  padding-left: 3rem;
+  font-size: 0.875rem;
+}
+
+.gantt-actividad-label {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  padding: 0.25rem 0.5rem 0.25rem 4rem;
+  background-color: var(--background);
+  border-bottom: 1px solid var(--border);
+  width: 300px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.gantt-itrb-label {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  padding: 0.25rem 0.5rem 0.25rem 5rem;
+  background-color: var(--background);
+  border-bottom: 1px solid var(--border);
+  width: 300px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* Barras del gantt */
+.gantt-bar {
+  position: absolute;
+  height: 1.25rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+.gantt-actividad-bar {
+  background-color: var(--gantt-bar-bg);
+  border: 1px solid var(--gantt-bar-border);
+}
+
+.gantt-itrb-bar {
+  height: 1rem;
+  border-radius: 999px;
+}
+
+.gantt-bar-hovered {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+  z-index: 20;
+}
+
+.gantt-progress-bar {
+  height: 100%;
+  background-color: var(--gantt-bar-progress);
+  opacity: 0.8;
+}
+
+.gantt-bar-label {
+  position: absolute;
+  left: 8px;
+  font-size: 0.75rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+}
+
+/* Leyenda */
+.gantt-legend {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-bottom: 1rem;
+  gap: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.gantt-legend-item {
+  display: flex;
+  align-items: center;
+}
+
+.gantt-legend-color {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  margin-right: 0.5rem;
 }
 
 /* Barras de desplazamiento personalizadas */

@@ -18,32 +18,38 @@ const GanttDateHeaders: React.FC<GanttDateHeadersProps> = ({
 
   return (
     <div 
-      className="grid sticky top-0 z-20 border-b shadow-sm"
+      className="grid sticky top-0 z-20 border-b gantt-timeline-header"
       style={{ 
-        gridTemplateColumns,
-        backgroundColor: isDarkMode ? "#1e293b" : "#ffffff"
+        gridTemplateColumns
       }}
     >
       <div className="p-2 border-r border-gray-200 dark:border-gray-700 font-medium">
         {viewMode === "month" ? "Mes" : viewMode === "week" ? "Semana" : "Día"}
       </div>
       
-      {axisDates.map((date, index) => (
-        <div 
-          key={index} 
-          className={`
-            text-center text-xs py-2 border-r border-gray-200 dark:border-gray-700
-            ${isToday(date) ? 'bg-blue-50 dark:bg-blue-900/20 font-bold' : ''}
-          `}
-        >
-          {viewMode === "month" 
-            ? format(date, "d", { locale: es })
-            : viewMode === "week"
-              ? format(date, "EEE d", { locale: es })
-              : format(date, "HH:mm")
-          }
-        </div>
-      ))}
+      {axisDates.map((date, index) => {
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+        const isFirstOfMonth = date.getDate() === 1;
+        
+        return (
+          <div 
+            key={index} 
+            className={`
+              gantt-day-header
+              ${isWeekend ? 'gantt-weekend' : ''}
+              ${isToday(date) ? 'font-bold text-primary' : ''}
+              ${isFirstOfMonth ? 'gantt-month-start' : ''}
+            `}
+          >
+            {viewMode === "month" 
+              ? format(date, "d", { locale: es })
+              : viewMode === "week"
+                ? format(date, "EEE d", { locale: es })
+                : format(date, "HH:mm")
+            }
+          </div>
+        );
+      })}
     </div>
   );
 };
