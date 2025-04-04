@@ -38,8 +38,7 @@ import {
   UserMinus, 
   Settings, 
   Lock, 
-  UserCog,
-  Save 
+  UserCog 
 } from "lucide-react";
 
 // Estructura para permisos
@@ -66,12 +65,11 @@ interface AppUser {
 }
 
 const UserManagement: React.FC = () => {
-  const { user } = useAppContext(); // Solo usamos user para fines de visualización
+  const { user, isAdmin } = useAppContext();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
-  const [isAdmin, setIsAdmin] = useState(true); // Permitir a todos los usuarios acceder a la gestión de usuarios
   
   // Nuevo usuario
   const [newUser, setNewUser] = useState<Omit<AppUser, "id" | "fechaCreacion" | "activo">>({
@@ -84,41 +82,20 @@ const UserManagement: React.FC = () => {
       actividades: false,
       itrb: false,
       proyectos: false,
-      reportes: true, // Por defecto permitir reportes a todos
+      reportes: false,
       configuracion: false
     }
   });
   
-  // Cargar usuarios desde localStorage o usar los predefinidos
+  // Cargar usuarios (simulación)
   useEffect(() => {
-    const storedUsers = localStorage.getItem('appUsers');
-    if (storedUsers) {
-      try {
-        setUsers(JSON.parse(storedUsers));
-      } catch (e) {
-        console.error("Error parsing stored users:", e);
-        setDefaultUsers();
-      }
-    } else {
-      setDefaultUsers();
-    }
-  }, []);
-  
-  // Guardar usuarios en localStorage cuando cambien
-  useEffect(() => {
-    if (users.length > 0) {
-      localStorage.setItem('appUsers', JSON.stringify(users));
-    }
-  }, [users]);
-  
-  // Establecer usuarios predefinidos
-  const setDefaultUsers = () => {
+    // En una implementación real, esto vendría de la API/base de datos
     const mockUsers: AppUser[] = [
       {
         id: "user-1",
         nombre: "Admin Principal",
         email: "admin@example.com",
-        password: "admin123",
+        password: "********",
         rol: "admin",
         permisos: {
           dashboard: true,
@@ -136,7 +113,7 @@ const UserManagement: React.FC = () => {
         id: "user-2",
         nombre: "Técnico Test",
         email: "tecnico@example.com",
-        password: "tecnico123",
+        password: "********",
         rol: "tecnico",
         permisos: {
           dashboard: true,
@@ -154,14 +131,14 @@ const UserManagement: React.FC = () => {
         id: "user-3",
         nombre: "Visualizador",
         email: "viewer@example.com",
-        password: "viewer123",
+        password: "********",
         rol: "viewer",
         permisos: {
           dashboard: true,
           actividades: true,
           itrb: false,
           proyectos: false,
-          reportes: true,
+          reportes: false,
           configuracion: false
         },
         activo: true,
@@ -171,8 +148,7 @@ const UserManagement: React.FC = () => {
     ];
     
     setUsers(mockUsers);
-    localStorage.setItem('appUsers', JSON.stringify(mockUsers));
-  };
+  }, []);
   
   // Función para añadir usuario
   const handleAddUser = () => {
@@ -200,10 +176,7 @@ const UserManagement: React.FC = () => {
       fechaCreacion: new Date().toISOString()
     };
     
-    const updatedUsers = [...users, newUserComplete];
-    setUsers(updatedUsers);
-    localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
-    
+    setUsers([...users, newUserComplete]);
     setShowAddUserDialog(false);
     resetNewUserForm();
     toast.success("Usuario creado exitosamente");
@@ -219,12 +192,9 @@ const UserManagement: React.FC = () => {
   const handleSaveEdit = () => {
     if (!selectedUser) return;
     
-    const updatedUsers = users.map(u => 
+    setUsers(users.map(u => 
       u.id === selectedUser.id ? selectedUser : u
-    );
-    
-    setUsers(updatedUsers);
-    localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+    ));
     
     setShowEditUserDialog(false);
     setSelectedUser(null);
@@ -233,20 +203,15 @@ const UserManagement: React.FC = () => {
   
   // Función para eliminar usuario
   const handleDeleteUser = (userId: string) => {
-    const updatedUsers = users.filter(u => u.id !== userId);
-    setUsers(updatedUsers);
-    localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+    setUsers(users.filter(u => u.id !== userId));
     toast.success("Usuario eliminado exitosamente");
   };
   
   // Función para activar/desactivar usuario
   const handleToggleUserStatus = (userId: string) => {
-    const updatedUsers = users.map(u => 
+    setUsers(users.map(u => 
       u.id === userId ? { ...u, activo: !u.activo } : u
-    );
-    
-    setUsers(updatedUsers);
-    localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+    ));
     
     const user = users.find(u => u.id === userId);
     toast.success(`Usuario ${user?.activo ? 'desactivado' : 'activado'} exitosamente`);
@@ -264,7 +229,7 @@ const UserManagement: React.FC = () => {
         actividades: false,
         itrb: false,
         proyectos: false,
-        reportes: true,
+        reportes: false,
         configuracion: false
       }
     });
@@ -321,7 +286,7 @@ const UserManagement: React.FC = () => {
           actividades: true,
           itrb: false,
           proyectos: false,
-          reportes: true,
+          reportes: false,
           configuracion: false
         };
       }
@@ -359,7 +324,7 @@ const UserManagement: React.FC = () => {
           actividades: true,
           itrb: false,
           proyectos: false,
-          reportes: true,
+          reportes: false,
           configuracion: false
         };
       }
@@ -371,26 +336,21 @@ const UserManagement: React.FC = () => {
       });
     }
   };
-
-  // Función para exportar usuarios
-  const exportUserData = () => {
-    try {
-      const dataStr = JSON.stringify(users, null, 2);
-      const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
-      
-      const exportFileDefaultName = 'usuarios-export.json';
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
-      
-      toast.success("Usuarios exportados exitosamente");
-    } catch (error) {
-      console.error("Error exporting users:", error);
-      toast.error("Error al exportar usuarios");
-    }
-  };
+  
+  if (!isAdmin) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestión de Usuarios</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <p className="text-center text-muted-foreground py-10">
+            No tienes permisos para acceder a esta sección
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card>
@@ -399,16 +359,10 @@ const UserManagement: React.FC = () => {
           <CardTitle>Gestión de Usuarios</CardTitle>
           <CardDescription>Administra los usuarios y sus permisos de acceso</CardDescription>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportUserData}>
-            <Save className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
-          <Button onClick={() => setShowAddUserDialog(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Nuevo Usuario
-          </Button>
-        </div>
+        <Button onClick={() => setShowAddUserDialog(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Nuevo Usuario
+        </Button>
       </CardHeader>
       
       <CardContent>
@@ -746,6 +700,7 @@ const UserManagement: React.FC = () => {
                     value={selectedUser.email}
                     onChange={(e) => setSelectedUser({...selectedUser, email: e.target.value})}
                     placeholder="usuario@empresa.com"
+                    disabled
                   />
                 </div>
               </div>

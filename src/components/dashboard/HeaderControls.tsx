@@ -2,7 +2,7 @@
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { SunMoon, Download, Image, FileSpreadsheet, Bot, FileText } from "lucide-react";
+import { SunMoon, Download, Image, FileSpreadsheet, Bot } from "lucide-react";
 import ProyectoSelector from "@/components/ProyectoSelector";
 import {
   DropdownMenu,
@@ -19,7 +19,6 @@ interface HeaderControlsProps {
   onExportPDF: () => void;
   onExportExcel: () => void;
   exportingChart: boolean;
-  onToggleReportGenerator?: () => void;
 }
 
 const HeaderControls: React.FC<HeaderControlsProps> = ({
@@ -28,7 +27,6 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onExportPDF,
   onExportExcel,
   exportingChart,
-  onToggleReportGenerator
 }) => {
   return (
     <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
@@ -68,7 +66,7 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
           </TabsList>
         </Tabs>
         
-        <div className="flex gap-2 mt-2 flex-wrap">
+        <div className="flex gap-2 mt-2">
           <Button
             variant="outline"
             onClick={onToggleTheme}
@@ -88,17 +86,6 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
               Asistente IA
             </Link>
           </Button>
-
-          {onToggleReportGenerator && (
-            <Button
-              variant="outline"
-              onClick={onToggleReportGenerator}
-              className="text-orange-600 border-orange-200 hover:bg-orange-50"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Generar Reporte
-            </Button>
-          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

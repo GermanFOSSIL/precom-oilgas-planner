@@ -19,7 +19,6 @@ export const useExportUtils = ({
 }: ExportUtilsProps) => {
   const captureGanttChart = async (): Promise<string | null> => {
     try {
-      // First try to find the visible gantt chart container
       const ganttContainers = Array.from(document.querySelectorAll('.gantt-chart-container'));
       const visibleGanttContainer = ganttContainers.find(el =>
         el instanceof HTMLElement &&
@@ -27,53 +26,8 @@ export const useExportUtils = ({
         window.getComputedStyle(el).display !== 'none'
       ) as HTMLElement;
 
-      // If found a visible container
-      if (visibleGanttContainer) {
-        // Add timestamp for context
-        const timestamp = document.createElement('div');
-        timestamp.className = 'chart-timestamp';
-        timestamp.style.position = 'absolute';
-        timestamp.style.bottom = '10px';
-        timestamp.style.right = '10px';
-        timestamp.style.fontSize = '10px';
-        timestamp.style.color = '#666';
-        timestamp.style.padding = '4px';
-        timestamp.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-        timestamp.style.borderRadius = '3px';
-
-        const userName = localStorage.getItem('userName') || 'Usuario';
-        timestamp.textContent = `Generado por: ${userName} - ${new Date().toLocaleString()}`;
-
-        visibleGanttContainer.appendChild(timestamp);
-
-        // Capture the chart with html2canvas
-        const canvas = await html2canvas(visibleGanttContainer, {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          logging: false,
-          width: visibleGanttContainer.scrollWidth,
-          height: visibleGanttContainer.scrollHeight
-        });
-
-        visibleGanttContainer.removeChild(timestamp);
-        return canvas.toDataURL('image/png');
-      } 
-      // Fallback to finding any Gantt chart element
-      else {
-        // Look for recharts or any element that might contain the Gantt chart
-        let ganttElement = document.querySelector('.gantt-chart-container .recharts-wrapper') as HTMLElement;
-        
-        if (!ganttElement) {
-          ganttElement = document.querySelector('.recharts-wrapper') as HTMLElement;
-        }
-        
-        if (!ganttElement) {
-          // One last attempt - try to find any element that might be the Gantt container
-          ganttElement = document.querySelector('.gantt-bar-chart') as HTMLElement;
-        }
-        
+      if (!visibleGanttContainer) {
+        const ganttElement = document.querySelector('.recharts-wrapper') as HTMLElement;
         if (!ganttElement) {
           toast.error("No se pudo encontrar el diagrama de Gantt para exportar");
           return null;
@@ -89,6 +43,36 @@ export const useExportUtils = ({
 
         return canvas.toDataURL('image/png');
       }
+
+      const timestamp = document.createElement('div');
+      timestamp.className = 'chart-timestamp';
+      timestamp.style.position = 'absolute';
+      timestamp.style.bottom = '10px';
+      timestamp.style.right = '10px';
+      timestamp.style.fontSize = '10px';
+      timestamp.style.color = '#666';
+      timestamp.style.padding = '4px';
+      timestamp.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+      timestamp.style.borderRadius = '3px';
+
+      const userName = localStorage.getItem('userName') || 'Usuario';
+      timestamp.textContent = `Generado por: ${userName} - ${new Date().toLocaleString()}`;
+
+      visibleGanttContainer.appendChild(timestamp);
+
+      const canvas = await html2canvas(visibleGanttContainer, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false,
+        width: visibleGanttContainer.scrollWidth,
+        height: visibleGanttContainer.scrollHeight
+      });
+
+      visibleGanttContainer.removeChild(timestamp);
+
+      return canvas.toDataURL('image/png');
     } catch (error) {
       console.error("Error al capturar el diagrama de Gantt:", error);
       toast.error("No se pudo capturar el diagrama de Gantt. Intente nuevamente.");
