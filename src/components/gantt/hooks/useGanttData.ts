@@ -69,7 +69,10 @@ export const useGanttData = (
         // Asegurarse de que los ITRBs asociados tengan fechas válidas
         const itrbsProcesados = itrbsAsociados.map(itrb => {
           // Asegurarse de que fechaInicio esté definida, usando la fecha de la actividad si es necesario
-          const itrbFechaInicio = itrb.fechaInicio ? new Date(itrb.fechaInicio) : validFechaInicio;
+          const itrbFechaInicio = itrb.fechaInicio 
+            ? new Date(itrb.fechaInicio) 
+            : validFechaInicio;
+            
           const itrbFechaVencimiento = new Date(itrb.fechaVencimiento || itrb.fechaLimite || validFechaFin);
           
           return {

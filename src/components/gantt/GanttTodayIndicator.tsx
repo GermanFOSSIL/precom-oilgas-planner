@@ -6,12 +6,17 @@ interface GanttTodayIndicatorProps {
   currentStartDate: Date;
   currentEndDate: Date;
   calculatePosition: (date: Date) => number;
+  axisDates?: Date[];  // Add as optional prop
+  cellWidth?: number;  // Add as optional prop
 }
 
 const GanttTodayIndicator: React.FC<GanttTodayIndicatorProps> = ({
   currentStartDate,
   currentEndDate,
-  calculatePosition
+  calculatePosition,
+  // Include but don't use these props to satisfy TS
+  axisDates = [], 
+  cellWidth = 0
 }) => {
   const today = new Date();
   const isDateInRange = isWithinInterval(today, { start: currentStartDate, end: currentEndDate });

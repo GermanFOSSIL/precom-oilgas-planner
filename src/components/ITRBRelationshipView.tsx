@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { ITRB, Actividad } from "@/types";
@@ -27,7 +28,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  ArrowUpDown
+  ArrowUpDown,
+  Filter,
+  X
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,6 +40,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const ITRBRelationshipView: React.FC = () => {
   const { actividades, itrbItems, proyectos, filtros } = useAppContext();
@@ -44,6 +50,12 @@ const ITRBRelationshipView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<string>("sistema");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // Checkbox filter states
+  const [selectedSistemas, setSelectedSistemas] = useState<string[]>([]);
+  const [selectedSubsistemas, setSelectedSubsistemas] = useState<string[]>([]);
+  const [showSistemasFilter, setShowSistemasFilter] = useState(false);
+  const [showSubsistemasFilter, setShowSubsistemasFilter] = useState(false);
 
   const toggleActividad = (actividadId: string) => {
     setExpandedActividades(prev => ({
@@ -52,6 +64,45 @@ const ITRBRelationshipView: React.FC = () => {
     }));
   };
 
+  // Get all available systems and subsystems for filtering
+  const allSistemas = useMemo(() => 
+    Array.from(new Set(actividades.map(act => act.sistema))).sort(),
+    [actividades]
+  );
+  
+  const allSubsistemas = useMemo(() => 
+    Array.from(new Set(actividades.map(act => act.subsistema))).sort(),
+    [actividades]
+  );
+
+  // Toggle sistema selection
+  const toggleSistema = (sistema: string) => {
+    setSelectedSistemas(prev => 
+      prev.includes(sistema) 
+        ? prev.filter(s => s !== sistema) 
+        : [...prev, sistema]
+    );
+  };
+
+  // Toggle subsistema selection
+  const toggleSubsistema = (subsistema: string) => {
+    setSelectedSubsistemas(prev => 
+      prev.includes(subsistema) 
+        ? prev.filter(s => s !== subsistema) 
+        : [...prev, subsistema]
+    );
+  };
+
+  // Clear all sistema filters
+  const clearSistemaFilters = () => {
+    setSelectedSistemas([]);
+  };
+
+  // Clear all subsistema filters
+  const clearSubsistemaFilters = () => {
+    setSelectedSubsistemas([]);
+  };
+  
   const actividadesConITRB = useMemo(() => {
     let actividadesFiltradas = actividades;
 
@@ -61,13 +112,23 @@ const ITRBRelationshipView: React.FC = () => {
       );
     }
 
-    if (filtros.sistema) {
+    // Apply sistema checkbox filters
+    if (selectedSistemas.length > 0) {
+      actividadesFiltradas = actividadesFiltradas.filter(
+        act => selectedSistemas.includes(act.sistema)
+      );
+    } else if (filtros.sistema) {
       actividadesFiltradas = actividadesFiltradas.filter(
         act => act.sistema === filtros.sistema
       );
     }
-
-    if (filtros.subsistema) {
+    
+    // Apply subsistema checkbox filters
+    if (selectedSubsistemas.length > 0) {
+      actividadesFiltradas = actividadesFiltradas.filter(
+        act => selectedSubsistemas.includes(act.subsistema)
+      );
+    } else if (filtros.subsistema) {
       actividadesFiltradas = actividadesFiltradas.filter(
         act => act.subsistema === filtros.subsistema
       );
@@ -106,7 +167,7 @@ const ITRBRelationshipView: React.FC = () => {
         proyecto: proyecto?.titulo || "Sin proyecto"
       };
     });
-  }, [actividades, itrbItems, proyectos, filtros, searchQuery]);
+  }, [actividades, itrbItems, proyectos, filtros, searchQuery, selectedSistemas, selectedSubsistemas]);
 
   const actividadesOrdenadas = useMemo(() => {
     return [...actividadesConITRB].sort((a, b) => {
@@ -191,7 +252,7 @@ const ITRBRelationshipView: React.FC = () => {
   return (
     <Card className="dark:bg-slate-800 dark:border-slate-700">
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <CardTitle className="text-xl flex items-center">
               <Link2 className="mr-2 h-5 w-5" />
@@ -201,14 +262,108 @@ const ITRBRelationshipView: React.FC = () => {
               Vista de relaciones entre actividades e ITR B
             </CardDescription>
           </div>
-          <div className="relative w-72">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar actividad..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar actividad..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <Popover open={showSistemasFilter} onOpenChange={setShowSistemasFilter}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Filter className="h-3.5 w-3.5" />
+                  Sistemas
+                  {selectedSistemas.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {selectedSistemas.length}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">Filtrar por sistemas</h4>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-xs"
+                      onClick={clearSistemaFilters}
+                      disabled={selectedSistemas.length === 0}
+                    >
+                      Limpiar filtros
+                    </Button>
+                  </div>
+                  <ScrollArea className="h-72">
+                    <div className="space-y-1">
+                      {allSistemas.map(sistema => (
+                        <div key={sistema} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`filter-sistema-${sistema}`} 
+                            checked={selectedSistemas.includes(sistema)}
+                            onCheckedChange={() => toggleSistema(sistema)}
+                          />
+                          <Label htmlFor={`filter-sistema-${sistema}`} className="text-sm">
+                            {sistema}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <Popover open={showSubsistemasFilter} onOpenChange={setShowSubsistemasFilter}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Filter className="h-3.5 w-3.5" />
+                  Subsistemas
+                  {selectedSubsistemas.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {selectedSubsistemas.length}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">Filtrar por subsistemas</h4>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-xs"
+                      onClick={clearSubsistemaFilters}
+                      disabled={selectedSubsistemas.length === 0}
+                    >
+                      Limpiar filtros
+                    </Button>
+                  </div>
+                  <ScrollArea className="h-72">
+                    <div className="space-y-1">
+                      {allSubsistemas.map(subsistema => (
+                        <div key={subsistema} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`filter-subsistema-${subsistema}`} 
+                            checked={selectedSubsistemas.includes(subsistema)}
+                            onCheckedChange={() => toggleSubsistema(subsistema)}
+                          />
+                          <Label htmlFor={`filter-subsistema-${subsistema}`} className="text-sm">
+                            {subsistema}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </CardHeader>

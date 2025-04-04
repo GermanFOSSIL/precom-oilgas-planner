@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Copy, FileSpreadsheet, Save, X, CheckSquare } from "lucide-react";
+import { Copy, FileSpreadsheet, Save, X, CheckSquare, Search } from "lucide-react";
 import { ITRB, Proyecto, Actividad } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -37,6 +37,12 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
   const [filtroSubsistema, setFiltroSubsistema] = useState<string>("");
   const [busquedaITR, setBusquedaITR] = useState<string>("");
   
+  // Checkbox filters for systems and subsystems
+  const [selectedSistemas, setSelectedSistemas] = useState<string[]>([]);
+  const [selectedSubsistemas, setSelectedSubsistemas] = useState<string[]>([]);
+  const [showSistemasFilter, setShowSistemasFilter] = useState<boolean>(false);
+  const [showSubsistemasFilter, setShowSubsistemasFilter] = useState<boolean>(false);
+  
   // Sistemas disponibles basados en el proyecto seleccionado (para el destino)
   const sistemasDisponibles = targetProyecto 
     ? [...new Set(actividades.filter(a => a.proyectoId === targetProyecto).map(a => a.sistema))]
@@ -59,14 +65,30 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
       })
     : [];
   
+  // Get all available systems for filtering
+  const allSistemas = [...new Set(actividades.map(a => a.sistema))];
+  
+  // Get all available subsystems for filtering
+  const allSubsistemas = [...new Set(actividades.map(a => a.subsistema))];
+  
   // ITRs filtrados para selección
   const itrsFiltrados = itrbItems.filter(itr => {
     const actividad = actividades.find(a => a.id === itr.actividadId);
     if (!actividad) return false;
     
     if (filtroProyecto && actividad.proyectoId !== filtroProyecto) return false;
+    
+    // Apply sistema checkbox filters
+    if (selectedSistemas.length > 0 && !selectedSistemas.includes(actividad.sistema)) return false;
+    
+    // Apply subsistema checkbox filters
+    if (selectedSubsistemas.length > 0 && !selectedSubsistemas.includes(actividad.subsistema)) return false;
+    
+    // Legacy filters
     if (filtroSistema && actividad.sistema !== filtroSistema) return false;
     if (filtroSubsistema && actividad.subsistema !== filtroSubsistema) return false;
+    
+    // Search text filter
     if (busquedaITR && !itr.descripcion.toLowerCase().includes(busquedaITR.toLowerCase())) return false;
     
     return true;
@@ -88,6 +110,24 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
     : [...new Set(actividades
         .filter(a => !filtroProyecto || a.proyectoId === filtroProyecto)
         .map(a => a.subsistema))];
+
+  // Toggle sistema selection
+  const toggleSistema = (sistema: string) => {
+    setSelectedSistemas(prev => 
+      prev.includes(sistema) 
+        ? prev.filter(s => s !== sistema) 
+        : [...prev, sistema]
+    );
+  };
+
+  // Toggle subsistema selection
+  const toggleSubsistema = (subsistema: string) => {
+    setSelectedSubsistemas(prev => 
+      prev.includes(subsistema) 
+        ? prev.filter(s => s !== subsistema) 
+        : [...prev, subsistema]
+    );
+  };
 
   useEffect(() => {
     // Inicializar con el ITR seleccionado si viene como prop
@@ -314,42 +354,97 @@ const ITRBackupManager: React.FC<ITRBackupManagerProps> = ({ itrId }) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="filtro-sistema">Filtrar por sistema</Label>
-            <Select value={filtroSistema} onValueChange={setFiltroSistema} disabled={sistemasDisponiblesFiltro.length === 0}>
-              <SelectTrigger id="filtro-sistema">
-                <SelectValue placeholder="Todos los sistemas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todos los sistemas</SelectItem>
-                {sistemasDisponiblesFiltro.map(sistema => (
-                  <SelectItem key={sistema} value={sistema}>{sistema}</SelectItem>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="filtro-sistema">Filtrar por sistema</Label>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowSistemasFilter(!showSistemasFilter)}
+                className="h-6 text-xs"
+              >
+                {showSistemasFilter ? "Ocultar" : "Filtrar"} ({selectedSistemas.length})
+              </Button>
+            </div>
+            {showSistemasFilter ? (
+              <div className="border p-2 rounded-md max-h-40 overflow-auto space-y-1">
+                {allSistemas.map(sistema => (
+                  <div key={sistema} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`sistema-${sistema}`} 
+                      checked={selectedSistemas.includes(sistema)}
+                      onCheckedChange={() => toggleSistema(sistema)}
+                    />
+                    <Label htmlFor={`sistema-${sistema}`} className="text-sm">
+                      {sistema}
+                    </Label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            ) : (
+              <Select value={filtroSistema} onValueChange={setFiltroSistema} disabled={sistemasDisponiblesFiltro.length === 0}>
+                <SelectTrigger id="filtro-sistema">
+                  <SelectValue placeholder="Todos los sistemas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos los sistemas</SelectItem>
+                  {sistemasDisponiblesFiltro.map(sistema => (
+                    <SelectItem key={sistema} value={sistema}>{sistema}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="filtro-subsistema">Filtrar por subsistema</Label>
-            <Select value={filtroSubsistema} onValueChange={setFiltroSubsistema} disabled={subsistemasDisponiblesFiltro.length === 0}>
-              <SelectTrigger id="filtro-subsistema">
-                <SelectValue placeholder="Todos los subsistemas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todos los subsistemas</SelectItem>
-                {subsistemasDisponiblesFiltro.map(subsistema => (
-                  <SelectItem key={subsistema} value={subsistema}>{subsistema}</SelectItem>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="filtro-subsistema">Filtrar por subsistema</Label>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowSubsistemasFilter(!showSubsistemasFilter)}
+                className="h-6 text-xs"
+              >
+                {showSubsistemasFilter ? "Ocultar" : "Filtrar"} ({selectedSubsistemas.length})
+              </Button>
+            </div>
+            {showSubsistemasFilter ? (
+              <div className="border p-2 rounded-md max-h-40 overflow-auto space-y-1">
+                {allSubsistemas.map(subsistema => (
+                  <div key={subsistema} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`subsistema-${subsistema}`} 
+                      checked={selectedSubsistemas.includes(subsistema)}
+                      onCheckedChange={() => toggleSubsistema(subsistema)}
+                    />
+                    <Label htmlFor={`subsistema-${subsistema}`} className="text-sm">
+                      {subsistema}
+                    </Label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            ) : (
+              <Select value={filtroSubsistema} onValueChange={setFiltroSubsistema} disabled={subsistemasDisponiblesFiltro.length === 0}>
+                <SelectTrigger id="filtro-subsistema">
+                  <SelectValue placeholder="Todos los subsistemas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos los subsistemas</SelectItem>
+                  {subsistemasDisponiblesFiltro.map(subsistema => (
+                    <SelectItem key={subsistema} value={subsistema}>{subsistema}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           
           <div className="col-span-full">
             <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <Input
                 placeholder="Buscar ITRs por nombre..."
                 value={busquedaITR}
                 onChange={(e) => setBusquedaITR(e.target.value)}
-                className="pr-8"
+                className="pl-8 pr-8"
               />
               {busquedaITR && (
                 <button 
