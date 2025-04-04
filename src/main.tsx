@@ -1,5 +1,4 @@
 
-import './utils/dataMigration'; // Add this line at the top of the file
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';

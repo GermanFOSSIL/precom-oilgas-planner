@@ -1,4 +1,3 @@
-
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -11,8 +10,6 @@ export interface Proyecto {
   id: string;
   titulo: string;
   descripcion: string;
-  fechaInicio: string;
-  fechaFin: string;
   fechaCreacion: string;
   fechaActualizacion: string;
 }
@@ -21,28 +18,23 @@ export interface Actividad {
   id: string;
   proyectoId: string;
   nombre: string;
-  descripcion?: string;
   sistema: string;
   subsistema: string;
   fechaInicio: string;
   fechaFin: string;
   duracion: number;
-  dependencias?: string[];
 }
 
-export type EstadoITR = "En curso" | "Completado" | "Pendiente" | "Vencido";
+export type EstadoITRB = "En curso" | "Completado" | "Vencido";
 
-export interface ITR {
+export interface ITRB {
   id: string;
-  proyectoId: string;
-  actividadId?: string;
-  nombre: string;
-  descripcion?: string;
-  fechaInicio: string;
-  fechaFin: string;
+  actividadId: string;
+  descripcion: string;
   cantidadTotal: number;
   cantidadRealizada: number;
-  estado: EstadoITR;
+  fechaLimite: string;
+  estado: EstadoITRB;
   mcc: boolean; 
   observaciones?: string;
   codigoITR?: string;
@@ -114,12 +106,12 @@ export interface FiltrosAvanzados {
   fechaFinRango?: string;
   prioridad?: "alta" | "media" | "baja" | "todas";
   responsable?: string;
-  estado?: EstadoITR[];
+  estado?: EstadoITRB[];
 }
 
 export interface ItemRelacionado {
   id: string;
-  tipo: "actividad" | "itr" | "proyecto";
+  tipo: "actividad" | "itrb" | "proyecto";
   nombre: string;
 }
 
@@ -127,7 +119,7 @@ export interface GraficoPersonalizado {
   id: string;
   titulo: string;
   tipo: "barras" | "lineas" | "pastel" | "area";
-  datos: "avance" | "itr" | "actividades" | "vencimientos";
+  datos: "avance" | "itrb" | "actividades" | "vencimientos";
   filtro?: Partial<FiltrosDashboard>;
   color: string;
   posicion: number;
@@ -169,38 +161,4 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-}
-
-// Interfaces para los formularios de creación/edición
-export interface ProyectoFormData {
-  titulo: string;
-  descripcion: string;
-  fechaInicio: Date;
-  fechaFin: Date;
-}
-
-export interface ActividadFormData {
-  proyectoId: string;
-  nombre: string;
-  descripcion?: string;
-  sistema: string;
-  subsistema: string;
-  fechaInicio: Date;
-  fechaFin: Date;
-  dependencias?: string[];
-}
-
-export interface ITRFormData {
-  proyectoId: string;
-  actividadId?: string;
-  nombre: string;
-  descripcion?: string;
-  fechaInicio: Date;
-  fechaFin: Date;
-  cantidadTotal: number;
-  cantidadRealizada: number;
-  estado: EstadoITR;
-  mcc: boolean;
-  observaciones?: string;
-  codigoITR?: string;
 }
