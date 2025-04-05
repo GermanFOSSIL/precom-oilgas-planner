@@ -7,7 +7,7 @@ import AlertasWidget from "@/components/AlertasWidget";
 import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { ConfiguracionGrafico, FiltrosDashboard } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Calendar, Check, Wrench, Download } from "lucide-react";
+import { AlertTriangle, Calendar, Check, Wrench, Download, ClipboardList } from "lucide-react";
 import PublicHeader from "@/components/PublicHeader";
 import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
@@ -216,9 +216,9 @@ const Dashboard: React.FC = () => {
 
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
 
-        {/* Add the prominent green button for technicians */}
+        {/* Add buttons for technicians */}
         {isTechnician && (
-          <div className="my-6 flex justify-center">
+          <div className="my-6 flex justify-center gap-4">
             <Sheet>
               <SheetTrigger asChild>
                 <Button 
@@ -228,6 +228,20 @@ const Dashboard: React.FC = () => {
                 >
                   <Check className="h-6 w-6" />
                   Completar ITRs
+                </Button>
+              </SheetTrigger>
+              <ITRSidebarContent />
+            </Sheet>
+
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button 
+                  variant="default" 
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 px-8 py-4 shadow-md text-base"
+                >
+                  <ClipboardList className="h-6 w-6" />
+                  Gestionar ITR
                 </Button>
               </SheetTrigger>
               <ITRSidebarContent />
