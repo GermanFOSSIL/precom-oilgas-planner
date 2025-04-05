@@ -192,6 +192,7 @@ const ITRBackupManager: React.FC = () => {
           id: `itrb-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           actividadId: targetActividadId,
           descripcion: itr.descripcion,
+          codigo: itr.codigo,
           cantidadTotal: cantidadNueva,
           cantidadRealizada: 0,
           fechaInicio: itr.fechaInicio || hoy.toISOString().split('T')[0],
