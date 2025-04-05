@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import KPICards from "@/components/KPICards";
 import { ConfiguracionGrafico, FiltrosDashboard } from "@/types";
-import { Download } from "lucide-react";
 import PublicHeader from "@/components/PublicHeader";
 import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
@@ -11,7 +10,6 @@ import FilterControls from "@/components/dashboard/FilterControls";
 import { toast } from "sonner";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import DashboardFooter from "@/components/dashboard/DashboardFooter";
-import TechnicianActions from "@/components/dashboard/TechnicianActions";
 
 const Dashboard: React.FC = () => {
   const {
@@ -35,7 +33,7 @@ const Dashboard: React.FC = () => {
   const [exportingChart, setExportingChart] = useState(false);
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
   
-  // Check user roles
+  // Determinamos si el usuario tiene roles específicos
   const isAdmin = user && user.role === "admin";
   const isTecnico = user && user.role === "tecnico";
 

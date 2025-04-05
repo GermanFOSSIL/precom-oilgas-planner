@@ -31,12 +31,12 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onExportExcel,
   exportingChart,
 }) => {
-  // Get the current user to check roles
+  // Acceder directamente al contexto para obtener el rol del usuario
   const { user } = useAppContext();
   const isAdmin = user && user.role === "admin";
   const isTechnician = user && user.role === "tecnico";
   
-  // If user is technician but not admin, show a simplified version with ITR management button
+  // Si user es técnico pero no admin, mostrar una versión simplificada con ITR management button
   if (isTechnician && !isAdmin) {
     return (
       <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
@@ -60,7 +60,7 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
     );
   }
 
-  // Admin sees the full interface without the Gestionar ITR button
+  // Admin ve la interfaz completa sin el botón Gestionar ITR
   return (
     <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
       <div className="flex items-center gap-2 w-full md:w-auto">
