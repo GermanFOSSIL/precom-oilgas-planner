@@ -1,16 +1,30 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import Login from "@/components/Login";
 import { useNavigate } from "react-router-dom";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAppContext();
+  const { user, login } = useAppContext();
 
-  const handleLoginSuccess = (email: string) => {
-    // Navigate to the main page after successful login
-    navigate("/");
+  useEffect(() => {
+    // If user is already logged in, redirect to home page
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
+  const handleLoginSuccess = async (email: string) => {
+    try {
+      const userData = await login(email);
+      if (userData) {
+        // Navigate to the main page after successful login
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    }
   };
 
   const handleCancel = () => {
@@ -32,6 +46,12 @@ const LoginPage: React.FC = () => {
         <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-8">
           © {new Date().getFullYear()} Fossil Energy. Todos los derechos reservados.
         </p>
+
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Esta aplicación ahora utiliza una base de datos SQLite para almacenar datos de forma segura.
+          </p>
+        </div>
       </div>
     </div>
   );

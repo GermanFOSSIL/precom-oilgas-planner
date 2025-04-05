@@ -1,73 +1,94 @@
-# Welcome to your Lovable project
 
-## Project info
+# FOSSIL Precom Track Plan
 
-**URL**: https://lovable.dev/projects/f41c8bc4-61b2-4958-b515-7909fa87b070
+Sistema de seguimiento para planes de precomisionamiento con base de datos SQLite.
 
-## How can I edit this code?
+## Requisitos previos
 
-There are several ways of editing your application.
+- Node.js (versión 14 o superior)
+- NPM (viene con Node.js)
 
-**Use Lovable**
+## Instalación
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f41c8bc4-61b2-4958-b515-7909fa87b070) and start prompting.
+1. Clona este repositorio:
+   ```
+   git clone <url-del-repositorio>
+   cd fossil-precom-track
+   ```
 
-Changes made via Lovable will be committed automatically to this repo.
+2. Instala las dependencias:
+   ```
+   npm install
+   ```
 
-**Use your preferred IDE**
+3. Configura la base de datos SQLite:
+   ```
+   node src/server/setup.js
+   ```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Ejecutar la aplicación
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Ambiente de desarrollo
 
-Follow these steps:
+Para ejecutar la aplicación en modo desarrollo:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+npm run start:dev
 ```
 
-**Edit a file directly in GitHub**
+Esto iniciará el servidor Express y la aplicación React en modo desarrollo.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Ambiente de producción
 
-**Use GitHub Codespaces**
+Para ejecutar la aplicación en modo producción:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. Primero, construye la aplicación:
+   ```
+   npm run build
+   ```
 
-## What technologies are used for this project?
+2. Luego, inicia el servidor:
+   ```
+   npm run start
+   ```
 
-This project is built with:
+La aplicación estará disponible en `http://localhost:3000`.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Estructura de la base de datos
 
-## How can I deploy this project?
+La aplicación utiliza SQLite como base de datos. La base de datos se crea automáticamente en la carpeta `data/` cuando se ejecuta el script de configuración (`setup.js`).
 
-Simply open [Lovable](https://lovable.dev/projects/f41c8bc4-61b2-4958-b515-7909fa87b070) and click on Share -> Publish.
+### Tablas principales:
 
-## Can I connect a custom domain to my Lovable project?
+- `users`: Usuarios del sistema
+- `proyectos`: Proyectos de precomisionamiento
+- `actividades`: Actividades de cada proyecto
+- `itrbs`: Items ITR-B asociados a las actividades
+- `alertas`: Sistema de alertas y notificaciones
+- `kpiConfig`: Configuración de indicadores KPI
+- `apiKeys`: Claves de API (para integraciones)
 
-Yes it is!
+## Usuarios predeterminados
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+La aplicación viene con tres usuarios predeterminados:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- Admin: admin@example.com
+- Técnico: tecnico@example.com
+- Visualizador: viewer@example.com
+
+## Respaldo y restauración
+
+La base de datos SQLite se guarda en un archivo en la carpeta `data/`. Se recomienda hacer copias de seguridad periódicas de este archivo.
+
+## Acceso a los datos
+
+Los datos se acceden a través de una API RESTful implementada con Express. Las rutas principales son:
+
+- `/api/users`: Gestión de usuarios
+- `/api/proyectos`: Gestión de proyectos
+- `/api/actividades`: Gestión de actividades
+- `/api/itrbs`: Gestión de ITR-Bs
+- `/api/alertas`: Gestión de alertas
+- `/api/kpiconfig`: Configuración de KPIs
+- `/api/apikeys`: Gestión de claves de API
+- `/api/login`: Autenticación de usuarios
