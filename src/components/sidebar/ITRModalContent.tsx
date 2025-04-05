@@ -19,13 +19,10 @@ import { debounce } from "lodash";
 
 // Custom hook for ITR management logic
 export const useITRManagement = () => {
-  const { actividades, itrbItems, user, updateITRBStatus } = useAppContext();
+  const { actividades, itrbItems, updateITRBStatus } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSistema, setSelectedSistema] = useState<string | null>(null);
   const [selectedSubsistema, setSelectedSubsistema] = useState<string | null>(null);
-  
-  // Check if user has permission to mark ITRs as completed
-  const hasPermission = user && (user.role === "admin" || user.role === "tecnico");
   
   // Debounce search to improve performance
   const debouncedSearch = React.useMemo(
@@ -123,7 +120,6 @@ export const useITRManagement = () => {
     markITRAsCompleted,
     canITRBeMarkedComplete,
     getITRBadge,
-    hasPermission,
     actividades
   };
 };
@@ -142,11 +138,8 @@ const ITRModalContent: React.FC = () => {
     markITRAsCompleted,
     canITRBeMarkedComplete,
     getITRBadge,
-    hasPermission,
     actividades
   } = useITRManagement();
-  
-  if (!hasPermission) return <div className="p-6 text-center text-muted-foreground">No tienes permisos para gestionar ITRs</div>;
   
   return (
     <div className="flex flex-col h-full">
@@ -195,7 +188,7 @@ const ITRModalContent: React.FC = () => {
                       </div>
                     )}
                     
-                    {canITRBeMarkedComplete(itrb) && hasPermission && (
+                    {canITRBeMarkedComplete(itrb) && (
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -264,7 +257,7 @@ const ITRModalContent: React.FC = () => {
                                       <span className="text-sm">{itrb.descripcion}</span>
                                       {getITRBadge(itrb.estado)}
                                     </div>
-                                    {canITRBeMarkedComplete(itrb) && hasPermission && (
+                                    {canITRBeMarkedComplete(itrb) && (
                                       <Button 
                                         variant="ghost" 
                                         size="sm" 
