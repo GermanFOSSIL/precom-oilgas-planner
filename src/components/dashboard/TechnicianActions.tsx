@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ClipboardList } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import ITRSidebarContent from "@/components/sidebar/ITRSidebarContent";
+import ITRModalContent from "@/components/sidebar/ITRModalContent";
 
 const TechnicianActions: React.FC<{
   className?: string;
@@ -24,7 +24,7 @@ const TechnicianActions: React.FC<{
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl h-[90vh] overflow-auto">
-        <ITRSidebarContent />
+        <ITRModalContent />
       </DialogContent>
     </Dialog>
   );
