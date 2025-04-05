@@ -61,7 +61,6 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     )
   ), [actividades, filtros.sistema]);
 
-  // Verificar si hay filtros activos
   const hayFiltrosActivos = React.useMemo(() => !!(
     filtros.sistema ||
     filtros.subsistema ||
@@ -71,10 +70,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     filtros.itrFilter
   ), [filtros]);
   
-  // Utilizar debounce para mejorar rendimiento en los cambios de filtro de texto
   const debouncedFilterChange = useCallback(
     debounce((key: keyof FiltrosDashboard, value: any) => {
-      // Siempre convertir a minúsculas para búsquedas insensibles a mayúsculas/minúsculas
       if (typeof value === 'string' && key === 'busquedaActividad') {
         value = value.toLowerCase();
       }
@@ -83,7 +80,6 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     [onFiltroChange]
   );
   
-  // Manejar cambio en búsqueda de código ITR con debounce
   const handleITRCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCodigoITRFilter(value);
@@ -91,7 +87,6 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     debouncedFilterChange("busquedaActividad", value);
   };
   
-  // Limpiar todos los filtros
   const handleClearAllFilters = () => {
     setCodigoITRFilter("");
     setModoFiltroAvanzado(false);
@@ -101,10 +96,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
 
   return (
     <div className="flex flex-wrap gap-2 justify-end w-full md:w-auto">
-      {/* ITR Management Button - Added here for easy access */}
       <TechnicianActions size="sm" />
       
-      {/* Botón para limpiar todos los filtros */}
       {hayFiltrosActivos && (
         <Button
           variant="outline"
