@@ -31,6 +31,7 @@ export interface ITRB {
   id: string;
   actividadId: string;
   descripcion: string;
+  codigo: string; // Campo obligatorio para el código del ITR B
   cantidadTotal: number;
   cantidadRealizada: number;
   fechaInicio: string;
@@ -38,8 +39,6 @@ export interface ITRB {
   estado: EstadoITRB;
   mcc: boolean; 
   observaciones?: string;
-  codigoITR?: string;
-  codigo?: string; // Added this property to support the code used in ITRModalContent
 }
 
 export interface Alerta {

@@ -56,12 +56,18 @@ export const useITRManagement = () => {
     return map;
   }, [actividades]);
   
-  // Ensure ITRB items have a description, defaulting to "FOSSIL" for legacy data
+  // Ensure ITRB items have a description and código, defaulting to "FOSSIL" for legacy data
   const normalizedITRBs = React.useMemo(() => {
     return itrbItems.map(itrb => {
       if (!itrb.descripcion) {
         return { ...itrb, descripcion: "FOSSIL" };
       }
+      
+      // Asegurarse de que el código esté definido para compatibilidad con datos antiguos
+      if (!itrb.codigo) {
+        return { ...itrb, codigo: "" };
+      }
+      
       return itrb;
     });
   }, [itrbItems]);

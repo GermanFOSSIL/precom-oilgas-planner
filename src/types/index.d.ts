@@ -1,3 +1,4 @@
+
 export interface Proyecto {
   id: string;
   titulo: string;
@@ -21,6 +22,7 @@ export interface ITRB {
   id: string;
   actividadId: string;
   descripcion: string;
+  codigo: string; // Campo obligatorio para el código del ITR B
   cantidadTotal: number;
   cantidadRealizada: number;
   fechaInicio: string;
@@ -28,7 +30,6 @@ export interface ITRB {
   fechaLimite: string;
   mcc: boolean;
   observaciones?: string;
-  codigo?: string;
 }
 
 export interface FiltrosDashboard {
