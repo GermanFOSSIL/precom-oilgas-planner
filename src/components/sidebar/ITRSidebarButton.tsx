@@ -2,15 +2,15 @@
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { Clipboard as ClipboardIcon } from "lucide-react";
+import { ClipboardIcon } from "lucide-react";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import ITRSidebarContent from "./ITRSidebarContent";
 
 const ITRSidebarButton: React.FC = () => {
   const { user } = useAppContext();
   
-  // Check if user has permission to manage ITRs (admin or technician role)
-  const hasPermission = user && (user.role === "admin" || user.role === "tecnico");
+  // Check if user has permission to manage ITRs and is admin (not technician)
+  const hasPermission = user && user.role === "admin";
   
   if (!hasPermission) return null;
 

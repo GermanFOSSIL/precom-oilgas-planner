@@ -11,7 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Check, Filter, ChevronRight, Clipboard, Search } from "lucide-react";
+import { Check, Filter, ChevronRight, Search } from "lucide-react";
+import { ClipboardIcon } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -113,7 +114,7 @@ const ITRSidebarContent: React.FC = () => {
     <SheetContent side="left" className="w-80 sm:w-96">
       <SheetHeader>
         <SheetTitle className="flex items-center">
-          <Clipboard className="mr-2 h-5 w-5 text-blue-600" />
+          <ClipboardIcon className="mr-2 h-5 w-5 text-blue-600" />
           Gestión de ITRs
         </SheetTitle>
         <SheetDescription>

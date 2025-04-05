@@ -73,9 +73,12 @@ const ProtectedRouteWithSidebar = ({ children }: { children: JSX.Element }) => {
 const AppRoutes = () => {
   const { user } = useAppContext();
   
+  // Only show the side ITR button for admin users, not for technicians
+  const showITRSidebarButton = user && user.role === "admin";
+  
   return (
     <>
-      {user && <ITRSidebarButton />}
+      {showITRSidebarButton && <ITRSidebarButton />}
       <Routes>
         <Route path="/login" element={
           <PublicRoute>

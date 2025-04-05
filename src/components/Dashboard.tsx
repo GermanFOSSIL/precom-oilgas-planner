@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,13 +7,16 @@ import AlertasWidget from "@/components/AlertasWidget";
 import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { ConfiguracionGrafico, FiltrosDashboard } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Calendar } from "lucide-react";
+import { AlertTriangle, Calendar, Check, Tool, Wrench } from "lucide-react";
 import PublicHeader from "@/components/PublicHeader";
 import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
 import FilterControls from "@/components/dashboard/FilterControls";
 import CriticalPathView from "@/components/CriticalPathView";
 import { toast } from "sonner";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import ITRSidebarContent from "@/components/sidebar/ITRSidebarContent";
 
 const Dashboard: React.FC = () => {
   const {
@@ -38,6 +42,9 @@ const Dashboard: React.FC = () => {
   const [tabActual, setTabActual] = useState("alertas");
   const [exportingChart, setExportingChart] = useState(false);
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
+
+  // Check if user has permission to manage ITRs (admin or technician role)
+  const hasPermission = user && (user.role === "admin" || user.role === "tecnico");
 
   const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
@@ -109,6 +116,7 @@ const Dashboard: React.FC = () => {
     }
   }, [configuracionGrafico.tamano]);
 
+  // Function to transform getKPIs output into an array format for export
   const getKPIsForExport = useCallback((proyectoId?: string): any[] => {
     const kpiData = getKPIs(proyectoId);
     return [
@@ -175,6 +183,9 @@ const Dashboard: React.FC = () => {
 
   const currentFilterTimestamp = ensureStringTimestamp(Date.now());
 
+  // Only show the ITR completion button for technical users
+  const isTechnician = user && user.role === "tecnico";
+
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
       <PublicHeader />
@@ -199,6 +210,25 @@ const Dashboard: React.FC = () => {
         </div>
 
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
+
+        {/* Add the prominent green button for technicians */}
+        {isTechnician && hasPermission && (
+          <div className="my-4 flex justify-center">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button 
+                  variant="default" 
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 px-6 py-3 shadow-md"
+                >
+                  <Wrench className="h-5 w-5" />
+                  Completar ITRs
+                </Button>
+              </SheetTrigger>
+              <ITRSidebarContent />
+            </Sheet>
+          </div>
+        )}
 
         <Tabs
           defaultValue="alertas"
@@ -241,6 +271,7 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
+            {/* Always show the Critical Path for all users */}
             <div className="mt-6">
               <Card className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
                 <CardContent className="p-0">
