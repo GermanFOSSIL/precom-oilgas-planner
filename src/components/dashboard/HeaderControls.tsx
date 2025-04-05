@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import ITRSidebarContent from "@/components/sidebar/ITRSidebarContent";
+import TechnicianActions from "./TechnicianActions";
 
 interface HeaderControlsProps {
   onResetSession: () => void;
@@ -30,30 +31,20 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onExportExcel,
   exportingChart,
 }) => {
-  // Obtenemos el usuario actual para verificar si es administrador
+  // Get the current user to check roles
   const { user } = useAppContext();
   const isAdmin = user && user.role === "admin";
+  const isTechnician = user && user.role === "tecnico";
   
-  // Si no es administrador, mostramos una versión simplificada con el botón de gestionar ITR
-  if (!isAdmin) {
+  // If user is technician but not admin, show a simplified version with ITR management button
+  if (isTechnician && !isAdmin) {
     return (
       <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
         <div className="flex items-center gap-2 w-full md:w-auto">
           <ProyectoSelector />
         </div>
         <div className="flex items-center gap-2">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button 
-                variant="default" 
-                className="bg-green-600 hover:bg-green-700 text-white mr-2"
-              >
-                <ClipboardList className="h-4 w-4 mr-2" />
-                Gestionar ITR
-              </Button>
-            </SheetTrigger>
-            <ITRSidebarContent />
-          </Sheet>
+          <TechnicianActions size="default" />
           
           <Button
             variant="default"
@@ -69,6 +60,7 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
     );
   }
 
+  // Admin sees the full interface without the Gestionar ITR button
   return (
     <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
       <div className="flex items-center gap-2 w-full md:w-auto">
@@ -127,19 +119,6 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
               Asistente IA
             </Link>
           </Button>
-          
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button 
-                variant="default" 
-                className="bg-green-600 hover:bg-green-700 text-white mr-2"
-              >
-                <ClipboardList className="h-4 w-4 mr-2" />
-                Gestionar ITR
-              </Button>
-            </SheetTrigger>
-            <ITRSidebarContent />
-          </Sheet>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

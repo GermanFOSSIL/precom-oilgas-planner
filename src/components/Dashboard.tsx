@@ -11,6 +11,7 @@ import FilterControls from "@/components/dashboard/FilterControls";
 import { toast } from "sonner";
 import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import DashboardFooter from "@/components/dashboard/DashboardFooter";
+import TechnicianActions from "@/components/dashboard/TechnicianActions";
 
 const Dashboard: React.FC = () => {
   const {
@@ -34,8 +35,9 @@ const Dashboard: React.FC = () => {
   const [exportingChart, setExportingChart] = useState(false);
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
   
-  // Check if user is an admin specifically
+  // Check user roles
   const isAdmin = user && user.role === "admin";
+  const isTecnico = user && user.role === "tecnico";
 
   const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
@@ -158,8 +160,8 @@ const Dashboard: React.FC = () => {
     }
   }, [filtros, generarExcel]);
 
-  // Only show header controls for admin users
-  const showHeaderControls = isAdmin;
+  // Determine if we should show the header controls or simplified view
+  const showHeaderControls = isAdmin || isTecnico;
 
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
