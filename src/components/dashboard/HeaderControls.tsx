@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -30,10 +31,17 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   exportingChart,
 }) => {
   const { user } = useAppContext();
-  const isAdmin = user && user.role === "admin";
-  const isTechnician = user && user.role === "tecnico";
+  const userRole = user?.role;
+  
+  const isAdmin = userRole === "admin";
+  const isTechnician = userRole === "tecnico";
 
-  // Si user es técnico pero no admin, mostrar versión simplificada con botón Gestionar ITR
+  const handleGestionarITRClick = () => {
+    const trigger = document.querySelector('[data-sheet-trigger="itr"]') as HTMLElement;
+    trigger?.click();
+  };
+
+  // Versión simplificada para técnicos sin derechos de admin
   if (isTechnician && !isAdmin) {
     return (
       <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
@@ -41,33 +49,34 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
           <ProyectoSelector />
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="default"
-            onClick={() => {
-              const trigger = document.querySelector('[data-sheet-trigger="itr"]') as HTMLElement;
-              trigger?.click();
-            }}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <ClipboardList className="h-4 w-4 mr-2" />
-            Gestionar ITR
-          </Button>
+          {isTechnician && (
+            <Button
+              variant="default"
+              onClick={handleGestionarITRClick}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Gestionar ITR
+            </Button>
+          )}
 
-          <Button
-            variant="default"
-            onClick={onExportPDF}
-            disabled={exportingChart}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
+          {(isAdmin || isTechnician) && (
+            <Button
+              variant="default"
+              onClick={onExportPDF}
+              disabled={exportingChart}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </Button>
+          )}
         </div>
       </div>
     );
   }
 
-  // Admin ve la interfaz completa sin el botón Gestionar ITR
+  // Admin ve la interfaz completa
   return (
     <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
       <div className="flex items-center gap-2 w-full md:w-auto">
@@ -127,28 +136,41 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
             </Link>
           </Button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="default"
-                disabled={exportingChart}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={onExportPDF} disabled={exportingChart}>
-                <Image className="h-4 w-4 mr-2" />
-                Generar PDF con Gantt
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onExportExcel} disabled={exportingChart}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Exportar Excel
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isTechnician && (
+            <Button
+              variant="default"
+              onClick={handleGestionarITRClick}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Gestionar ITR
+            </Button>
+          )}
+
+          {(isAdmin || isTechnician) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="default"
+                  disabled={exportingChart}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={onExportPDF} disabled={exportingChart}>
+                  <Image className="h-4 w-4 mr-2" />
+                  Generar PDF con Gantt
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onExportExcel} disabled={exportingChart}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </div>

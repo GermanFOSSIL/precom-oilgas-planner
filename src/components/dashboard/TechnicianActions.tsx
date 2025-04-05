@@ -11,7 +11,7 @@ const TechnicianActions: React.FC<{
 }> = ({ className = "", size = "lg" }) => {
   return (
     <Sheet>
-      <SheetTrigger asChild>
+      <SheetTrigger asChild data-sheet-trigger="itr">
         <Button 
           variant="default" 
           size={size}
