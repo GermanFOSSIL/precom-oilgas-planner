@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { 
@@ -943,4 +944,144 @@ const UserManagement: React.FC = () => {
                   <div className="flex items-start">
                     <Checkbox 
                       id="edit-perm-actividades"
-                      checked={selectedUser.permisos.act
+                      checked={selectedUser.permisos.actividades}
+                      onCheckedChange={(checked) => handlePermissionChange("actividades", checked as boolean)}
+                    />
+                    <div className="ml-2">
+                      <Label htmlFor="edit-perm-actividades">Actividades</Label>
+                      <p className="text-xs text-muted-foreground">Gestión de actividades</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <Checkbox 
+                      id="edit-perm-itrb"
+                      checked={selectedUser.permisos.itrb}
+                      onCheckedChange={(checked) => handlePermissionChange("itrb", checked as boolean)}
+                    />
+                    <div className="ml-2">
+                      <Label htmlFor="edit-perm-itrb">ITR B</Label>
+                      <p className="text-xs text-muted-foreground">Gestión de ITR B</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <Checkbox 
+                      id="edit-perm-proyectos"
+                      checked={selectedUser.permisos.proyectos}
+                      onCheckedChange={(checked) => handlePermissionChange("proyectos", checked as boolean)}
+                    />
+                    <div className="ml-2">
+                      <Label htmlFor="edit-perm-proyectos">Proyectos</Label>
+                      <p className="text-xs text-muted-foreground">Gestión de proyectos</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <Checkbox 
+                      id="edit-perm-reportes"
+                      checked={selectedUser.permisos.reportes}
+                      onCheckedChange={(checked) => handlePermissionChange("reportes", checked as boolean)}
+                    />
+                    <div className="ml-2">
+                      <Label htmlFor="edit-perm-reportes">Reportes</Label>
+                      <p className="text-xs text-muted-foreground">Generación de reportes</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <Checkbox 
+                      id="edit-perm-configuracion"
+                      checked={selectedUser.permisos.configuracion}
+                      onCheckedChange={(checked) => handlePermissionChange("configuracion", checked as boolean)}
+                    />
+                    <div className="ml-2">
+                      <Label htmlFor="edit-perm-configuracion">Configuración</Label>
+                      <p className="text-xs text-muted-foreground">Configuración del sistema</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowEditUserDialog(false);
+              setSelectedUser(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              <UserCog className="h-4 w-4 mr-2" />
+              Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo para cambiar contraseña */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Cambiar Contraseña</DialogTitle>
+            <DialogDescription>
+              {selectedUser && `Actualizar contraseña para ${selectedUser.nombre}`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Contraseña Actual *</Label>
+              <Input 
+                id="current-password" 
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                placeholder="Contraseña actual"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nueva Contraseña *</Label>
+              <Input 
+                id="new-password" 
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                placeholder="Nueva contraseña"
+              />
+              <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirmar Contraseña *</Label>
+              <Input 
+                id="confirm-password" 
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                placeholder="Confirmar nueva contraseña"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowPasswordDialog(false);
+              setSelectedUser(null);
+            }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSavePassword}>
+              <KeyRound className="h-4 w-4 mr-2" />
+              Actualizar Contraseña
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+};
+
+export default UserManagement;
