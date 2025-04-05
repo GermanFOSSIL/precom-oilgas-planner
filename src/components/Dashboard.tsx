@@ -1,32 +1,23 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KPICards from "@/components/KPICards";
-import AlertasWidget from "@/components/AlertasWidget";
-import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { ConfiguracionGrafico, FiltrosDashboard } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Calendar, Check, Wrench, Download, ClipboardList } from "lucide-react";
+import { Download } from "lucide-react";
 import PublicHeader from "@/components/PublicHeader";
 import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
 import FilterControls from "@/components/dashboard/FilterControls";
-import CriticalPathView from "@/components/CriticalPathView";
 import { toast } from "sonner";
-import { Sheet, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import ITRSidebarContent from "@/components/sidebar/ITRSidebarContent";
+import DashboardTabs from "@/components/dashboard/DashboardTabs";
+import DashboardFooter from "@/components/dashboard/DashboardFooter";
 
 const Dashboard: React.FC = () => {
   const {
-    proyectos,
     filtros,
     setFiltros,
     theme,
     toggleTheme,
-    actividades,
-    itrbItems,
     logout,
     getKPIs,
     user
@@ -42,12 +33,9 @@ const Dashboard: React.FC = () => {
   const [tabActual, setTabActual] = useState("alertas");
   const [exportingChart, setExportingChart] = useState(false);
   const [mostrarSubsistemas, setMostrarSubsistemas] = useState(true);
-
-  // Check if user has permission to manage ITRs (admin or technician role)
-  const hasPermission = user && (user.role === "admin" || user.role === "tecnico");
   
-  // Check if user is a technician specifically
-  const isTechnician = user && user.role === "tecnico";
+  // Check if user is an admin specifically
+  const isAdmin = user && user.role === "admin";
 
   const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
@@ -95,10 +83,6 @@ const Dashboard: React.FC = () => {
     window.location.reload();
   }, [logout]);
 
-  const handleTamanoGrafico = useCallback((tamano: ConfiguracionGrafico["tamano"]) => {
-    setConfiguracionGrafico(prev => ({ ...prev, tamano }));
-  }, []);
-
   const handleSubsistemaToggle = useCallback((checked: boolean | "indeterminate") => {
     if (typeof checked === "boolean") {
       setMostrarSubsistemas(checked);
@@ -108,16 +92,6 @@ const Dashboard: React.FC = () => {
       }));
     }
   }, []);
-
-  const getGanttHeight = useCallback(() => {
-    switch (configuracionGrafico.tamano) {
-      case "pequeno": return "h-[600px]";
-      case "mediano": return "h-[800px]";
-      case "grande": return "h-[1000px]";
-      case "completo": return "h-screen";
-      default: return "h-[600px]";
-    }
-  }, [configuracionGrafico.tamano]);
 
   // Function to transform getKPIs output into an array format for export
   const getKPIsForExport = useCallback((proyectoId?: string): any[] => {
@@ -152,9 +126,9 @@ const Dashboard: React.FC = () => {
   }, [getKPIs]);
 
   const { generarPDF, generarExcel } = useExportUtils({
-    proyectos,
-    actividades,
-    itrbItems,
+    proyectos: [],
+    actividades: [],
+    itrbItems: [],
     getKPIs: getKPIsForExport
   });
 
@@ -184,10 +158,8 @@ const Dashboard: React.FC = () => {
     }
   }, [filtros, generarExcel]);
 
-  const currentFilterTimestamp = ensureStringTimestamp(Date.now());
-
-  // Only show header controls for admin users, not for viewers or technicians
-  const showHeaderControls = user && user.role === "admin";
+  // Only show header controls for admin users
+  const showHeaderControls = isAdmin;
 
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
@@ -216,118 +188,18 @@ const Dashboard: React.FC = () => {
 
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
 
-        {/* Add buttons for technicians */}
-        {isTechnician && (
-          <div className="my-6 flex justify-center gap-4">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button 
-                  variant="default" 
-                  size="lg"
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 px-8 py-4 shadow-md text-base"
-                >
-                  <Check className="h-6 w-6" />
-                  Completar ITRs
-                </Button>
-              </SheetTrigger>
-              <ITRSidebarContent />
-            </Sheet>
-
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button 
-                  variant="default" 
-                  size="lg"
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 px-8 py-4 shadow-md text-base"
-                >
-                  <ClipboardList className="h-6 w-6" />
-                  Gestionar ITR
-                </Button>
-              </SheetTrigger>
-              <ITRSidebarContent />
-            </Sheet>
-          </div>
-        )}
-
-        <Tabs
-          defaultValue="alertas"
-          className="w-full"
-          value={tabActual}
-          onValueChange={setTabActual}
-        >
-          <div className="flex justify-between items-center mb-4">
-            <TabsList className="grid w-full md:w-auto grid-cols-2 mb-0">
-              <TabsTrigger value="alertas" className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="hidden sm:inline">Alertas</span>
-              </TabsTrigger>
-              <TabsTrigger value="gantt" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span className="hidden sm:inline">Gráfico Gantt</span>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Add export button here for all users except admins (who already have it) */}
-            {!showHeaderControls && (
-              <div className="ml-auto">
-                <Button
-                  variant="default"
-                  onClick={handleExportPDF}
-                  disabled={exportingChart}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          <TabsContent value="alertas" className="mt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
-              <AlertasWidget />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="gantt" className="mt-0">
-            <Card className="dark:bg-slate-800 dark:border-slate-700">
-              <CardContent className="p-0 h-[calc(100vh-280px)] overflow-y-auto gantt-chart-container">
-                <EnhancedGanttChart 
-                  filtros={{
-                    ...filtros,
-                    timestamp: currentFilterTimestamp
-                  }} 
-                  configuracion={{
-                    ...configuracionGrafico,
-                    mostrarSubsistemas
-                  }}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Always show the Critical Path for all users */}
-            <div className="mt-6">
-              <Card className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="p-4">
-                    <h2 className="text-xl font-bold flex items-center mb-4">
-                      <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
-                      Camino Crítico
-                    </h2>
-                    <CriticalPathView />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+        <DashboardTabs
+          tabActual={tabActual}
+          setTabActual={setTabActual}
+          filtros={filtros}
+          configuracionGrafico={configuracionGrafico}
+          mostrarSubsistemas={mostrarSubsistemas}
+          exportingChart={exportingChart}
+          handleExportPDF={handleExportPDF}
+          showHeaderControls={showHeaderControls}
+        />
         
-        <div className="py-6 border-t text-center text-xs text-muted-foreground dark:border-slate-700 mt-6">
-          <div className="mb-2 text-sm italic text-gray-600 dark:text-gray-400">
-            Del plan al arranque, en una sola plataforma.
-          </div>
-          Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
-        </div>
+        <DashboardFooter />
       </main>
     </div>
   );
