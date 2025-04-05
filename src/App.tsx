@@ -15,7 +15,6 @@ import AIAssistant from "./pages/AIAssistant";
 import TestGanttPage from "./pages/TestGanttPage";
 import ChatbotButton from "./components/ChatbotButton";
 import UserProfilePage from "./pages/UserProfilePage";
-import ITRSidebarButton from "./components/sidebar/ITRSidebarButton";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -73,12 +72,8 @@ const ProtectedRouteWithSidebar = ({ children }: { children: JSX.Element }) => {
 const AppRoutes = () => {
   const { user } = useAppContext();
   
-  // Only show the side ITR button for admin users, not for technicians or other roles
-  const showITRSidebarButton = user && user.role === "admin";
-  
   return (
     <>
-      {showITRSidebarButton && <ITRSidebarButton />}
       <Routes>
         <Route path="/login" element={
           <PublicRoute>
