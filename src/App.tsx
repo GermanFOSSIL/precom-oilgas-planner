@@ -130,6 +130,11 @@ const AppRoutes = () => {
 
 // Componente principal de la aplicación
 const App = () => {
+  // Actualizar el título de la página
+  React.useEffect(() => {
+    document.title = "FOSSIL Precom Track Plan";
+  }, []);
+
   return (
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>

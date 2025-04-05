@@ -28,6 +28,21 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onExportExcel,
   exportingChart,
 }) => {
+  // Obtenemos el usuario actual para verificar si es administrador
+  const { user } = useAppContext();
+  const isAdmin = user && user.role === "admin";
+  
+  // Si no es administrador, no mostramos los controles
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <ProyectoSelector />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
       <div className="flex items-center gap-2 w-full md:w-auto">

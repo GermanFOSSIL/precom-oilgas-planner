@@ -37,17 +37,22 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ onLoginClick }) => {
 
   return (
     <header className="bg-white dark:bg-slate-800 shadow-sm border-b dark:border-slate-700">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="container mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center justify-between">
         <div className="flex items-center">
-          <h1 
-            className="text-xl font-semibold cursor-pointer"
+          <div 
+            className="cursor-pointer"
             onClick={() => navigate("/")}
           >
-            Plan de Precomisionado
-          </h1>
+            <h1 className="text-xl font-semibold">
+              FOSSIL Precom Track Plan
+            </h1>
+            <p className="text-sm text-muted-foreground italic">
+              Del plan al arranque, en una sola plataforma.
+            </p>
+          </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 mt-2 md:mt-0">
           {user ? (
             <>
               <Button 

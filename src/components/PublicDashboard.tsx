@@ -313,6 +313,20 @@ const PublicDashboard: React.FC = () => {
                 />
               </CardContent>
             </Card>
+
+            <div className="mt-6">
+              <Card className="dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="p-4">
+                    <h2 className="text-xl font-bold flex items-center mb-4">
+                      <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                      Camino Crítico
+                    </h2>
+                    <CriticalPathView />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
           
           <TabsContent value="critical-path" className="mt-0">
@@ -325,7 +339,10 @@ const PublicDashboard: React.FC = () => {
         </Tabs>
         
         <div className="py-6 border-t text-center text-xs text-muted-foreground dark:border-slate-700 mt-6">
-          Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
+          <div className="mb-2 text-sm italic text-gray-600 dark:text-gray-400">
+            Del plan al arranque, en una sola plataforma.
+          </div>
+          FOSSIL Precom Track Plan | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
         </div>
       </main>
     </div>

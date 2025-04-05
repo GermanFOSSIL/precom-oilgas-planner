@@ -45,6 +45,9 @@ const Dashboard: React.FC = () => {
 
   // Check if user has permission to manage ITRs (admin or technician role)
   const hasPermission = user && (user.role === "admin" || user.role === "tecnico");
+  
+  // Check if user is a technician specifically
+  const isTechnician = user && user.role === "tecnico";
 
   const ensureStringTimestamp = useCallback((timestamp: number | string | undefined): string => {
     if (timestamp === undefined) return String(Date.now());
@@ -183,31 +186,33 @@ const Dashboard: React.FC = () => {
 
   const currentFilterTimestamp = ensureStringTimestamp(Date.now());
 
-  // Only show the ITR completion button for technical users
-  const isTechnician = user && user.role === "tecnico";
+  // Only show header controls for admin users, not for viewers or technicians
+  const showHeaderControls = user && user.role === "admin";
 
   return (
     <div className={`min-h-screen flex flex-col ${theme.mode === "dark" ? "dark bg-slate-900 text-white" : "bg-gray-50"}`}>
       <PublicHeader />
 
       <main className="flex-1 container mx-auto px-4 py-6">
-        <HeaderControls 
-          onResetSession={handleResetSession}
-          onToggleTheme={toggleTheme}
-          onExportPDF={handleExportPDF}
-          onExportExcel={handleExportExcel}
-          exportingChart={exportingChart}
-        />
-
-        <div className="flex justify-between mb-4 flex-wrap gap-2">
-          <FilterControls 
-            filtros={filtros}
-            onFiltroChange={handleFiltroChange}
-            onSubsistemaToggle={handleSubsistemaToggle}
-            mostrarSubsistemas={mostrarSubsistemas}
-            onClearAllFilters={handleResetFilters}
+        {showHeaderControls ? (
+          <HeaderControls 
+            onResetSession={handleResetSession}
+            onToggleTheme={toggleTheme}
+            onExportPDF={handleExportPDF}
+            onExportExcel={handleExportExcel}
+            exportingChart={exportingChart}
           />
-        </div>
+        ) : (
+          <div className="flex justify-between mb-4 flex-wrap gap-2">
+            <FilterControls 
+              filtros={filtros}
+              onFiltroChange={handleFiltroChange}
+              onSubsistemaToggle={handleSubsistemaToggle}
+              mostrarSubsistemas={mostrarSubsistemas}
+              onClearAllFilters={handleResetFilters}
+            />
+          </div>
+        )}
 
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
 
@@ -221,7 +226,7 @@ const Dashboard: React.FC = () => {
                   size="lg"
                   className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 px-6 py-3 shadow-md"
                 >
-                  <Wrench className="h-5 w-5" />
+                  <Check className="h-5 w-5" />
                   Completar ITRs
                 </Button>
               </SheetTrigger>
@@ -289,6 +294,9 @@ const Dashboard: React.FC = () => {
         </Tabs>
         
         <div className="py-6 border-t text-center text-xs text-muted-foreground dark:border-slate-700 mt-6">
+          <div className="mb-2 text-sm italic text-gray-600 dark:text-gray-400">
+            Del plan al arranque, en una sola plataforma.
+          </div>
           Plan de Precomisionado | v1.0.0 | © {new Date().getFullYear()} Fossil Energy
         </div>
       </main>
