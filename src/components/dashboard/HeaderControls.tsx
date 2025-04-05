@@ -91,7 +91,7 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
             </Link>
           </Button>
 
-          {/* Botón Gestionar ITR - Ahora visible para todos los usuarios */}
+          {/* Botón Gestionar ITR - Ahora visible para todos los usuarios y usando TechnicianActions */}
           <TechnicianActions size="default" className="font-normal" />
 
           <DropdownMenu>
