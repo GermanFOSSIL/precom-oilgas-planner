@@ -1,4 +1,3 @@
-
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -40,6 +39,7 @@ export interface ITRB {
   mcc: boolean; 
   observaciones?: string;
   codigoITR?: string;
+  codigo?: string; // Added this property to support the code used in ITRModalContent
 }
 
 export interface Alerta {
