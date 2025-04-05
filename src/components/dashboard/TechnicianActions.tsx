@@ -8,16 +8,16 @@ import ITRSidebarContent from "@/components/sidebar/ITRSidebarContent";
 const TechnicianActions: React.FC<{
   className?: string;
   size?: "default" | "sm" | "lg" | "icon";
-}> = ({ className = "", size = "lg" }) => {
+}> = ({ className = "", size = "default" }) => {
   return (
     <Sheet>
       <SheetTrigger asChild data-sheet-trigger="itr">
         <Button 
           variant="default" 
           size={size}
-          className={`bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 px-6 py-2 shadow-md ${className}`}
+          className={`bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 ${className}`}
         >
-          <ClipboardList className="h-5 w-5" />
+          <ClipboardList className="h-4 w-4" />
           Gestionar ITR
         </Button>
       </SheetTrigger>

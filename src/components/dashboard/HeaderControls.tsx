@@ -2,7 +2,7 @@
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
-import { SunMoon, Download, Image, FileSpreadsheet, Bot, ClipboardList } from "lucide-react";
+import { SunMoon, Download, Image, FileSpreadsheet, Bot } from "lucide-react";
 import ProyectoSelector from "@/components/ProyectoSelector";
 import {
   DropdownMenu,
@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
-import { SheetTrigger } from "@/components/ui/sheet";
 import TechnicianActions from "./TechnicianActions";
 
 interface HeaderControlsProps {
@@ -31,52 +30,8 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   exportingChart,
 }) => {
   const { user } = useAppContext();
-  const userRole = user?.role;
   
-  const isAdmin = userRole === "admin";
-  const isTechnician = userRole === "tecnico";
-
-  const handleGestionarITRClick = () => {
-    const trigger = document.querySelector('[data-sheet-trigger="itr"]') as HTMLElement;
-    trigger?.click();
-  };
-
-  // Versión simplificada para técnicos sin derechos de admin
-  if (isTechnician && !isAdmin) {
-    return (
-      <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <ProyectoSelector />
-        </div>
-        <div className="flex items-center gap-2">
-          {isTechnician && (
-            <Button
-              variant="default"
-              onClick={handleGestionarITRClick}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Gestionar ITR
-            </Button>
-          )}
-
-          {(isAdmin || isTechnician) && (
-            <Button
-              variant="default"
-              onClick={onExportPDF}
-              disabled={exportingChart}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Admin ve la interfaz completa
+  // Versión simplificada para todos los usuarios
   return (
     <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
       <div className="flex items-center gap-2 w-full md:w-auto">
@@ -136,41 +91,31 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
             </Link>
           </Button>
 
-          {isTechnician && (
-            <Button
-              variant="default"
-              onClick={handleGestionarITRClick}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Gestionar ITR
-            </Button>
-          )}
+          {/* Botón Gestionar ITR - Ahora visible para todos los usuarios */}
+          <TechnicianActions size="default" className="font-normal" />
 
-          {(isAdmin || isTechnician) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="default"
-                  disabled={exportingChart}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={onExportPDF} disabled={exportingChart}>
-                  <Image className="h-4 w-4 mr-2" />
-                  Generar PDF con Gantt
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onExportExcel} disabled={exportingChart}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Exportar Excel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="default"
+                disabled={exportingChart}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={onExportPDF} disabled={exportingChart}>
+                <Image className="h-4 w-4 mr-2" />
+                Generar PDF con Gantt
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onExportExcel} disabled={exportingChart}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Exportar Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>
