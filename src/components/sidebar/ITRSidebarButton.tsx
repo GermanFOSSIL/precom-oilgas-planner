@@ -10,7 +10,7 @@ const ITRSidebarButton: React.FC = () => {
   const { user } = useAppContext();
   
   // Check if user has permission to manage ITRs and is admin (not technician)
-  const hasPermission = user && user.role === "admin";
+  const hasPermission = user && user.role === "tecnico";
   
   if (!hasPermission) return null;
 
