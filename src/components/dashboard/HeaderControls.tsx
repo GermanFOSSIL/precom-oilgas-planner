@@ -39,6 +39,17 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
         <div className="flex items-center gap-2 w-full md:w-auto">
           <ProyectoSelector />
         </div>
+        <div className="ml-auto">
+          <Button
+            variant="default"
+            onClick={onExportPDF}
+            disabled={exportingChart}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
+        </div>
       </div>
     );
   }

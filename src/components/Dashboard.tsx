@@ -217,16 +217,16 @@ const Dashboard: React.FC = () => {
         <KPICards proyectoId={filtros.proyecto !== "todos" ? filtros.proyecto : undefined} />
 
         {/* Add the prominent green button for technicians */}
-        {isTechnician && hasPermission && (
-          <div className="my-4 flex justify-center">
+        {isTechnician && (
+          <div className="my-6 flex justify-center">
             <Sheet>
               <SheetTrigger asChild>
                 <Button 
                   variant="default" 
                   size="lg"
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 px-6 py-3 shadow-md"
+                  className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 px-8 py-4 shadow-md text-base"
                 >
-                  <Check className="h-5 w-5" />
+                  <Check className="h-6 w-6" />
                   Completar ITRs
                 </Button>
               </SheetTrigger>
@@ -252,6 +252,21 @@ const Dashboard: React.FC = () => {
                 <span className="hidden sm:inline">Gráfico Gantt</span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Add export button here for all users except admins (who already have it) */}
+            {!showHeaderControls && (
+              <div className="ml-auto">
+                <Button
+                  variant="default"
+                  onClick={handleExportPDF}
+                  disabled={exportingChart}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </div>
+            )}
           </div>
           
           <TabsContent value="alertas" className="mt-0">

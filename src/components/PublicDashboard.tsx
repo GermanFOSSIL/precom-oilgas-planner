@@ -6,7 +6,7 @@ import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { FiltrosDashboard, ConfiguracionGrafico } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, SunMoon, AlertTriangle, Eye, EyeOff, FileText, FileSpreadsheet, Database } from "lucide-react";
+import { Calendar, SunMoon, AlertTriangle, Eye, EyeOff, FileText, FileSpreadsheet, Database, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import PublicHeader from "@/components/PublicHeader";
@@ -266,36 +266,47 @@ const PublicDashboard: React.FC = () => {
               </TabsTrigger>
             </TabsList>
             
-            {tabActual === "gantt" && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMostrarSubsistemas(!mostrarSubsistemas)}
-                  className="flex items-center gap-1"
-                >
-                  {mostrarSubsistemas ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  {mostrarSubsistemas ? "Ocultar subsistemas" : "Mostrar subsistemas"}
-                </Button>
-                
-                <Select
-                  value={configuracionGrafico.tamano}
-                  onValueChange={(value: "pequeno" | "mediano" | "grande" | "completo") =>
-                    handleTamanoGrafico(value)
-                  }
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Tamaño" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pequeno">Pequeño</SelectItem>
-                    <SelectItem value="mediano">Mediano</SelectItem>
-                    <SelectItem value="grande">Grande</SelectItem>
-                    <SelectItem value="completo">Completo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="flex gap-2">
+              <Button 
+                variant="default" 
+                onClick={handleExportGantt}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+
+              {tabActual === "gantt" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMostrarSubsistemas(!mostrarSubsistemas)}
+                    className="flex items-center gap-1"
+                  >
+                    {mostrarSubsistemas ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {mostrarSubsistemas ? "Ocultar subsistemas" : "Mostrar subsistemas"}
+                  </Button>
+                  
+                  <Select
+                    value={configuracionGrafico.tamano}
+                    onValueChange={(value: "pequeno" | "mediano" | "grande" | "completo") =>
+                      handleTamanoGrafico(value)
+                    }
+                  >
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Tamaño" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pequeno">Pequeño</SelectItem>
+                      <SelectItem value="mediano">Mediano</SelectItem>
+                      <SelectItem value="grande">Grande</SelectItem>
+                      <SelectItem value="completo">Completo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
+            </div>
           </div>
           
           <TabsContent value="gantt" className="mt-0">
