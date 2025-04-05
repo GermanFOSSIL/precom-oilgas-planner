@@ -138,6 +138,13 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
             }
           };
 
+          // Format ITR label as "Description - Code (Status)"
+          const itrbDescription = itrb.descripcion || "FOSSIL";
+          const itrbCode = itrb.codigo || "";
+          const itrbLabel = itrbCode 
+            ? `${itrbDescription} - ${itrbCode} (${itrb.cantidadRealizada || 0}/${itrb.cantidadTotal || 0})`
+            : `${itrbDescription} (${itrb.cantidadRealizada || 0}/${itrb.cantidadTotal || 0})`;
+
           return (
             <div
               key={`itrb-${itrb.id}`}
@@ -174,7 +181,7 @@ const GanttActivityBar: React.FC<GanttActivityBarProps> = ({
               
               {itrbBarWidth > 5 && (
                 <div className="gantt-bar-label">
-                  {itrb.descripcion || `ITR ${itrbIndex + 1}`}
+                  {itrbLabel}
                 </div>
               )}
             </div>
