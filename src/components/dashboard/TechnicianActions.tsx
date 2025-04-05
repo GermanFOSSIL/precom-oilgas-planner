@@ -2,16 +2,18 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { ClipboardList } from "lucide-react";
-import { Sheet, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import ITRSidebarContent from "@/components/sidebar/ITRSidebarContent";
 
 const TechnicianActions: React.FC<{
   className?: string;
   size?: "default" | "sm" | "lg" | "icon";
 }> = ({ className = "", size = "default" }) => {
+  const [open, setOpen] = React.useState(false);
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button 
           variant="default" 
           size={size}
@@ -20,9 +22,11 @@ const TechnicianActions: React.FC<{
           <ClipboardList className="h-4 w-4" />
           Gestionar ITR
         </Button>
-      </SheetTrigger>
-      <ITRSidebarContent />
-    </Sheet>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl h-[90vh] overflow-auto">
+        <ITRSidebarContent />
+      </DialogContent>
+    </Dialog>
   );
 };
 
