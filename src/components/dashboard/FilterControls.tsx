@@ -1,4 +1,3 @@
-
 import React, { useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { FiltrosDashboard } from "@/types";
@@ -9,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Filter, ChevronDown, Search, X } from "lucide-react";
+import { Filter, ChevronDown, Search, X, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { debounce } from "lodash";
+import TechnicianActions from "./TechnicianActions";
 
 interface FilterControlsProps {
   filtros: FiltrosDashboard;
@@ -101,6 +101,9 @@ const FilterControls: React.FC<FilterControlsProps> = ({
 
   return (
     <div className="flex flex-wrap gap-2 justify-end w-full md:w-auto">
+      {/* ITR Management Button - Added here for easy access */}
+      <TechnicianActions size="sm" />
+      
       {/* Botón para limpiar todos los filtros */}
       {hayFiltrosActivos && (
         <Button
