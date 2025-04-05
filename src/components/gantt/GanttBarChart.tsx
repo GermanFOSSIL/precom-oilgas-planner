@@ -141,14 +141,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
   const getGridTemplateColumns = () => {
     return `minmax(280px, auto) repeat(${axisDates.length}, ${cellWidth}px)`;
   };
-
-  const getFormattedITRLabel = (itrb: any) => {
-    const description = itrb.descripcion || "FOSSIL";
-    const code = itrb.codigo || "";
-    return code 
-      ? `${description} - ${code} (${itrb.cantidadRealizada || 0}/${itrb.cantidadTotal || 0})`
-      : `${description} (${itrb.cantidadRealizada || 0}/${itrb.cantidadTotal || 0})`;
-  };
   
   return (
     <div className="gantt-container">
@@ -293,8 +285,6 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                       };
                       
                       const colors = getItrColor(itrb.estado);
-                      
-                      const itrbLabel = getFormattedITRLabel(itrb);
 
                       return (
                         <div 
@@ -302,7 +292,7 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                           className="gantt-row itrb-row"
                         >
                           <div className="gantt-label itrb-label">
-                            <span className="truncate">{itrbLabel}</span>
+                            <span className="truncate">{itrb.descripcion}</span>
                           </div>
                           
                           <div 
@@ -317,7 +307,9 @@ const GanttBarChart: React.FC<GanttBarChartProps> = ({
                             onMouseLeave={hideTooltip}
                           >
                             {itrbPosition.width > 50 && (
-                              <span className="gantt-bar-label">{itrbLabel}</span>
+                              <span className="gantt-bar-label">
+                                {itrb.descripcion} ({itrb.cantidadRealizada}/{itrb.cantidadTotal})
+                              </span>
                             )}
                           </div>
                         </div>

@@ -1,3 +1,4 @@
+
 export type UserRole = "admin" | "tecnico" | "viewer";
 
 export interface User {
@@ -31,7 +32,6 @@ export interface ITRB {
   id: string;
   actividadId: string;
   descripcion: string;
-  codigo: string; // Campo obligatorio para el código del ITR B
   cantidadTotal: number;
   cantidadRealizada: number;
   fechaInicio: string;
@@ -39,6 +39,7 @@ export interface ITRB {
   estado: EstadoITRB;
   mcc: boolean; 
   observaciones?: string;
+  codigoITR?: string;
 }
 
 export interface Alerta {

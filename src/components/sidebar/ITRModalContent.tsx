@@ -56,30 +56,10 @@ export const useITRManagement = () => {
     return map;
   }, [actividades]);
   
-  // Ensure ITRB items have a description and código, defaulting to "FOSSIL" for legacy data
-  const normalizedITRBs = React.useMemo(() => {
-    return itrbItems.map(itrb => {
-      if (!itrb.descripcion) {
-        return { ...itrb, descripcion: "FOSSIL" };
-      }
-      
-      // Asegurarse de que el código esté definido para compatibilidad con datos antiguos
-      if (!itrb.codigo) {
-        return { ...itrb, codigo: "" };
-      }
-      
-      return itrb;
-    });
-  }, [itrbItems]);
-  
   // Filter ITRs by search term or selection
   const filteredITRs = React.useMemo(() => {
-    return normalizedITRBs.filter(itrb => {
-      // Search in both description and code fields if they exist
-      const searchInDescription = itrb.descripcion && itrb.descripcion.toLowerCase().includes(searchTerm.toLowerCase());
-      const searchInCode = itrb.codigo && itrb.codigo.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      if (searchTerm && !searchInDescription && !searchInCode) {
+    return itrbItems.filter(itrb => {
+      if (searchTerm && !itrb.descripcion.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
       
@@ -93,7 +73,7 @@ export const useITRManagement = () => {
       
       return true;
     });
-  }, [normalizedITRBs, searchTerm, selectedSistema, selectedSubsistema, actividades]);
+  }, [itrbItems, searchTerm, selectedSistema, selectedSubsistema, actividades]);
   
   const markITRAsCompleted = async (itrId: string) => {
     try {
@@ -122,14 +102,6 @@ export const useITRManagement = () => {
     }
   };
 
-  // Format ITR label as "Description - Code"
-  const getFormattedITRLabel = (itrb: any) => {
-    const description = itrb.descripcion || "FOSSIL";
-    const code = itrb.codigo || "";
-    
-    return code ? `${description} - ${code}` : description;
-  };
-
   // Process the data for display
   const sistemasArray = React.useMemo(() => {
     return Array.from(sistemasMap.keys()).sort();
@@ -148,7 +120,6 @@ export const useITRManagement = () => {
     markITRAsCompleted,
     canITRBeMarkedComplete,
     getITRBadge,
-    getFormattedITRLabel,
     actividades
   };
 };
@@ -167,7 +138,6 @@ const ITRModalContent: React.FC = () => {
     markITRAsCompleted,
     canITRBeMarkedComplete,
     getITRBadge,
-    getFormattedITRLabel,
     actividades
   } = useITRManagement();
   
@@ -185,7 +155,7 @@ const ITRModalContent: React.FC = () => {
       <div className="relative mb-4">
         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar ITR por descripción o código..."
+          placeholder="Buscar ITR..."
           className="pl-8"
           onChange={handleSearch}
         />
@@ -208,7 +178,7 @@ const ITRModalContent: React.FC = () => {
                 return (
                   <div key={itrb.id} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-md mb-2">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-medium text-sm">{getFormattedITRLabel(itrb)}</span>
+                      <span className="font-medium text-sm">{itrb.descripcion}</span>
                       {getITRBadge(itrb.estado)}
                     </div>
                     
@@ -284,7 +254,7 @@ const ITRModalContent: React.FC = () => {
                                 subsistemaITRs.map(itrb => (
                                   <div key={itrb.id} className="bg-slate-50 dark:bg-slate-800 p-2 rounded-md">
                                     <div className="flex justify-between items-start">
-                                      <span className="text-sm">{getFormattedITRLabel(itrb)}</span>
+                                      <span className="text-sm">{itrb.descripcion}</span>
                                       {getITRBadge(itrb.estado)}
                                     </div>
                                     {canITRBeMarkedComplete(itrb) && (

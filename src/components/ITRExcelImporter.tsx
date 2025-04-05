@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ const ITRExcelImporter: React.FC = () => {
     setShowResults(false);
     setResults({ success: 0, errors: 0, messages: [] });
 
+    // Verificar que sea un archivo Excel
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
       toast.error("Por favor, sube un archivo Excel (.xlsx o .xls)");
       setUploading(false);
@@ -80,6 +82,7 @@ const ITRExcelImporter: React.FC = () => {
       return;
     }
 
+    // Verificar que las columnas necesarias existan
     const firstRow = data[0];
     const requiredColumns = ['codigo', 'descripcion'];
     const missingColumns = requiredColumns.filter(col => 
@@ -96,6 +99,7 @@ const ITRExcelImporter: React.FC = () => {
       return;
     }
 
+    // Filtrar actividades del proyecto actual
     const actividadesDelProyecto = actividades.filter(act => 
       proyectoActual === "todos" || act.proyectoId === proyectoActual
     );
@@ -110,12 +114,14 @@ const ITRExcelImporter: React.FC = () => {
       return;
     }
 
+    // Procesar cada fila del Excel
     let successCount = 0;
     let errorCount = 0;
     const messages: string[] = [];
 
     data.forEach((row, index) => {
       try {
+        // Encontrar las claves que contienen 'codigo' y 'descripcion'
         const codigoKey = Object.keys(row).find(key => 
           key.toLowerCase().includes('codigo') || key.toLowerCase().includes('code')
         );
@@ -134,26 +140,29 @@ const ITRExcelImporter: React.FC = () => {
           throw new Error(`Fila ${index + 1}: Código o descripción vacío`);
         }
 
+        // Asignar a la primera actividad disponible (esto podría mejorarse)
         const actividadAsignada = actividadesDelProyecto[0];
         const fechaActual = new Date().toISOString().split('T')[0];
         const fechaLimite = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+        // Crear nuevo ITR B
         const nuevoITRB: ITRB = {
           id: `itr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           actividadId: actividadAsignada.id,
-          codigo: codigo,
-          descripcion: descripcion,
+          descripcion: `${codigo} - ${descripcion}`,
           cantidadTotal: 1,
           cantidadRealizada: 0,
-          fechaInicio: fechaActual,
+          fechaInicio: fechaActual, // Añadido fechaInicio
           fechaLimite: fechaLimite,
           estado: "En curso",
           mcc: false
         };
 
+        // Agregar el ITR B
         addITRB(nuevoITRB);
         successCount++;
         messages.push(`✅ Importado: ${codigo} - ${descripcion}`);
+
       } catch (error) {
         errorCount++;
         const errorMessage = error instanceof Error ? error.message : "Error desconocido";

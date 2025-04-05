@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Actividad, ITRB } from "@/types";
@@ -50,7 +49,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
   const initialData: Omit<ITRB, "id" | "estado"> = {
     actividadId: editingITRB?.actividadId || "",
     descripcion: editingITRB?.descripcion || "",
-    codigo: editingITRB?.codigo || "",
     cantidadTotal: editingITRB?.cantidadTotal || 1,
     cantidadRealizada: editingITRB?.cantidadRealizada || 0,
     fechaInicio: editingITRB?.fechaInicio || new Date().toISOString().split('T')[0],
@@ -180,11 +178,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
     
     if (!formData.descripcion) {
       toast.error("La descripción es obligatoria");
-      return;
-    }
-    
-    if (!formData.codigo) {
-      toast.error("El código del ITR es obligatorio");
       return;
     }
     
@@ -387,17 +380,6 @@ const ITRBFormRelationship: React.FC<ITRBFormRelationshipProps> = ({ onClose, ed
             onChange={handleInputChange}
             className="resize-none"
             rows={3}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="codigo">Código del ITR B *</Label>
-          <Input
-            id="codigo"
-            name="codigo"
-            placeholder="Ej: E01A"
-            value={formData.codigo}
-            onChange={handleInputChange}
           />
         </div>
         

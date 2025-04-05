@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { ITRB, Actividad } from "@/types";
@@ -63,6 +64,7 @@ const ITRBRelationshipView: React.FC = () => {
     }));
   };
 
+  // Get all available systems and subsystems for filtering
   const allSistemas = useMemo(() => 
     Array.from(new Set(actividades.map(act => act.sistema))).sort(),
     [actividades]
@@ -73,6 +75,7 @@ const ITRBRelationshipView: React.FC = () => {
     [actividades]
   );
 
+  // Toggle sistema selection
   const toggleSistema = (sistema: string) => {
     setSelectedSistemas(prev => 
       prev.includes(sistema) 
@@ -81,6 +84,7 @@ const ITRBRelationshipView: React.FC = () => {
     );
   };
 
+  // Toggle subsistema selection
   const toggleSubsistema = (subsistema: string) => {
     setSelectedSubsistemas(prev => 
       prev.includes(subsistema) 
@@ -89,10 +93,12 @@ const ITRBRelationshipView: React.FC = () => {
     );
   };
 
+  // Clear all sistema filters
   const clearSistemaFilters = () => {
     setSelectedSistemas([]);
   };
 
+  // Clear all subsistema filters
   const clearSubsistemaFilters = () => {
     setSelectedSubsistemas([]);
   };
@@ -106,6 +112,7 @@ const ITRBRelationshipView: React.FC = () => {
       );
     }
 
+    // Apply sistema checkbox filters
     if (selectedSistemas.length > 0) {
       actividadesFiltradas = actividadesFiltradas.filter(
         act => selectedSistemas.includes(act.sistema)
@@ -116,6 +123,7 @@ const ITRBRelationshipView: React.FC = () => {
       );
     }
     
+    // Apply subsistema checkbox filters
     if (selectedSubsistemas.length > 0) {
       actividadesFiltradas = actividadesFiltradas.filter(
         act => selectedSubsistemas.includes(act.subsistema)
@@ -138,15 +146,7 @@ const ITRBRelationshipView: React.FC = () => {
     return actividadesFiltradas.map(actividad => {
       const itrbsAsociados = itrbItems.filter(
         itrb => itrb.actividadId === actividad.id
-      ).map(itrb => {
-        if (!itrb.descripcion) {
-          return {
-            ...itrb,
-            descripcion: "FOSSIL"
-          };
-        }
-        return itrb;
-      });
+      );
 
       const totalITRBs = itrbsAsociados.length;
       const completados = itrbsAsociados.filter(itrb => itrb.estado === "Completado").length;
@@ -247,13 +247,6 @@ const ITRBRelationshipView: React.FC = () => {
       case "Vencido": return <AlertTriangle className="h-4 w-4" />;
       default: return null;
     }
-  };
-
-  const getFormattedItrLabel = (itrb: ITRB) => {
-    const description = itrb.descripcion || "FOSSIL";
-    const code = itrb.codigo || "";
-    
-    return code ? `${description} - ${code}` : description;
   };
 
   return (
@@ -501,9 +494,7 @@ const ITRBRelationshipView: React.FC = () => {
                                     <div className={`h-1.5 w-full ${getColorByEstado(itrb.estado)}`}></div>
                                     <CardContent className="p-3">
                                       <div className="flex justify-between items-start">
-                                        <h5 className="text-sm font-medium line-clamp-2 flex-1">
-                                          {getFormattedItrLabel(itrb)}
-                                        </h5>
+                                        <h5 className="text-sm font-medium line-clamp-2 flex-1">{itrb.descripcion}</h5>
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger asChild>
