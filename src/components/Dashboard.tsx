@@ -7,7 +7,7 @@ import AlertasWidget from "@/components/AlertasWidget";
 import EnhancedGanttChart from "@/components/EnhancedGanttChart";
 import { ConfiguracionGrafico, FiltrosDashboard } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Calendar, Check, Wrench } from "lucide-react";
+import { AlertTriangle, Calendar, Check, Wrench, Download } from "lucide-react";
 import PublicHeader from "@/components/PublicHeader";
 import { useExportUtils } from "@/components/dashboard/ExportUtils";
 import HeaderControls from "@/components/dashboard/HeaderControls";
