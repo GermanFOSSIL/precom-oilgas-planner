@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -12,8 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
-import { Sheet, SheetTrigger } from "@/components/ui/sheet";
-import ITRSidebarContent from "@/components/sidebar/ITRSidebarContent";
+import { SheetTrigger } from "@/components/ui/sheet";
 import TechnicianActions from "./TechnicianActions";
 
 interface HeaderControlsProps {
@@ -31,12 +29,11 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onExportExcel,
   exportingChart,
 }) => {
-  // Acceder directamente al contexto para obtener el rol del usuario
   const { user } = useAppContext();
   const isAdmin = user && user.role === "admin";
   const isTechnician = user && user.role === "tecnico";
-  
-  // Si user es técnico pero no admin, mostrar una versión simplificada con ITR management button
+
+  // Si user es técnico pero no admin, mostrar versión simplificada con botón Gestionar ITR
   if (isTechnician && !isAdmin) {
     return (
       <div className="flex flex-col md:flex-row justify-between mb-6 items-center gap-4">
@@ -44,8 +41,18 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
           <ProyectoSelector />
         </div>
         <div className="flex items-center gap-2">
-          <TechnicianActions size="default" />
-          
+          <Button
+            variant="default"
+            onClick={() => {
+              const trigger = document.querySelector('[data-sheet-trigger="itr"]') as HTMLElement;
+              trigger?.click();
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Gestionar ITR
+          </Button>
+
           <Button
             variant="default"
             onClick={onExportPDF}
@@ -98,7 +105,7 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        
+
         <div className="flex gap-2 mt-2">
           <Button
             variant="outline"
