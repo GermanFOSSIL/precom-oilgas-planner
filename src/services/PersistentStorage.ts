@@ -1,4 +1,3 @@
-
 import { 
   Proyecto, 
   Actividad, 
@@ -384,3 +383,6 @@ export class PersistentStorage {
     }
   }
 }
+
+// Export an instance for compatibility with parts of the app that need it
+export const persistentStorage = PersistentStorage;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { 
@@ -41,9 +40,9 @@ import {
   UserCog,
   KeyRound
 } from "lucide-react";
-import { persistentStorage } from "@/services/PersistentStorage";
+import { PersistentStorage } from "@/services/PersistentStorage";
 
-// Estructura para permisos
+// Structure for permissions
 interface UserPermission {
   dashboard: boolean;
   actividades: boolean;
@@ -53,7 +52,7 @@ interface UserPermission {
   configuracion: boolean;
 }
 
-// Estructura para Usuario
+// Structure for User
 interface AppUser {
   id: string;
   nombre: string;
@@ -97,94 +96,137 @@ const UserManagement: React.FC = () => {
     confirmPassword: ""
   });
   
-  // Cargar usuarios desde almacenamiento persistente
+  // Load users from persistent storage
   useEffect(() => {
-    // Intentar cargar usuarios del almacenamiento persistente
-    const allUsers = persistentStorage.getItem<{[email: string]: any}>("allUsers");
-    
-    if (allUsers) {
-      // Convertir formato de objeto a array
-      const usersArray: AppUser[] = Object.values(allUsers).map(userData => ({
-        id: userData.id || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        nombre: userData.nombre,
-        email: userData.email,
-        password: userData.password || "********",
-        rol: userData.role || "viewer",
-        permisos: {
-          dashboard: true,
-          actividades: userData.role === "admin" || userData.role === "tecnico",
-          itrb: userData.role === "admin" || userData.role === "tecnico",
-          proyectos: userData.role === "admin",
-          reportes: userData.role === "admin" || userData.role === "tecnico",
-          configuracion: userData.role === "admin"
-        },
-        activo: true,
-        fechaCreacion: userData.fechaCreacion || new Date().toISOString(),
-        ultimoAcceso: userData.ultimoAcceso
-      }));
-      
-      setUsers(usersArray);
-    } else {
-      // Si no hay usuarios en el almacenamiento, usar los de ejemplo
-      const mockUsers: AppUser[] = [
-        {
-          id: "user-1",
-          nombre: "Admin Principal",
-          email: "admin@fossil.com",
-          password: "********",
-          rol: "admin",
-          permisos: {
-            dashboard: true,
-            actividades: true,
-            itrb: true,
-            proyectos: true,
-            reportes: true,
-            configuracion: true
-          },
-          activo: true,
-          fechaCreacion: "2023-01-15T10:30:00Z",
-          ultimoAcceso: new Date().toISOString()
-        },
-        {
-          id: "user-2",
-          nombre: "Técnico Test",
-          email: "tecnico@ejemplo.com",
-          password: "********",
-          rol: "tecnico",
-          permisos: {
-            dashboard: true,
-            actividades: true,
-            itrb: true,
-            proyectos: false,
-            reportes: true,
-            configuracion: false
-          },
-          activo: true,
-          fechaCreacion: "2023-02-20T14:15:00Z",
-          ultimoAcceso: "2023-05-10T09:45:00Z"
-        },
-        {
-          id: "user-3",
-          nombre: "Visualizador",
-          email: "viewer@ejemplo.com",
-          password: "********",
-          rol: "viewer",
-          permisos: {
-            dashboard: true,
-            actividades: true,
-            itrb: false,
-            proyectos: false,
-            reportes: false,
-            configuracion: false
-          },
-          activo: true,
-          fechaCreacion: "2023-03-05T11:20:00Z",
-          ultimoAcceso: "2023-05-09T16:30:00Z"
+    async function loadUsers() {
+      try {
+        const loadedUsers = await PersistentStorage.getUsers();
+        if (loadedUsers && loadedUsers.length > 0) {
+          setUsers(loadedUsers);
+        } else {
+          // If no users in storage, use example users
+          const mockUsers: AppUser[] = [
+            {
+              id: "user-1",
+              nombre: "Admin Principal",
+              email: "admin@fossil.com",
+              password: "********",
+              rol: "admin",
+              permisos: {
+                dashboard: true,
+                actividades: true,
+                itrb: true,
+                proyectos: true,
+                reportes: true,
+                configuracion: true
+              },
+              activo: true,
+              fechaCreacion: "2023-01-15T10:30:00Z",
+              ultimoAcceso: new Date().toISOString()
+            },
+            {
+              id: "user-2",
+              nombre: "Técnico Test",
+              email: "tecnico@ejemplo.com",
+              password: "********",
+              rol: "tecnico",
+              permisos: {
+                dashboard: true,
+                actividades: true,
+                itrb: true,
+                proyectos: false,
+                reportes: true,
+                configuracion: false
+              },
+              activo: true,
+              fechaCreacion: "2023-02-20T14:15:00Z",
+              ultimoAcceso: "2023-05-10T09:45:00Z"
+            },
+            {
+              id: "user-3",
+              nombre: "Visualizador",
+              email: "viewer@ejemplo.com",
+              password: "********",
+              rol: "viewer",
+              permisos: {
+                dashboard: true,
+                actividades: true,
+                itrb: false,
+                proyectos: false,
+                reportes: false,
+                configuracion: false
+              },
+              activo: true,
+              fechaCreacion: "2023-03-05T11:20:00Z",
+              ultimoAcceso: "2023-05-09T16:30:00Z"
+            }
+          ];
+          setUsers(mockUsers);
         }
-      ];
-      
-      setUsers(mockUsers);
+      } catch (error) {
+        console.error("Error loading users:", error);
+        // Fallback to mock users
+        const mockUsers: AppUser[] = [
+          {
+            id: "user-1",
+            nombre: "Admin Principal",
+            email: "admin@fossil.com",
+            password: "********",
+            rol: "admin",
+            permisos: {
+              dashboard: true,
+              actividades: true,
+              itrb: true,
+              proyectos: true,
+              reportes: true,
+              configuracion: true
+            },
+            activo: true,
+            fechaCreacion: "2023-01-15T10:30:00Z",
+            ultimoAcceso: new Date().toISOString()
+          },
+          {
+            id: "user-2",
+            nombre: "Técnico Test",
+            email: "tecnico@ejemplo.com",
+            password: "********",
+            rol: "tecnico",
+            permisos: {
+              dashboard: true,
+              actividades: true,
+              itrb: true,
+              proyectos: false,
+              reportes: true,
+              configuracion: false
+            },
+            activo: true,
+            fechaCreacion: "2023-02-20T14:15:00Z",
+            ultimoAcceso: "2023-05-10T09:45:00Z"
+          },
+          {
+            id: "user-3",
+            nombre: "Visualizador",
+            email: "viewer@ejemplo.com",
+            password: "********",
+            rol: "viewer",
+            permisos: {
+              dashboard: true,
+              actividades: true,
+              itrb: false,
+              proyectos: false,
+              reportes: false,
+              configuracion: false
+            },
+            activo: true,
+            fechaCreacion: "2023-03-05T11:20:00Z",
+            ultimoAcceso: "2023-05-09T16:30:00Z"
+            }
+        ];
+        setUsers(mockUsers);
+      }
     }
+    
+    loadUsers();
   }, []);
   
   // Guardar usuarios en almacenamiento persistente cuando cambian
@@ -199,7 +241,7 @@ const UserManagement: React.FC = () => {
         return acc;
       }, {} as {[email: string]: any});
       
-      persistentStorage.setItem("allUsers", usersObject);
+      PersistentStorage.updateUser(user?.email, usersObject);
     }
   }, [users]);
   
@@ -901,146 +943,4 @@ const UserManagement: React.FC = () => {
                   <div className="flex items-start">
                     <Checkbox 
                       id="edit-perm-actividades"
-                      checked={selectedUser.permisos.actividades}
-                      onCheckedChange={(checked) => handlePermissionChange("actividades", checked as boolean)}
-                    />
-                    <div className="ml-2">
-                      <Label htmlFor="edit-perm-actividades">Actividades</Label>
-                      <p className="text-xs text-muted-foreground">Gestión de actividades</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <Checkbox 
-                      id="edit-perm-itrb"
-                      checked={selectedUser.permisos.itrb}
-                      onCheckedChange={(checked) => handlePermissionChange("itrb", checked as boolean)}
-                    />
-                    <div className="ml-2">
-                      <Label htmlFor="edit-perm-itrb">ITR B</Label>
-                      <p className="text-xs text-muted-foreground">Gestión de ITR B</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <Checkbox 
-                      id="edit-perm-proyectos"
-                      checked={selectedUser.permisos.proyectos}
-                      onCheckedChange={(checked) => handlePermissionChange("proyectos", checked as boolean)}
-                    />
-                    <div className="ml-2">
-                      <Label htmlFor="edit-perm-proyectos">Proyectos</Label>
-                      <p className="text-xs text-muted-foreground">Gestión de proyectos</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <Checkbox 
-                      id="edit-perm-reportes"
-                      checked={selectedUser.permisos.reportes}
-                      onCheckedChange={(checked) => handlePermissionChange("reportes", checked as boolean)}
-                    />
-                    <div className="ml-2">
-                      <Label htmlFor="edit-perm-reportes">Reportes</Label>
-                      <p className="text-xs text-muted-foreground">Generación de reportes</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <Checkbox 
-                      id="edit-perm-configuracion"
-                      checked={selectedUser.permisos.configuracion}
-                      onCheckedChange={(checked) => handlePermissionChange("configuracion", checked as boolean)}
-                    />
-                    <div className="ml-2">
-                      <Label htmlFor="edit-perm-configuracion">Configuración</Label>
-                      <p className="text-xs text-muted-foreground">Configuración del sistema</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowEditUserDialog(false);
-              setSelectedUser(null);
-            }}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveEdit}>
-              <UserCog className="h-4 w-4 mr-2" />
-              Guardar Cambios
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Diálogo para cambiar contraseña */}
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Cambiar Contraseña</DialogTitle>
-            <DialogDescription>
-              {selectedUser && `Cambiar contraseña para el usuario ${selectedUser.nombre} (${selectedUser.email})`}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-3">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Contraseña Actual *</Label>
-              <Input 
-                id="current-password" 
-                type="password"
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
-                placeholder="••••••••"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="new-password">Nueva Contraseña *</Label>
-              <Input 
-                id="new-password" 
-                type="password"
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                placeholder="••••••••"
-              />
-              <p className="text-xs text-muted-foreground">
-                La contraseña debe tener al menos 6 caracteres
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirmar Nueva Contraseña *</Label>
-              <Input 
-                id="confirm-password" 
-                type="password"
-                value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowPasswordDialog(false);
-              setSelectedUser(null);
-            }}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSavePassword}>
-              <KeyRound className="h-4 w-4 mr-2" />
-              Cambiar Contraseña
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-};
-
-export default UserManagement;
+                      checked={selectedUser.permisos.act
