@@ -123,6 +123,7 @@ const AdminPanel: React.FC = () => {
   const [nuevoITRB, setNuevoITRB] = useState<Omit<ITRB, "id" | "estado">>({
     actividadId: "",
     descripcion: "",
+    codigo: "",
     cantidadTotal: 1,
     cantidadRealizada: 0,
     fechaInicio: new Date().toISOString().split('T')[0],
@@ -237,6 +238,11 @@ const AdminPanel: React.FC = () => {
       return;
     }
 
+    if (!nuevoITRB.codigo.trim()) {
+      toast.error("El código del ITR es obligatorio");
+      return;
+    }
+
     const itrb: ITRB = {
       id: `itrb-${Date.now()}`,
       ...nuevoITRB,
@@ -247,6 +253,7 @@ const AdminPanel: React.FC = () => {
     setNuevoITRB({
       actividadId: "",
       descripcion: "",
+      codigo: "",
       cantidadTotal: 1,
       cantidadRealizada: 0,
       fechaInicio: new Date().toISOString().split('T')[0],
@@ -1038,6 +1045,16 @@ const AdminPanel: React.FC = () => {
                   value={nuevoITRB.descripcion}
                   onChange={(e) => setNuevoITRB({...nuevoITRB, descripcion: e.target.value})}
                   placeholder="Ej: ITR B-01 Verificación de tensión"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="codigo">Código del ITR B *</Label>
+                <Input 
+                  id="codigo" 
+                  value={nuevoITRB.codigo}
+                  onChange={(e) => setNuevoITRB({...nuevoITRB, codigo: e.target.value})}
+                  placeholder="Ej: E01A"
                 />
               </div>
               

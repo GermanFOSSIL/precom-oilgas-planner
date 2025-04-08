@@ -41,9 +41,9 @@ import {
   UserCog,
   KeyRound
 } from "lucide-react";
-import { PersistentStorage } from "@/services/PersistentStorage";
+import { persistentStorage } from "@/services/PersistentStorage";
 
-// Structure for permissions
+// Estructura para permisos
 interface UserPermission {
   dashboard: boolean;
   actividades: boolean;
@@ -53,7 +53,7 @@ interface UserPermission {
   configuracion: boolean;
 }
 
-// Structure for User
+// Estructura para Usuario
 interface AppUser {
   id: string;
   nombre: string;
@@ -97,137 +97,94 @@ const UserManagement: React.FC = () => {
     confirmPassword: ""
   });
   
-  // Load users from persistent storage
+  // Cargar usuarios desde almacenamiento persistente
   useEffect(() => {
-    async function loadUsers() {
-      try {
-        const loadedUsers = await PersistentStorage.getUsers();
-        if (loadedUsers && loadedUsers.length > 0) {
-          setUsers(loadedUsers);
-        } else {
-          // If no users in storage, use example users
-          const mockUsers: AppUser[] = [
-            {
-              id: "user-1",
-              nombre: "Admin Principal",
-              email: "admin@fossil.com",
-              password: "********",
-              rol: "admin",
-              permisos: {
-                dashboard: true,
-                actividades: true,
-                itrb: true,
-                proyectos: true,
-                reportes: true,
-                configuracion: true
-              },
-              activo: true,
-              fechaCreacion: "2023-01-15T10:30:00Z",
-              ultimoAcceso: new Date().toISOString()
-            },
-            {
-              id: "user-2",
-              nombre: "Técnico Test",
-              email: "tecnico@ejemplo.com",
-              password: "********",
-              rol: "tecnico",
-              permisos: {
-                dashboard: true,
-                actividades: true,
-                itrb: true,
-                proyectos: false,
-                reportes: true,
-                configuracion: false
-              },
-              activo: true,
-              fechaCreacion: "2023-02-20T14:15:00Z",
-              ultimoAcceso: "2023-05-10T09:45:00Z"
-            },
-            {
-              id: "user-3",
-              nombre: "Visualizador",
-              email: "viewer@ejemplo.com",
-              password: "********",
-              rol: "viewer",
-              permisos: {
-                dashboard: true,
-                actividades: true,
-                itrb: false,
-                proyectos: false,
-                reportes: false,
-                configuracion: false
-              },
-              activo: true,
-              fechaCreacion: "2023-03-05T11:20:00Z",
-              ultimoAcceso: "2023-05-09T16:30:00Z"
-            }
-          ];
-          setUsers(mockUsers);
-        }
-      } catch (error) {
-        console.error("Error loading users:", error);
-        // Fallback to mock users
-        const mockUsers: AppUser[] = [
-          {
-            id: "user-1",
-            nombre: "Admin Principal",
-            email: "admin@fossil.com",
-            password: "********",
-            rol: "admin",
-            permisos: {
-              dashboard: true,
-              actividades: true,
-              itrb: true,
-              proyectos: true,
-              reportes: true,
-              configuracion: true
-            },
-            activo: true,
-            fechaCreacion: "2023-01-15T10:30:00Z",
-            ultimoAcceso: new Date().toISOString()
-          },
-          {
-            id: "user-2",
-            nombre: "Técnico Test",
-            email: "tecnico@ejemplo.com",
-            password: "********",
-            rol: "tecnico",
-            permisos: {
-              dashboard: true,
-              actividades: true,
-              itrb: true,
-              proyectos: false,
-              reportes: true,
-              configuracion: false
-            },
-            activo: true,
-            fechaCreacion: "2023-02-20T14:15:00Z",
-            ultimoAcceso: "2023-05-10T09:45:00Z"
-          },
-          {
-            id: "user-3",
-            nombre: "Visualizador",
-            email: "viewer@ejemplo.com",
-            password: "********",
-            rol: "viewer",
-            permisos: {
-              dashboard: true,
-              actividades: true,
-              itrb: false,
-              proyectos: false,
-              reportes: false,
-              configuracion: false
-            },
-            activo: true,
-            fechaCreacion: "2023-03-05T11:20:00Z",
-            ultimoAcceso: "2023-05-09T16:30:00Z"
-            }
-        ];
-        setUsers(mockUsers);
-      }
-    }
+    // Intentar cargar usuarios del almacenamiento persistente
+    const allUsers = persistentStorage.getItem<{[email: string]: any}>("allUsers");
     
-    loadUsers();
+    if (allUsers) {
+      // Convertir formato de objeto a array
+      const usersArray: AppUser[] = Object.values(allUsers).map(userData => ({
+        id: userData.id || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        nombre: userData.nombre,
+        email: userData.email,
+        password: userData.password || "********",
+        rol: userData.role || "viewer",
+        permisos: {
+          dashboard: true,
+          actividades: userData.role === "admin" || userData.role === "tecnico",
+          itrb: userData.role === "admin" || userData.role === "tecnico",
+          proyectos: userData.role === "admin",
+          reportes: userData.role === "admin" || userData.role === "tecnico",
+          configuracion: userData.role === "admin"
+        },
+        activo: true,
+        fechaCreacion: userData.fechaCreacion || new Date().toISOString(),
+        ultimoAcceso: userData.ultimoAcceso
+      }));
+      
+      setUsers(usersArray);
+    } else {
+      // Si no hay usuarios en el almacenamiento, usar los de ejemplo
+      const mockUsers: AppUser[] = [
+        {
+          id: "user-1",
+          nombre: "Admin Principal",
+          email: "admin@fossil.com",
+          password: "********",
+          rol: "admin",
+          permisos: {
+            dashboard: true,
+            actividades: true,
+            itrb: true,
+            proyectos: true,
+            reportes: true,
+            configuracion: true
+          },
+          activo: true,
+          fechaCreacion: "2023-01-15T10:30:00Z",
+          ultimoAcceso: new Date().toISOString()
+        },
+        {
+          id: "user-2",
+          nombre: "Técnico Test",
+          email: "tecnico@ejemplo.com",
+          password: "********",
+          rol: "tecnico",
+          permisos: {
+            dashboard: true,
+            actividades: true,
+            itrb: true,
+            proyectos: false,
+            reportes: true,
+            configuracion: false
+          },
+          activo: true,
+          fechaCreacion: "2023-02-20T14:15:00Z",
+          ultimoAcceso: "2023-05-10T09:45:00Z"
+        },
+        {
+          id: "user-3",
+          nombre: "Visualizador",
+          email: "viewer@ejemplo.com",
+          password: "********",
+          rol: "viewer",
+          permisos: {
+            dashboard: true,
+            actividades: true,
+            itrb: false,
+            proyectos: false,
+            reportes: false,
+            configuracion: false
+          },
+          activo: true,
+          fechaCreacion: "2023-03-05T11:20:00Z",
+          ultimoAcceso: "2023-05-09T16:30:00Z"
+        }
+      ];
+      
+      setUsers(mockUsers);
+    }
   }, []);
   
   // Guardar usuarios en almacenamiento persistente cuando cambian
@@ -242,7 +199,7 @@ const UserManagement: React.FC = () => {
         return acc;
       }, {} as {[email: string]: any});
       
-      PersistentStorage.updateUser(user?.email, usersObject);
+      persistentStorage.setItem("allUsers", usersObject);
     }
   }, [users]);
   
@@ -1026,7 +983,7 @@ const UserManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Cambiar Contraseña</DialogTitle>
             <DialogDescription>
-              {selectedUser && `Actualizar contraseña para ${selectedUser.nombre}`}
+              {selectedUser && `Cambiar contraseña para el usuario ${selectedUser.nombre} (${selectedUser.email})`}
             </DialogDescription>
           </DialogHeader>
           
@@ -1038,7 +995,7 @@ const UserManagement: React.FC = () => {
                 type="password"
                 value={passwordData.currentPassword}
                 onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
-                placeholder="Contraseña actual"
+                placeholder="••••••••"
               />
             </div>
             
@@ -1049,19 +1006,21 @@ const UserManagement: React.FC = () => {
                 type="password"
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                placeholder="Nueva contraseña"
+                placeholder="••••••••"
               />
-              <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>
+              <p className="text-xs text-muted-foreground">
+                La contraseña debe tener al menos 6 caracteres
+              </p>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirmar Contraseña *</Label>
+              <Label htmlFor="confirm-password">Confirmar Nueva Contraseña *</Label>
               <Input 
                 id="confirm-password" 
                 type="password"
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                placeholder="Confirmar nueva contraseña"
+                placeholder="••••••••"
               />
             </div>
           </div>
@@ -1075,7 +1034,7 @@ const UserManagement: React.FC = () => {
             </Button>
             <Button onClick={handleSavePassword}>
               <KeyRound className="h-4 w-4 mr-2" />
-              Actualizar Contraseña
+              Cambiar Contraseña
             </Button>
           </DialogFooter>
         </DialogContent>

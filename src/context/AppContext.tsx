@@ -1,443 +1,672 @@
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { AppContextType, Proyecto, Actividad, ITRB, FiltrosDashboard, ConfiguracionGrafico, KPIConfig, KPIs, User, APIKeys } from "@/types";
-import { PersistentStorage } from "@/services/PersistentStorage";
-import { useToast } from "@/hooks/use-toast";
+import React, { createContext, useContext, useState, useEffect, Dispatch, SetStateAction } from "react";
+import { 
+  User, 
+  Actividad, 
+  ITRB, 
+  KPIs, 
+  EstadoITRB, 
+  Proyecto, 
+  Alerta, 
+  AppTheme,
+  FiltrosDashboard,
+  KPIConfig,
+  APIKeys
+} from "@/types";
+import { persistentStorage } from "@/services/PersistentStorage";
 import { toast } from "sonner";
 
-// Create the context with a default value
+interface AppContextType {
+  // Usuario y autenticación
+  user: User | null;
+  setUser: (user: User | null) => void;
+  login: (email: string, password?: string) => Promise<boolean>;
+  logout: () => void;
+  isAdmin: boolean;
+  isTecnico: boolean;
+  changePassword: (email: string, currentPassword: string, newPassword: string) => Promise<boolean>;
+  
+  // Tema de la aplicación
+  theme: AppTheme;
+  toggleTheme: () => void;
+  
+  // Proyectos
+  proyectos: Proyecto[];
+  addProyecto: (proyecto: Proyecto) => void;
+  updateProyecto: (id: string, proyecto: Proyecto) => void;
+  deleteProyecto: (id: string) => void;
+  proyectoActual: string | "todos";
+  setProyectoActual: (id: string | "todos") => void;
+  setProyectos: (proyectos: Proyecto[]) => void;
+  
+  // Actividades
+  actividades: Actividad[];
+  setActividades: (actividades: Actividad[]) => void;
+  addActividad: (actividad: Actividad) => void;
+  updateActividad: (id: string, actividad: Actividad) => void;
+  deleteActividad: (id: string) => void;
+  
+  // ITRs
+  itrbItems: ITRB[];
+  setItrbItems: (items: ITRB[]) => void;
+  addITRB: (itrb: ITRB) => void;
+  updateITRB: (id: string, itrb: ITRB) => void;
+  deleteITRB: (id: string) => void;
+  completarTodosITRB: (proyectoId: string) => void;
+  updateITRBStatus: (id: string, estado: EstadoITRB) => Promise<void>;
+  
+  // Alertas
+  alertas: Alerta[];
+  addAlerta: (alerta: Alerta) => void;
+  markAlertaAsRead: (id: string) => void;
+  deleteAlerta: (id: string) => void;
+  setAlertas: (alertas: Alerta[]) => void;
+  
+  // Filtros
+  filtros: FiltrosDashboard;
+  setFiltros: (filtros: FiltrosDashboard) => void;
+  
+  // Configuración de KPIs
+  kpiConfig: KPIConfig;
+  updateKPIConfig: (config: Partial<KPIConfig>) => void;
+  
+  // KPIs y estadísticas
+  getKPIs: (proyectoId?: string) => KPIs;
+  
+  // API Keys
+  apiKeys: APIKeys;
+  updateAPIKeys: (keys: Partial<APIKeys>) => void;
+  
+  // Respaldo automático
+  createManualBackup: () => string;
+  restoreFromBackup: (backupData: string) => boolean;
+  getLastBackupTime: () => string;
+}
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Estados
   const [user, setUser] = useState<User | null>(null);
-  const { toast: shadcnToast } = useToast();
-  
-  // State for entity data
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [itrbItems, setItrbItems] = useState<ITRB[]>([]);
+  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [proyectoActual, setProyectoActual] = useState<string | "todos">("todos");
+  const [theme, setTheme] = useState<AppTheme>({ mode: "light" });
+  const [filtros, setFiltros] = useState<FiltrosDashboard>({ proyecto: "todos" });
   
-  // Configuration state
-  const [filtros, setFiltros] = useState<FiltrosDashboard>({
-    proyecto: "todos",
-    timestamp: new Date().toISOString(),
+  // Configuración de KPIs
+  const [kpiConfig, setKPIConfig] = useState<KPIConfig>({
+    itrVencidosMostrar: "total",
   });
-  const [configuracionGrafico, setConfigurationGrafico] = useState<ConfiguracionGrafico>({
-    tamano: "mediano",
-    mostrarLeyenda: true,
-    mostrarSubsistemas: true,
-  });
-  const [proyectoActual, setProyectoActual] = useState<string>("");
-  const [kpiConfig, setKpiConfig] = useState<KPIConfig>({
-    itrVencidosMostrar: "total"
-  });
-  const [apiKeys, setApiKeys] = useState<APIKeys>({});
   
-  // Check for session on mount
+  // API Keys
+  const [apiKeys, setApiKeys] = useState<APIKeys>({
+    openAI: '',
+    aiModel: 'gpt-4o'
+  });
+  
+  // Propiedades derivadas
+  const isAdmin = user?.role === "admin";
+  const isTecnico = user?.role === "tecnico";
+
+  // Usuarios del sistema (simulación de base de datos)
+  const [allUsers, setAllUsers] = useState<{[email: string]: User & {password: string}}>({
+    "admin@fossil.com": {
+      email: "admin@fossil.com",
+      role: "admin",
+      nombre: "Administrador",
+      password: "admin123"
+    },
+    "tecnico@ejemplo.com": {
+      email: "tecnico@ejemplo.com",
+      role: "tecnico",
+      nombre: "Técnico Ejemplo",
+      password: "tecnico123"
+    },
+    "viewer@ejemplo.com": {
+      email: "viewer@ejemplo.com",
+      role: "viewer",
+      nombre: "Visualizador",
+      password: "viewer123"
+    }
+  });
+
+  // Cargar datos desde el almacenamiento persistente al iniciar
   useEffect(() => {
-    const checkSession = async () => {
-      const savedEmail = localStorage.getItem("userEmail");
-      if (savedEmail) {
-        try {
-          const userData = await PersistentStorage.verifyUser(savedEmail);
-          if (userData) {
-            setUser(userData);
-          } else {
-            localStorage.removeItem("userEmail");
-          }
-        } catch (error) {
-          console.error("Error checking session:", error);
-        }
-      }
-    };
+    const storedUser = persistentStorage.getItem<User>("user");
+    if (storedUser) {
+      setUser(storedUser);
+    }
+
+    const storedProyectos = persistentStorage.getItem<Proyecto[]>("proyectos");
+    if (storedProyectos) {
+      setProyectos(storedProyectos);
+    }
+
+    const storedActividades = persistentStorage.getItem<Actividad[]>("actividades");
+    if (storedActividades) {
+      setActividades(storedActividades);
+    }
+
+    const storedITRBs = persistentStorage.getItem<ITRB[]>("itrbItems");
+    if (storedITRBs) {
+      setItrbItems(storedITRBs);
+    }
+
+    const storedAlertas = persistentStorage.getItem<Alerta[]>("alertas");
+    if (storedAlertas) {
+      setAlertas(storedAlertas);
+    }
+
+    const storedTheme = persistentStorage.getItem<AppTheme>("theme");
+    if (storedTheme) {
+      setTheme(storedTheme);
+    }
     
-    checkSession();
+    const storedKPIConfig = persistentStorage.getItem<KPIConfig>("kpiConfig");
+    if (storedKPIConfig) {
+      setKPIConfig(storedKPIConfig);
+    }
+    
+    const storedAPIKeys = persistentStorage.getItem<APIKeys>("apiKeys");
+    if (storedAPIKeys) {
+      setApiKeys(storedAPIKeys);
+    }
+    
+    const storedUsers = persistentStorage.getItem<{[email: string]: User & {password: string}}>("allUsers");
+    if (storedUsers) {
+      setAllUsers(storedUsers);
+    }
   }, []);
 
-  // Load data on mount and when user changes
+  // Guardar datos en almacenamiento persistente cuando cambian
   useEffect(() => {
     if (user) {
-      const loadData = async () => {
-        try {
-          // Load data in parallel
-          const [proyectosData, actividadesData, itrbsData, kpiConfigData, apiKeysData] = await Promise.all([
-            PersistentStorage.getProyectos(),
-            PersistentStorage.getActividades(),
-            PersistentStorage.getITRBItems(),
-            PersistentStorage.getKPIConfig(),
-            PersistentStorage.getAPIKeys(),
-          ]);
-          
-          setProyectos(proyectosData);
-          setActividades(actividadesData);
-          setItrbItems(itrbsData);
-          
-          if (kpiConfigData) {
-            setKpiConfig(kpiConfigData);
-          }
-          
-          if (apiKeysData) {
-            setApiKeys(apiKeysData);
-          }
-          
-          // Save email for session persistence
-          localStorage.setItem("userEmail", user.email);
-          
-        } catch (error) {
-          console.error("Error loading data:", error);
-          toast.error("Error al cargar los datos", {
-            description: "Ocurrió un error al cargar los datos de la aplicación."
-          });
-        }
-      };
-      
-      loadData();
+      persistentStorage.setItem("user", user);
+    } else {
+      persistentStorage.removeItem("user");
     }
   }, [user]);
 
-  // Logout function
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("lastSession");
-  };
-  
-  // Check user roles
-  const isAdmin = user?.role === "admin";
-  const isTecnico = user?.role === "tecnico" || isAdmin;
-  
-  // Theme state
-  const [theme, setTheme] = useState<{ mode: "light" | "dark" }>({
-    mode: (localStorage.getItem("theme") as "light" | "dark") || "light"
-  });
-  
-  const toggleTheme = () => {
-    const newMode = theme.mode === "light" ? "dark" : "light";
-    setTheme({ mode: newMode });
-    localStorage.setItem("theme", newMode);
-    
-    // Apply theme to document
-    if (newMode === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
-  
-  // Apply theme on mount
   useEffect(() => {
+    persistentStorage.setItem("proyectos", proyectos);
+  }, [proyectos]);
+
+  useEffect(() => {
+    persistentStorage.setItem("actividades", actividades);
+  }, [actividades]);
+
+  useEffect(() => {
+    persistentStorage.setItem("itrbItems", itrbItems);
+    
+    // Actualizar automáticamente los estados de los ITR
+    const today = new Date();
+    const updatedItems = itrbItems.map(item => {
+      const fechaLimite = new Date(item.fechaLimite);
+      
+      let estado: EstadoITRB = "En curso";
+      
+      if (item.cantidadRealizada >= item.cantidadTotal) {
+        estado = "Completado";
+      } else if (fechaLimite < today) {
+        estado = "Vencido";
+      }
+      
+      return { ...item, estado };
+    });
+    
+    if (JSON.stringify(updatedItems) !== JSON.stringify(itrbItems)) {
+      setItrbItems(updatedItems);
+      
+      // Generar alertas para los ITR vencidos
+      updatedItems.forEach(item => {
+        if (item.estado === "Vencido" && !alertas.some(alerta => 
+          alerta.tipo === "Vencimiento" && 
+          alerta.itemsRelacionados?.includes(item.id)
+        )) {
+          // Encontrar el proyecto asociado a este ITR
+          const actividad = actividades.find(act => act.id === item.actividadId);
+          if (actividad) {
+            addAlerta({
+              id: `alerta-${Date.now()}-${item.id}`,
+              tipo: "Vencimiento",
+              mensaje: `El ITR "${item.descripcion}" ha vencido.`,
+              fechaCreacion: new Date().toISOString(),
+              leida: false,
+              itemsRelacionados: [item.id],
+              proyectoId: actividad.proyectoId
+            });
+          }
+        }
+      });
+    }
+  }, [itrbItems, alertas, actividades]);
+
+  useEffect(() => {
+    persistentStorage.setItem("alertas", alertas);
+  }, [alertas]);
+
+  useEffect(() => {
+    persistentStorage.setItem("theme", theme);
+    // Aplicar clase al body para el tema oscuro/claro
     if (theme.mode === "dark") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }, [theme.mode]);
+  }, [theme]);
+  
+  useEffect(() => {
+    persistentStorage.setItem("kpiConfig", kpiConfig);
+  }, [kpiConfig]);
 
-  // Proyecto CRUD operations
-  const addProyecto = async (proyecto: Omit<Proyecto, "id" | "fechaCreacion" | "fechaActualizacion">) => {
-    try {
-      const newProyecto = await PersistentStorage.addProyecto(proyecto);
-      setProyectos([...proyectos, newProyecto]);
-      toast.success("Proyecto creado", {
-        description: `El proyecto "${proyecto.titulo}" ha sido creado exitosamente.`
-      });
-    } catch (error) {
-      console.error("Error adding proyecto:", error);
-      toast.error("Error al crear el proyecto", {
-        description: `No se pudo crear el proyecto "${proyecto.titulo}".`
-      });
-    }
-  };
+  useEffect(() => {
+    persistentStorage.setItem("apiKeys", apiKeys);
+  }, [apiKeys]);
   
-  const updateProyecto = async (id: string, updates: Partial<Proyecto>) => {
-    try {
-      const updatedProyecto = await PersistentStorage.updateProyecto(id, updates);
-      setProyectos(
-        proyectos.map(p => p.id === id ? updatedProyecto : p)
-      );
-      toast.success("Proyecto actualizado", {
-        description: `El proyecto ha sido actualizado exitosamente.`
-      });
-    } catch (error) {
-      console.error("Error updating proyecto:", error);
-      toast.error("Error al actualizar el proyecto", {
-        description: "No se pudo actualizar el proyecto."
-      });
-    }
-  };
-  
-  const deleteProyecto = async (id: string) => {
-    try {
-      await PersistentStorage.deleteProyecto(id);
-      setProyectos(proyectos.filter(p => p.id !== id));
-      toast.success("Proyecto eliminado", {
-        description: `El proyecto ha sido eliminado exitosamente.`
-      });
-    } catch (error) {
-      console.error("Error deleting proyecto:", error);
-      toast.error("Error al eliminar el proyecto", {
-        description: "No se pudo eliminar el proyecto."
-      });
-    }
+  useEffect(() => {
+    persistentStorage.setItem("allUsers", allUsers);
+  }, [allUsers]);
+
+  // Función para actualizar la configuración de KPIs
+  const updateKPIConfig = (config: Partial<KPIConfig>) => {
+    setKPIConfig(prev => ({ ...prev, ...config }));
   };
 
-  // Actividad CRUD operations
-  const addActividad = async (actividad: Omit<Actividad, "id">) => {
-    try {
-      const newActividad = await PersistentStorage.addActividad(actividad);
-      setActividades([...actividades, newActividad]);
-      toast.success("Actividad creada", {
-        description: `La actividad "${actividad.nombre}" ha sido creada exitosamente.`
-      });
-    } catch (error) {
-      console.error("Error adding actividad:", error);
-      toast.error("Error al crear la actividad", {
-        description: `No se pudo crear la actividad "${actividad.nombre}".`
-      });
-    }
+  // Función para actualizar las API Keys
+  const updateAPIKeys = (keys: Partial<APIKeys>) => {
+    setApiKeys(prev => ({ ...prev, ...keys }));
   };
-  
-  const updateActividad = async (id: string, updates: Partial<Actividad>) => {
-    try {
-      const updatedActividad = await PersistentStorage.updateActividad(id, updates);
-      setActividades(
-        actividades.map(a => a.id === id ? updatedActividad : a)
-      );
-      toast.success("Actividad actualizada", {
-        description: `La actividad ha sido actualizada exitosamente.`
-      });
-    } catch (error) {
-      console.error("Error updating actividad:", error);
-      toast.error("Error al actualizar la actividad", {
-        description: "No se pudo actualizar la actividad."
-      });
+
+  // Funciones de autenticación
+  const login = async (email: string, password?: string): Promise<boolean> => {
+    // Verificar si el usuario existe
+    const userData = allUsers[email.toLowerCase()];
+    
+    if (!userData) {
+      // Si el email no está registrado, crear un usuario visualizador
+      if (!password) {
+        // Crear nuevo usuario
+        const newUser: User & {password: string} = {
+          email: email.toLowerCase(),
+          role: "viewer",
+          nombre: `Usuario ${email.split('@')[0]}`,
+          password: "viewer123" // Contraseña por defecto
+        };
+        
+        setAllUsers(prev => ({
+          ...prev,
+          [email.toLowerCase()]: newUser
+        }));
+        
+        setUser({
+          email: email.toLowerCase(),
+          role: "viewer",
+          nombre: `Usuario ${email.split('@')[0]}`
+        });
+        
+        return true;
+      }
+      return false;
     }
-  };
-  
-  const deleteActividad = async (id: string) => {
-    try {
-      await PersistentStorage.deleteActividad(id);
-      setActividades(actividades.filter(a => a.id !== id));
-      toast.success("Actividad eliminada", {
-        description: `La actividad ha sido eliminada exitosamente.`
+    
+    // Si es admin o se proporciona contraseña, validar
+    if (userData.role === "admin" || password) {
+      if (password && password !== userData.password) {
+        return false; // Contraseña incorrecta
+      }
+      
+      // Login exitoso
+      setUser({
+        email: userData.email,
+        role: userData.role,
+        nombre: userData.nombre
       });
-    } catch (error) {
-      console.error("Error deleting actividad:", error);
-      toast.error("Error al eliminar la actividad", {
-        description: "No se pudo eliminar la actividad."
+      
+      // Guardar la sesión
+      persistentStorage.setItem("lastSession", Date.now().toString());
+      
+      return true;
+    } else {
+      // Para usuarios no admin sin contraseña
+      setUser({
+        email: userData.email,
+        role: userData.role,
+        nombre: userData.nombre
       });
+      
+      // Guardar la sesión
+      persistentStorage.setItem("lastSession", Date.now().toString());
+      
+      return true;
     }
   };
 
-  // ITRB CRUD operations
-  const addITRB = async (itrb: Omit<ITRB, "id">) => {
-    try {
-      const newITRB = await PersistentStorage.addITRB(itrb);
-      setItrbItems([...itrbItems, newITRB]);
-      toast.success("ITR creado", {
-        description: `El ITR "${itrb.descripcion}" ha sido creado exitosamente.`
-      });
-    } catch (error) {
-      console.error("Error adding ITRB:", error);
-      toast.error("Error al crear el ITR", {
-        description: `No se pudo crear el ITR "${itrb.descripcion}".`
-      });
+  const changePassword = async (email: string, currentPassword: string, newPassword: string): Promise<boolean> => {
+    // Verificar si el usuario existe
+    const userData = allUsers[email.toLowerCase()];
+    
+    if (!userData) {
+      return false;
     }
-  };
-  
-  const updateITRB = async (id: string, updates: Partial<ITRB>) => {
-    try {
-      const updatedITRB = await PersistentStorage.updateITRB(id, updates);
-      setItrbItems(
-        itrbItems.map(i => i.id === id ? updatedITRB : i)
-      );
-      toast.success("ITR actualizado", {
-        description: `El ITR ha sido actualizado exitosamente.`
-      });
-    } catch (error) {
-      console.error("Error updating ITRB:", error);
-      toast.error("Error al actualizar el ITR", {
-        description: "No se pudo actualizar el ITR."
-      });
+    
+    // Verificar contraseña actual
+    if (userData.password !== currentPassword) {
+      return false;
     }
+    
+    // Cambiar contraseña
+    const updatedUser = {
+      ...userData,
+      password: newPassword
+    };
+    
+    setAllUsers(prev => ({
+      ...prev,
+      [email.toLowerCase()]: updatedUser
+    }));
+    
+    return true;
   };
-  
-  const deleteITRB = async (id: string) => {
-    try {
-      await PersistentStorage.deleteITRB(id);
-      setItrbItems(itrbItems.filter(i => i.id !== id));
-      toast.success("ITR eliminado", {
-        description: `El ITR ha sido eliminado exitosamente.`
-      });
-    } catch (error) {
-      console.error("Error deleting ITRB:", error);
-      toast.error("Error al eliminar el ITR", {
-        description: "No se pudo eliminar el ITR."
-      });
-    }
+
+  const logout = () => {
+    setUser(null);
+    
+    // Reset filtros to default
+    setFiltros({ proyecto: "todos" });
+    
+    // Mantener los datos pero eliminar la sesión
+    persistentStorage.removeItem("lastSession");
+    persistentStorage.removeItem("user");
+    
+    // Set default theme
+    setTheme({ mode: "light" });
   };
-  
-  // Convenience method to update ITRB status
-  const updateITRBStatus = async (id: string, estado: "En curso" | "Completado" | "Vencido") => {
+
+  // Funciones para gestión de tema
+  const toggleTheme = () => {
+    setTheme(prev => ({
+      mode: prev.mode === "light" ? "dark" : "light"
+    }));
+  };
+
+  // Funciones CRUD para proyectos
+  const addProyecto = (proyecto: Proyecto) => {
+    setProyectos([...proyectos, proyecto]);
+  };
+
+  const updateProyecto = (id: string, proyecto: Proyecto) => {
+    setProyectos(proyectos.map(p => p.id === id ? proyecto : p));
+  };
+
+  const deleteProyecto = (id: string) => {
+    setProyectos(proyectos.filter(p => p.id !== id));
+    // Eliminar actividades y ITRB asociados
+    setActividades(actividades.filter(a => a.proyectoId !== id));
+    const actividadesIds = actividades
+      .filter(a => a.proyectoId === id)
+      .map(a => a.id);
+    setItrbItems(itrbItems.filter(i => !actividadesIds.includes(i.actividadId)));
+    // Eliminar alertas asociadas
+    setAlertas(alertas.filter(a => a.proyectoId !== id));
+  };
+
+  // Funciones CRUD para actividades
+  const addActividad = (actividad: Actividad) => {
+    setActividades([...actividades, actividad]);
+  };
+
+  const updateActividad = (id: string, actividad: Actividad) => {
+    setActividades(actividades.map(act => act.id === id ? actividad : act));
+  };
+
+  const deleteActividad = (id: string) => {
+    setActividades(actividades.filter(act => act.id !== id));
+    // Eliminar ITRB asociados
+    setItrbItems(itrbItems.filter(item => item.actividadId !== id));
+  };
+
+  // Funciones CRUD para ITRB
+  const addITRB = (itrb: ITRB) => {
+    setItrbItems([...itrbItems, itrb]);
+  };
+
+  const updateITRB = (id: string, itrb: ITRB) => {
+    setItrbItems(itrbItems.map(item => item.id === id ? itrb : item));
+  };
+
+  const deleteITRB = (id: string) => {
+    setItrbItems(itrbItems.filter(item => item.id !== id));
+  };
+
+  // Función para completar todos los ITRB de un proyecto
+  const completarTodosITRB = (proyectoId: string) => {
+    // Obtener IDs de actividades del proyecto
+    const actividadesProyecto = actividades
+      .filter(a => a.proyectoId === proyectoId)
+      .map(a => a.id);
+    
+    // Actualizar todos los ITRB relacionados
+    setItrbItems(itrbItems.map(item => {
+      if (actividadesProyecto.includes(item.actividadId)) {
+        return {
+          ...item,
+          cantidadRealizada: item.cantidadTotal,
+          estado: "Completado" as EstadoITRB
+        };
+      }
+      return item;
+    }));
+  };
+
+  // Funciones para alertas
+  const addAlerta = (alerta: Alerta) => {
+    setAlertas([...alertas, alerta]);
+  };
+
+  const markAlertaAsRead = (id: string) => {
+    setAlertas(alertas.map(a => a.id === id ? { ...a, leida: true } : a));
+  };
+
+  const deleteAlerta = (id: string) => {
+    setAlertas(alertas.filter(a => a.id !== id));
+  };
+
+  // Actualizar el estado de un ITR
+  const updateITRBStatus = async (id: string, estado: EstadoITRB): Promise<void> => {
     try {
-      await updateITRB(id, { estado });
+      const itrToUpdate = itrbItems.find(item => item.id === id);
+      
+      if (!itrToUpdate) {
+        throw new Error("ITR no encontrado");
+      }
+      
+      const updatedITR = {
+        ...itrToUpdate,
+        estado,
+        // Si está completado, establecer cantidadRealizada al total
+        cantidadRealizada: estado === "Completado" ? itrToUpdate.cantidadTotal : itrToUpdate.cantidadRealizada
+      };
+      
+      // Actualizar el ITR
+      updateITRB(id, updatedITR);
+      
+      // Si se completó, crear una alerta informativa
+      if (estado === "Completado") {
+        // Encontrar la actividad relacionada para obtener el proyecto
+        const actividad = actividades.find(act => act.id === updatedITR.actividadId);
+        
+        if (actividad) {
+          addAlerta({
+            id: `alerta-completion-${Date.now()}-${id}`,
+            tipo: "Información",
+            mensaje: `El ITR "${updatedITR.descripcion}" ha sido marcado como completado.`,
+            fechaCreacion: new Date().toISOString(),
+            leida: false,
+            itemsRelacionados: [id],
+            proyectoId: actividad.proyectoId
+          });
+        }
+      }
+      
     } catch (error) {
-      console.error("Error updating ITRB status:", error);
+      console.error("Error al actualizar el estado del ITR:", error);
       throw error;
     }
   };
 
-  // KPI Config operations
-  const updateKPIConfig = async (config: Partial<KPIConfig>) => {
-    try {
-      const updatedConfig = await PersistentStorage.updateKPIConfig(config);
-      setKpiConfig(prevConfig => ({
-        ...prevConfig,
-        ...updatedConfig
-      }));
-      toast.success("Configuración KPI actualizada", {
-        description: "La configuración de KPI ha sido actualizada exitosamente."
-      });
-    } catch (error) {
-      console.error("Error updating KPI config:", error);
-      toast.error("Error al actualizar configuración KPI", {
-        description: "No se pudo actualizar la configuración de KPI."
-      });
-    }
-  };
-
-  // API Keys operations
-  const updateAPIKeys = async (keys: Partial<APIKeys>) => {
-    try {
-      const updatedKeys = await PersistentStorage.updateAPIKeys(keys);
-      setApiKeys(prevKeys => ({
-        ...prevKeys,
-        ...updatedKeys
-      }));
-      toast.success("API keys actualizadas", {
-        description: "Las claves API han sido actualizadas exitosamente."
-      });
-    } catch (error) {
-      console.error("Error updating API keys:", error);
-      toast.error("Error al actualizar las claves API", {
-        description: "No se pudieron actualizar las claves API."
-      });
-    }
-  };
-
-  // Calculate KPIs
+  // Calcular KPIs
   const getKPIs = (proyectoId?: string): KPIs => {
-    // Filter items based on project
-    const filteredActividades = proyectoId 
-      ? actividades.filter(a => a.proyectoId === proyectoId) 
-      : actividades;
-      
-    const actividadIds = filteredActividades.map(a => a.id);
+    // Código de KPIs sin cambios
+    const actividadesFiltradas = proyectoId ? 
+      actividades.filter(a => a.proyectoId === proyectoId) : 
+      actividades;
     
-    const filteredITRBs = itrbItems.filter(i => actividadIds.includes(i.actividadId));
+    const actividadesIds = actividadesFiltradas.map(a => a.id);
     
-    // Calculate KPIs
-    const totalITRB = filteredITRBs.length;
-    const realizadosITRB = filteredITRBs.filter(i => i.estado === "Completado").length;
+    const itrbFiltrados = itrbItems.filter(i => 
+      actividadesIds.includes(i.actividadId)
+    );
     
-    // Calculate physical progress
-    const avanceFisico = totalITRB > 0 
-      ? Math.round((realizadosITRB / totalITRB) * 100) 
-      : 0;
+    const totalITRB = itrbFiltrados.reduce((sum, item) => sum + item.cantidadTotal, 0);
+    const realizadosITRB = itrbFiltrados.reduce((sum, item) => sum + item.cantidadRealizada, 0);
     
-    // Count systems and subsystems with MCC
-    const uniqueSubsystems = new Set<string>();
-    const subsystemsWithMCC = new Set<string>();
+    const avanceFisico = totalITRB > 0 ? (realizadosITRB / totalITRB) * 100 : 0;
     
-    filteredActividades.forEach(actividad => {
-      const subsystemKey = `${actividad.sistema}-${actividad.subsistema}`;
-      uniqueSubsystems.add(subsystemKey);
-      
-      // Check if any ITRB in this activity has MCC
-      const activityITRBs = filteredITRBs.filter(i => i.actividadId === actividad.id);
-      if (activityITRBs.some(i => i.mcc)) {
-        subsystemsWithMCC.add(subsystemKey);
-      }
+    // Contar subsistemas únicos
+    const todosSubsistemas = new Set(
+      actividadesFiltradas.map(a => `${a.sistema}-${a.subsistema}`)
+    );
+    
+    // Contar subsistemas únicos con MCC (changed from CCC)
+    const subsistemasMCC = new Set(
+      itrbFiltrados
+        .filter(item => item.mcc) // Changed from ccc to mcc
+        .map(item => {
+          const actividad = actividades.find(act => act.id === item.actividadId);
+          return actividad ? `${actividad.sistema}-${actividad.subsistema}` : "";
+        })
+        .filter(Boolean)
+    ).size;
+    
+    // Contar actividades vencidas
+    const hoy = new Date();
+    const itrbsVencidos = itrbFiltrados.filter(item => {
+      const fechaLimite = new Date(item.fechaLimite);
+      return fechaLimite < hoy; // Es vencido si la fecha límite es anterior a hoy
     });
     
-    // Count overdue activities
-    const now = new Date();
-    const actividadesVencidas = filteredActividades.filter(a => {
-      return new Date(a.fechaFin) < now;
-    }).length;
+    const actividadesVencidas = itrbsVencidos.filter(item => item.estado !== "Completado").length;
     
     return {
       avanceFisico,
       totalITRB,
       realizadosITRB,
-      subsistemasMCC: subsystemsWithMCC.size,
-      totalSubsistemas: uniqueSubsystems.size,
+      subsistemasMCC,
       actividadesVencidas,
+      totalSubsistemas: todosSubsistemas.size,
       proyectoId
     };
   };
-  
-  // Login function
-  const login = async (email: string): Promise<User | null> => {
-    try {
-      const userData = await PersistentStorage.verifyUser(email);
-      if (userData) {
-        setUser(userData);
-        return userData;
-      }
-      return null;
-    } catch (error) {
-      console.error("Error during login:", error);
-      return null;
-    }
+
+  // Funciones para respaldo de datos
+  const createManualBackup = (): string => {
+    persistentStorage.createBackup();
+    toast.success("Respaldo manual creado correctamente");
+    return persistentStorage.getLastBackupDate();
   };
 
-  const contextValue: AppContextType = {
-    user,
-    setUser,
-    logout,
-    isAdmin,
-    isTecnico,
-    theme,
-    toggleTheme,
-    proyectos,
-    actividades,
-    itrbItems,
-    filtros,
-    setFiltros,
-    configuracionGrafico,
-    setConfigurationGrafico,
-    proyectoActual,
-    setProyectoActual,
-    addProyecto,
-    updateProyecto,
-    deleteProyecto,
-    addActividad,
-    updateActividad,
-    deleteActividad,
-    addITRB,
-    updateITRB,
-    deleteITRB,
-    updateITRBStatus,
-    kpiConfig,
-    updateKPIConfig,
-    apiKeys,
-    updateAPIKeys,
-    getKPIs,
-    login
+  const restoreFromBackup = (backupData: string): boolean => {
+    const success = persistentStorage.restoreBackup(backupData);
+    
+    if (success) {
+      // Recargar datos después de la restauración
+      const storedProyectos = persistentStorage.getItem<Proyecto[]>("proyectos");
+      if (storedProyectos) setProyectos(storedProyectos);
+      
+      const storedActividades = persistentStorage.getItem<Actividad[]>("actividades");
+      if (storedActividades) setActividades(storedActividades);
+      
+      const storedITRBs = persistentStorage.getItem<ITRB[]>("itrbItems");
+      if (storedITRBs) setItrbItems(storedITRBs);
+      
+      const storedAlertas = persistentStorage.getItem<Alerta[]>("alertas");
+      if (storedAlertas) setAlertas(storedAlertas);
+      
+      const storedUsers = persistentStorage.getItem<typeof allUsers>("allUsers");
+      if (storedUsers) setAllUsers(storedUsers);
+      
+      toast.success("Respaldo restaurado correctamente");
+    } else {
+      toast.error("Error al restaurar el respaldo");
+    }
+    
+    return success;
+  };
+
+  const getLastBackupTime = (): string => {
+    return persistentStorage.getLastBackupDate();
   };
 
   return (
-    <AppContext.Provider value={contextValue}>
+    <AppContext.Provider
+      value={{
+        user,
+        setUser,
+        login,
+        logout,
+        changePassword,
+        isAdmin,
+        isTecnico,
+        theme,
+        toggleTheme,
+        proyectos,
+        addProyecto,
+        updateProyecto,
+        deleteProyecto,
+        proyectoActual,
+        setProyectoActual,
+        setProyectos,
+        actividades,
+        setActividades,
+        addActividad,
+        updateActividad,
+        deleteActividad,
+        itrbItems,
+        setItrbItems,
+        addITRB,
+        updateITRB,
+        deleteITRB,
+        completarTodosITRB,
+        updateITRBStatus,
+        alertas,
+        addAlerta,
+        markAlertaAsRead,
+        deleteAlerta,
+        setAlertas,
+        filtros,
+        setFiltros,
+        kpiConfig,
+        updateKPIConfig,
+        apiKeys,
+        updateAPIKeys,
+        getKPIs,
+        createManualBackup,
+        restoreFromBackup,
+        getLastBackupTime
+      }}
+    >
       {children}
     </AppContext.Provider>
   );
 };
 
-export const useAppContext = (): AppContextType => {
+export const useAppContext = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error("useAppContext must be used within an AppProvider");
+    throw new Error("useAppContext debe ser usado dentro de un AppProvider");
   }
   return context;
 };

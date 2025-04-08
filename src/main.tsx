@@ -6,17 +6,17 @@ import './index.css';
 // Import jsPDF correctly
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { PersistentStorage } from './services/PersistentStorage';
+import { persistentStorage } from './services/PersistentStorage';
 
 // Add to the global window object
 declare global {
   interface Window {
     jsPDF: typeof jsPDF;
-    PersistentStorage: typeof PersistentStorage;
+    persistentStorage: typeof persistentStorage;
   }
 }
 window.jsPDF = jsPDF;
-window.PersistentStorage = PersistentStorage; // Make the PersistentStorage class available for debugging
+window.persistentStorage = persistentStorage; // Hacemos disponible el almacenamiento persistente para debugging
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error('Failed to find the root element');

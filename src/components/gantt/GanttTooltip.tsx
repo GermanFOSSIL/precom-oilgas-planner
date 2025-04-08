@@ -44,7 +44,14 @@ const GanttTooltip: React.FC<GanttTooltipProps> = ({ item, position }) => {
         left: `${position.x + 10}px`,
       }}
     >
-      <h3 className="font-bold text-base mb-2 border-b pb-1">{item.nombre}</h3>
+      <h3 className="font-bold text-base mb-2 border-b pb-1">
+        {item.nombre}
+        {item.codigo && (
+          <span className="ml-2 text-sm font-normal text-gray-500">
+            {item.codigo}
+          </span>
+        )}
+      </h3>
       
       <div className="grid grid-cols-[100px_1fr] gap-y-1 mb-3">
         <div className="text-gray-500 dark:text-gray-400">Proyecto:</div>

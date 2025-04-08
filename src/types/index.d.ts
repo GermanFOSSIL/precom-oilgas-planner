@@ -22,6 +22,7 @@ export interface ITRB {
   id: string;
   actividadId: string;
   descripcion: string;
+  codigo: string; // Campo obligatorio para el código del ITR B
   cantidadTotal: number;
   cantidadRealizada: number;
   fechaInicio: string;
